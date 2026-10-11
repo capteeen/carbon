@@ -1,0 +1,97 @@
+{
+  "url": "http://127.0.0.1:3202/",
+  "dpr": 0.3,
+  "cycles": 12,
+  "heapAfterEachCycleKB": [
+    11198,
+    11559,
+    11737,
+    11837,
+    11900,
+    12256,
+    12027,
+    12075,
+    12134,
+    12264,
+    12632,
+    12644
+  ],
+  "growthFromCycle2KB": 1086,
+  "topGrowersSinceCycle2": [
+    {
+      "k": "code",
+      "dn": 2713,
+      "dsize": 1034900
+    },
+    {
+      "k": "hidden",
+      "dn": 1206,
+      "dsize": 57020
+    },
+    {
+      "k": "native",
+      "dn": 496,
+      "dsize": 40020
+    },
+    {
+      "k": "concatenated string",
+      "dn": 109,
+      "dsize": 2180
+    },
+    {
+      "k": "array",
+      "dn": 4,
+      "dsize": 536
+    },
+    {
+      "k": "object:Object",
+      "dn": 11,
+      "dsize": 332
+    },
+    {
+      "k": "number",
+      "dn": 23,
+      "dsize": 276
+    },
+    {
+      "k": "object:Array",
+      "dn": 5,
+      "dsize": 80
+    },
+    {
+      "k": "object:sn",
+      "dn": 1,
+      "dsize": 24
+    },
+    {
+      "k": "object:r0",
+      "dn": 1,
+      "dsize": 24
+    },
+    {
+      "k": "synthetic",
+      "dn": 0,
+      "dsize": 0
+    },
+    {
+      "k": "string",
+      "dn": 0,
+      "dsize": 0
+    },
+    {
+      "k": "object shape",
+      "dn": 0,
+      "dsize": 0
+    },
+    {
+      "k": "symbol",
+      "dn": 0,
+      "dsize": 0
+    },
+    {
+      "k": "object:UtilityScript",
+      "dn": 0,
+      "dsize": 0
+    }
+  ]
+}

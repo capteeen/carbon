@@ -1,0 +1,123 @@
+{
+  "empty: chapters 00-07 each carry ILLUSTRATED EXPLAINER": {
+    "ok": true,
+    "detail": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "empty: ch03 BONDS and LOAD readouts are --.--": {
+    "ok": true,
+    "detail": "////// 03 Six protons6 protons make it carbon. 6 agents make it a Carbon launch.ILLUSTRATED EXPLAINER// Illustration, not live activityPROTON_01_SCOUTPROTON_01SCOUTFinds live trends on X, proposes 3-5 narratives and namesBONDS --.--// bonds: no molecule handing off yetLOAD --.--// no live data yetCL"
+  },
+  "empty: ch05 shows no hashes (\"No hand-offs recorded yet\")": {
+    "ok": true
+  },
+  "empty: ch08 shows the honest empty state, no \"replaying\"": {
+    "ok": true,
+    "detail": "////// 08 The launchNO_LAUNCH_RECORDEDNo launch has been recorded yet. The first real launch will replay here.CA --.--"
+  },
+  "empty: ch09 says \"No molecules yet. Launch the first one.\" with no feed or receipts": {
+    "ok": true,
+    "detail": "////// 09 LiveLIVENo molecules yet. Launch the first one.[ Launch ]// agent reasoning// No reasoning logged yet// receipts// No fee splits yet"
+  },
+  "replay: label is \"replaying $TICKER, <date>\"": {
+    "ok": true,
+    "detail": "////// 08 The launchREPLAYreplaying $GPROBE, 2026-10-11COIN_GPROBEISOTOPE C-13SHAPE RINGSTABILITY 82/100 · PASSEDHAND-OFFS 7/7// d73d62eb SENTINEL→FORGE// abaa2f25 SENTINEL→TREASURER// 46fa0888 TREASU"
+  },
+  "replay: ch08 lists the last recorded hand-off hashes in order": {
+    "ok": true,
+    "detail": {
+      "shownHashes": [
+        "d73d62eb",
+        "abaa2f25",
+        "46fa0888",
+        "8914b845"
+      ],
+      "want": [
+        "d73d62eb",
+        "abaa2f25",
+        "46fa0888",
+        "8914b845"
+      ]
+    }
+  },
+  "replay: the typed CA is the recorded CA": {
+    "ok": true,
+    "detail": " 46fa0888 TREASURER→HERALD// 8914b845 HERALD→KEEPERCA 9gRWuSRNh3789U3m7bMTfd9wdvh6e5dfncsnwvXLDD4D// devnet · 2026-10-11"
+  },
+  "replay: two page loads give identical ch08 HUD text at 21 scroll points": {
+    "ok": true
+  },
+  "replay: hand-off counter is monotone in scroll and ends at all recorded": {
+    "ok": true,
+    "detail": [
+      "0/7",
+      "0/7",
+      "0/7",
+      "1/7",
+      "3/7",
+      "4/7",
+      "5/7",
+      "6/7",
+      "6/7",
+      "7/7",
+      "7/7",
+      "7/7",
+      "7/7",
+      "7/7",
+      "7/7",
+      "7/7",
+      "7/7",
+      "7/7",
+      "7/7",
+      "7/7",
+      "7/7"
+    ]
+  },
+  "/l/[ca]: recorded hand-offs older than 60 s show BONDS 0/4 at display time": {
+    "ok": true,
+    "detail": "SCOUT BONDS 0/4 FORGE BONDS 0/4 HERALD BONDS 0/4 KEEPER BONDS 0/4 TREASURER BONDS 0/4 SENTINEL BONDS 0/4"
+  },
+  "/l/[ca]: a new signed hand-off reaches the page over SSE as HERALD/KEEPER BONDS 1/4": {
+    "ok": true,
+    "detail": {
+      "live": "SCOUT BONDS 0/4 FORGE BONDS 0/4 HERALD BONDS 1/4 KEEPER BONDS 1/4 TREASURER BONDS 0/4 SENTINEL BONDS 0/4 // last seam 742027f4",
+      "ms": 743,
+      "hash": "742027f4"
+    }
+  },
+  "/l/[ca]: with no further events the bond ages out of the 60 s window (display time, AG-009)": {
+    "ok": true,
+    "detail": {
+      "aged": "SCOUT BONDS 0/4 FORGE BONDS 0/4 HERALD BONDS 0/4 KEEPER BONDS 0/4 TREASURER BONDS 0/4 SENTINEL BONDS 0/4",
+      "agedAfterMs": 60861
+    }
+  },
+  "stillness: LaunchScene with an empty event stream renders identical frames over 4 s (after the quality ladder settles)": {
+    "ok": true,
+    "detail": [
+      "f51d02280b28",
+      "f51d02280b28",
+      "f51d02280b28",
+      "f51d02280b28",
+      "f51d02280b28"
+    ]
+  },
+  "stillness control: the same scene with recorded events animates": {
+    "ok": true,
+    "detail": [
+      "f4cf2f97d99e",
+      "6cd3b8015aee",
+      "7384d4dc58be",
+      "f692ebdc0b05",
+      "a21b6f8c310c"
+    ]
+  }
+}

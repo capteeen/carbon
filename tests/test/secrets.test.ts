@@ -5,6 +5,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { inspect } from 'node:util';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -77,6 +78,29 @@ describe('no keys or seeds in git history, the working tree, or ignored files th
     expect(() => git('check-ignore', '--no-index', 'apps/worker/.env.example')).toThrow(); // examples stay tracked (names only)
     const example = git('show', 'HEAD:apps/worker/.env.example');
     for (const line of example.split('\n')) if (/^[A-Z_]+=/.test(line)) expect(line, 'example files hold names only').toMatch(/^[A-Z_]+=$/);
+  });
+
+  // Second pass: `git show HEAD:vendor/qsd-market` is a gitlink, so the scans above never read the
+  // vendored submodule (the source of @qsd/protocol, which the worker runs). Scan its history and files.
+  it('the vendored submodule (vendor/qsd-market) has no secret-shaped values in its history or files', () => {
+    const sub = path.join(ROOT, 'vendor/qsd-market');
+    if (!existsSync(path.join(sub, '.git'))) return; // submodule not initialised in this checkout
+    const sg = (...args: string[]) => execFileSync('git', args, { cwd: sub, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+    // A 64-byte base58 value is either a secret key or a (public) transaction signature: lines that
+    // name it a signature are public data.
+    const notSig = (text: string) => text.split('\n').filter((l) => !/signature|txSig|"sig"/i.test(l)).join('\n');
+    expect(scan(notSig(sg('log', '-p', '--all', '--no-color')))).toEqual([]);
+    const hits: string[] = [];
+    for (const f of sg('ls-files').split('\n').filter((f) => f && !/lock\.yaml$|\.(png|jpg|ico|woff2?)$/.test(f))) {
+      let text: string;
+      try {
+        text = sg('show', `HEAD:${f}`);
+      } catch {
+        continue;
+      }
+      for (const h of scan(notSig(text))) hits.push(`${f}: ${h.name} ${h.sample}`);
+    }
+    expect(hits).toEqual([]);
   });
 });
 

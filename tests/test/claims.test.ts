@@ -93,6 +93,20 @@ describe('chemistry and half-lives', () => {
     expect(section).toMatch(/not a half-life/);
   });
 
+  // Second pass. AG-020 was fixed in contracts.ts, but the hand-written shapes table in
+  // docs/how.md (rendered on /how) still says "Every agent bonded to every other." With valence
+  // 4 and five neighbours an agent can never hold all five bonds at once.
+  it.fails('[AG-028] how.md does not claim DIAMOND bonds every agent to every other at once', () => {
+    const shapes = how.slice(how.indexOf('## Shapes'), how.indexOf('<!-- generated:config-table:start -->'));
+    expect(shapes).not.toMatch(/Every agent bonded to every other/);
+  });
+
+  // Chapter 04's copy "Every agent holds exactly 4 bonds." (a SPEC §5 literal) contradicts the
+  // rule the code and /how state: AT MOST 4 bond orders. An agent with no hand-offs holds 0.
+  it.fails('[AG-030] no copy says an agent holds EXACTLY 4 bonds while the rule is at most 4', () => {
+    expect(read('packages/visual/src/copy.ts')).not.toMatch(/holds exactly 4 bonds/);
+  });
+
   it('[AG-026] the isotope chamber labels the collapse rule DECAY_RULE, not HALF-LIFE', () => {
     expect(read('packages/visual/src/hud/panels.tsx')).not.toMatch(/label="HALF-LIFE"/);
     expect(read('packages/visual/src/copy.ts')).not.toMatch(/'HALF-LIFE'/);
@@ -166,6 +180,17 @@ describe('fee split: native pump.fun fee sharing, 50/30/20', () => {
     const copyUnconditional = /Carbon never holds your 50%/.test(how) && !/CARBON_FEE_MODE|wallet mode|fallback/i.test(how.slice(how.indexOf('## Money')));
     const walletsPageStatic = /Native pump\.fun fee sharing: the address is the coin/.test(read('apps/web/src/components/WalletsView.tsx'));
     expect(walletModeExists && (copyUnconditional || walletsPageStatic)).toBe(false);
+  });
+
+  // Posts autopilot is a real feature (off by default; apps/web /api/autopilot, core approvals),
+  // so "you approve every post" is false for a launcher who turned it on. how.md's own "What
+  // Carbon never does" gets it right ("without your approval or the posts autopilot you turned
+  // on"); the hero manifesto and how.md's intro state it unconditionally.
+  it.fails('[AG-029] no copy says the user approves EVERY post without the posts-autopilot exception', () => {
+    const hero = read('packages/visual/src/copy.ts');
+    expect(hero).not.toMatch(/You approve every launch and post\./);
+    const intro = how.slice(0, how.indexOf('## The six protons'));
+    expect(intro).not.toMatch(/You approve the launch and every post\./);
   });
 });
 

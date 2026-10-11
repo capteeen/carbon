@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:3201/",
+  "viewport": "390x844@1x",
+  "replay": false,
+  "sync": {
+    "forward": {
+      "agree": "201/201",
+      "failures": []
+    },
+    "backward": {
+      "agree": "201/201",
+      "failures": []
+    },
+    "boundaries": {
+      "agree": "71/71",
+      "failures": []
+    },
+    "randomJumps": {
+      "agree": "150/150",
+      "failures": []
+    },
+    "reducedMotion": {
+      "agree": "102/102",
+      "failures": []
+    }
+  },
+  "jumpRecoveryFrames": {
+    "median": 1,
+    "p90": 1,
+    "max": 1
+  },
+  "continuousSweep": {
+    "frames": 345,
+    "mismatch3d": 0,
+    "mismatchHud": 0
+  },
+  "pageErrors": []
+}
