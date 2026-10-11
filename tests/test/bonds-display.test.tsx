@@ -236,3 +236,73 @@ describe('the launch HUD readouts agree with the bonds shown next to them', () =
     expect(/PROTON_01_SCOUT[\s\S]*?BONDS (\d+\/4|--\.--)/.exec(html)?.[1]).toBe('--.--');
   });
 });
+
+// ───────────────────────── AG-032: display time is server time, not the device clock ─────────────────────────
+
+describe('[AG-032] display bonds use server time even when the device clock is skewed', () => {
+  function log(): CarbonEvent[] {
+    let seq = 0;
+    const mk = (ts: number, kind: CarbonEvent['kind'], actor: CarbonEvent['actor'], payload: unknown): CarbonEvent =>
+      ({ id: (++seq).toString(16).padStart(64, 'd'), seq, launchId: 'S', ts, kind, actor, payload, signer: '', sig: '' }) as CarbonEvent;
+    return [
+      mk(1_000_000, 'launch.created', 'user', { line: 'x', isotope: 'C-12', shape: 'ring', heavyAgent: null, launcherWallet: 'w', xConnected: false }),
+      mk(1_001_000, 'handoff', 'scout', { from: 'scout', to: 'forge', topic: 't', summary: 's' }),
+    ];
+  }
+
+  it('a device 90 s fast (or 90 s slow) shows exactly the bonds of the log at true server time', async () => {
+    const { ServerClock } = await import('@/lib/server-clock');
+    const events = log();
+    const handoffTs = events[1]!.ts;
+    for (const skew of [90_000, -90_000]) {
+      const clock = new ServerClock();
+      const serverAtSample = handoffTs + 1_000;
+      clock.observe(serverAtSample, serverAtSample + skew, 'stream'); // the SSE server-time sample
+      for (const trueElapsed of [2_000, 30_000, 59_000, 61_000, 120_000]) {
+        const trueNow = handoffTs + trueElapsed;
+        const deviceNow = trueNow + skew;
+        const shown = clock.now(deviceNow);
+        expect(shown).toBe(trueNow);
+        expect(displayBonds(events, shown), `skew ${skew} at +${trueElapsed}`).toEqual(computeBonds(events, trueNow));
+      }
+      // and the skewed device clock alone would have shown something else
+      // (fast: the bond vanishes at true +30 s; slow: it is still shown at true +61 s)
+      const at = handoffTs + (skew > 0 ? 30_000 : 61_000);
+      expect(displayBonds(events, at + skew)).not.toEqual(computeBonds(events, at));
+    }
+  });
+
+  it('the stream sample wins over the coarse render-time sample', async () => {
+    const { ServerClock } = await import('@/lib/server-clock');
+    const clock = new ServerClock();
+    clock.observe(1_000, 91_500, 'render'); // hydration: renderedAt vs a fast device clock
+    expect(clock.now(91_500)).toBe(1_000);
+    clock.observe(2_000, 92_000, 'stream');
+    clock.observe(1_000, 99_000, 'render'); // a later component's stale renderedAt is ignored
+    expect(clock.now(92_000)).toBe(2_000);
+  });
+
+  it('the web SSE route sends the server clock (event server-time, no id) and the client applies it in useNow', async () => {
+    const { sseStream, SERVER_TIME_EVENT } = await import('@carbon/core/sse');
+    const web = await import('@/lib/server-clock');
+    expect(web.SERVER_TIME_EVENT).toBe(SERVER_TIME_EVENT);
+    const fakeBus = { subscribe: () => () => undefined } as unknown as Parameters<typeof sseStream>[0];
+    const ac = new AbortController();
+    const reader = sseStream(fakeBus, '*', null, { signal: ac.signal, serverTime: true, now: () => 1_234_567 }).getReader();
+    let text = '';
+    const dec = new TextDecoder();
+    while (!text.includes('server-time')) {
+      const r = await reader.read();
+      if (r.done) break;
+      text += dec.decode(r.value, { stream: true });
+    }
+    ac.abort();
+    const frame = text.split('\n\n').find((f) => f.includes('server-time'))!;
+    expect(frame).toBe(`event: ${SERVER_TIME_EVENT}\ndata: 1234567`);
+    expect(src('apps/web/src/app/api/events/[launchId]/route.ts')).toMatch(/serverTime: true/);
+    const hook = src('apps/web/src/lib/use-events.ts');
+    expect(hook).toMatch(/addEventListener\(SERVER_TIME_EVENT/);
+    expect(hook).toMatch(/setNow\(serverClock\.now\(Date\.now\(\)\)\)/);
+    expect(hook).not.toMatch(/setNow\(Date\.now\(\)\)/);
+  });
+});

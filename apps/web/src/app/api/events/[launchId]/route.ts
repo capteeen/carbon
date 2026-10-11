@@ -19,6 +19,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ launchId: strin
   const after = new URL(req.url).searchParams.get('after');
   const lastEventId = req.headers.get('last-event-id') ?? after;
   const { bus } = await getCore();
-  const stream = sseStream(bus, launchId, lastEventId, { signal: req.signal });
+  const stream = sseStream(bus, launchId, lastEventId, { signal: req.signal, serverTime: true });
   return new Response(stream, { headers: SSE_HEADERS });
 }

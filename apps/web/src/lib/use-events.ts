@@ -7,6 +7,7 @@
 import type { CarbonEvent, EventKind } from '@carbon/core/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { mergeEvents } from './launch-view';
+import { SERVER_TIME_EVENT, serverClock } from './server-clock';
 
 /** Every EventKind (the SSE `event:` field). Compile-time checked to be complete. */
 export const EVENT_KINDS = [
@@ -73,6 +74,8 @@ export function useEventStream(
       });
     };
     for (const k of EVENT_KINDS) es.addEventListener(k, onEvent as EventListener);
+    const onServerTime = (m: MessageEvent<string>) => serverClock.observe(Number(m.data), Date.now(), 'stream');
+    es.addEventListener(SERVER_TIME_EVENT, onServerTime as EventListener);
     es.onopen = () => setStatus('live');
     es.onerror = () => setStatus('reconnecting');
     return () => es.close();
@@ -86,13 +89,20 @@ export function useEventStream(
  * `initial` is the server's render time (a page prop), so the server render and the
  * first client render agree (no hydration mismatch) AND are evaluated at a real
  * display time; without it the first render returns null.
+ *
+ * The value is SERVER time: the browser clock corrected by the offset observed at
+ * hydration (from `initial`) and on the SSE stream (`server-time`), so a skewed
+ * device clock does not change which bonds are shown (AG-032).
  */
 export function useNow(ms = 1000, active = true, initial: number | null = null): number | null {
   const [now, setNow] = useState<number | null>(initial);
+  const initialRef = useRef(initial);
   useEffect(() => {
-    setNow(Date.now());
+    if (initialRef.current !== null) serverClock.observe(initialRef.current, Date.now(), 'render');
+    const tick = () => setNow(serverClock.now(Date.now()));
+    tick();
     if (!active) return;
-    const t = setInterval(() => setNow(Date.now()), ms);
+    const t = setInterval(tick, ms);
     return () => clearInterval(t);
   }, [ms, active]);
   return now;

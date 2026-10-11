@@ -20,8 +20,15 @@ export const SSE_HEADERS: Record<string, string> = {
 };
 
 export interface SseOptions {
-  /** Comment heartbeat interval, ms. Default 15000. */
+  /** Heartbeat interval, ms. Default 15000. */
   heartbeatMs?: number;
+  /**
+   * Send the server clock: a `server-time` message on connect and as every heartbeat
+   * (instead of a comment), so browsers can display on server time (AG-032). Default off.
+   */
+  serverTime?: boolean;
+  /** Server clock (ms). Default Date.now. */
+  now?: () => number;
   /** Client reconnect delay sent as `retry:`. Default 3000. */
   retryMs?: number;
   signal?: AbortSignal;
@@ -30,6 +37,17 @@ export interface SseOptions {
 export function formatSse(e: CarbonEvent): string {
   // JSON.stringify never emits raw newlines, so one data line is always valid.
   return `id: ${e.seq}\nevent: ${e.kind}\ndata: ${JSON.stringify(e)}\n\n`;
+}
+
+/** SSE event name for the server's clock reading (no `id:`, so Last-Event-ID is untouched). */
+export const SERVER_TIME_EVENT = 'server-time';
+
+/**
+ * The server's Date.now(), so browsers evaluate the 60 s bond window on server time
+ * rather than their own (possibly skewed) clock (AG-032).
+ */
+export function formatServerTime(nowMs: number): string {
+  return `event: ${SERVER_TIME_EVENT}\ndata: ${Math.trunc(nowMs)}\n\n`;
 }
 
 /** Parses Last-Event-ID (a seq). Anything else means "from now". */
@@ -70,9 +88,12 @@ export function sseStream(
           stop();
         }
       };
+      const now = opts.now ?? Date.now;
       push(`retry: ${opts.retryMs ?? 3000}\n\n`);
+      const beat = opts.serverTime ? () => formatServerTime(now()) : () => ': keep-alive\n\n';
+      if (opts.serverTime) push(beat());
       unsubscribe = bus.subscribe(launchId, (e) => push(formatSse(e)), afterSeq === undefined ? {} : { afterSeq });
-      heartbeat = setInterval(() => push(': keep-alive\n\n'), opts.heartbeatMs ?? 15_000);
+      heartbeat = setInterval(() => push(beat()), opts.heartbeatMs ?? 15_000);
       if (opts.signal) {
         if (opts.signal.aborted) {
           stop();
