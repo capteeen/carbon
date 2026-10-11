@@ -8,15 +8,31 @@
   "exports": {
     ".": "./src/index.ts",
     "./contracts": "./src/contracts.ts",
-    "./ports": "./src/ports.ts"
+    "./ports": "./src/ports.ts",
+    "./bonds": "./src/bonds.ts",
+    "./molecule": "./src/molecule.ts",
+    "./render-config": "./src/render-config.ts",
+    "./crypto": "./src/crypto.ts",
+    "./sse": "./src/bus/sse.ts",
+    "./llm": "./src/llm/index.ts"
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "migrate": "tsx src/bus/migrate-cli.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.128.0",
+    "@google/genai": "2.24.0",
+    "@noble/curves": "2.3.0",
+    "@noble/hashes": "2.3.0",
+    "ioredis": "5.11.1",
+    "pg": "8.23.0"
   },
   "devDependencies": {
+    "@types/node": "22.18.8",
+    "@types/pg": "8.23.1",
     "typescript": "5.9.3",
-    "vitest": "3.2.4",
-    "@types/node": "22.18.8"
+    "vitest": "3.2.4"
   }
 }
