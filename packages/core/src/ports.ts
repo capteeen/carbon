@@ -154,9 +154,8 @@ export interface ChainClient {
   runSplit(launchId: string, claimId: string): Promise<SplitReceipt>;
   /** lamportsIn = what the trade actually spent, from the on-chain event. */
   buyCarbon(lamports: bigint, splitId: string): Promise<{ txSig: string; carbonOut: bigint; lamportsIn?: bigint }>;
-  /** Ledger reconciliation (see @carbon/agents ChainLedger): confirmed claims, third-party distributions, buyback acks. */
-  confirmedClaims?(launchId: string): Promise<unknown[]>;
-  scanForeignDistributions?(launchId: string): Promise<unknown[]>;
+  // Ledger reconciliation methods (confirmedClaims, scanForeignDistributions, recordedBuyback, ackBuyback)
+  // are typed in @carbon/agents as ChainLedger and implemented by @carbon/solana.
   lastTradeAt(ca: string): Promise<number | null>;
 }
 
