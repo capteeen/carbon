@@ -7,6 +7,16 @@ import { ISOTOPES, type CarbonEvent, type EventKind, type EventPayloads } from '
 import type { LaunchSummary, Network, ReceiptRow, ReplayData, WalletRow } from '@/lib/types';
 import { getCore } from './core';
 
+/** The core, or null when this deployment has no event log (honest empty reads). */
+async function coreOrNull(): Promise<Awaited<ReturnType<typeof getCore>> | null> {
+  try {
+    return await getCore();
+  } catch (err) {
+    if (err instanceof Error && err.name === 'LogNotConfiguredError') return null;
+    throw err;
+  }
+}
+
 const SUMMARY_KINDS: EventKind[] = ['launch.created', 'forge.draft', 'sentinel.score', 'launch.deployed', 'holders.snapshot', 'decay.collapsed'];
 
 /** Builds summaries from the summary-relevant events of any number of launches. */
@@ -59,12 +69,16 @@ export function summarize(events: readonly CarbonEvent[]): LaunchSummary[] {
 
 /** Every deployed launch (the graphene sheet). */
 export async function listLiveLaunches(): Promise<LaunchSummary[]> {
-  const { bus } = await getCore();
+  const core = await coreOrNull();
+  if (!core) return [];
+  const { bus } = core;
   return summarize(await bus.list('*', { kinds: SUMMARY_KINDS })).filter((s) => s.ca !== null);
 }
 
 export async function findLaunchIdByCa(ca: string): Promise<string | null> {
-  const { bus } = await getCore();
+  const core = await coreOrNull();
+  if (!core) return null;
+  const { bus } = core;
   const r = await bus.pool.query<{ launch_id: string }>(
     "SELECT launch_id FROM events WHERE kind = 'launch.deployed' AND payload->>'ca' = $1 ORDER BY seq ASC LIMIT 1",
     [ca],
@@ -74,7 +88,9 @@ export async function findLaunchIdByCa(ca: string): Promise<string | null> {
 
 /** The launch an approval card belongs to (from its approval.requested event). */
 export async function approvalLaunchId(approvalId: string): Promise<string | null> {
-  const { bus } = await getCore();
+  const core = await coreOrNull();
+  if (!core) return null;
+  const { bus } = core;
   const r = await bus.pool.query<{ launch_id: string }>(
     "SELECT launch_id FROM events WHERE kind = 'approval.requested' AND payload->>'approvalId' = $1 ORDER BY seq ASC LIMIT 1",
     [approvalId],
@@ -83,7 +99,9 @@ export async function approvalLaunchId(approvalId: string): Promise<string | nul
 }
 
 export async function getLaunchEvents(launchId: string): Promise<CarbonEvent[]> {
-  const { bus } = await getCore();
+  const core = await coreOrNull();
+  if (!core) return [];
+  const { bus } = core;
   return bus.list(launchId);
 }
 
@@ -96,7 +114,9 @@ export async function getLaunchByCa(ca: string): Promise<{ summary: LaunchSummar
 }
 
 export async function launchCreated(launchId: string): Promise<CarbonEvent<'launch.created'> | null> {
-  const { bus } = await getCore();
+  const core = await coreOrNull();
+  if (!core) return null;
+  const { bus } = core;
   const [e] = await bus.list(launchId, { kinds: ['launch.created'], limit: 1 });
   return (e as CarbonEvent<'launch.created'> | undefined) ?? null;
 }
@@ -118,7 +138,9 @@ function launchIndex(events: readonly CarbonEvent[]): Map<string, { ca: string |
 
 /** Every split.receipt, newest first. Superseded receipts for the same split are kept: the log is the record. */
 export async function listReceipts(): Promise<ReceiptRow[]> {
-  const { bus } = await getCore();
+  const core = await coreOrNull();
+  if (!core) return [];
+  const { bus } = core;
   const evs = await bus.list('*', { kinds: ['split.receipt', 'launch.deployed', 'forge.draft'] });
   const idx = launchIndex(evs);
   return evs
@@ -129,7 +151,9 @@ export async function listReceipts(): Promise<ReceiptRow[]> {
 
 /** Every per-launch public fee address (wallet.created; launch.deployed's creatorWallet when no wallet.created exists). */
 export async function listLaunchWallets(): Promise<WalletRow[]> {
-  const { bus } = await getCore();
+  const core = await coreOrNull();
+  if (!core) return [];
+  const { bus } = core;
   const evs = await bus.list('*', { kinds: ['wallet.created', 'launch.deployed', 'forge.draft'] });
   const idx = launchIndex(evs);
   const rows = new Map<string, WalletRow>();
@@ -150,7 +174,9 @@ export async function listLaunchWallets(): Promise<WalletRow[]> {
 
 /** The most recent deployed launch, for the chapter 08 replay. */
 export async function latestReplay(): Promise<ReplayData | null> {
-  const { bus } = await getCore();
+  const core = await coreOrNull();
+  if (!core) return null;
+  const { bus } = core;
   const r = await bus.pool.query<{ launch_id: string }>("SELECT launch_id FROM events WHERE kind = 'launch.deployed' ORDER BY seq DESC LIMIT 1");
   const launchId = r.rows[0]?.launch_id;
   if (!launchId) return null;
@@ -169,7 +195,9 @@ export async function latestReplay(): Promise<ReplayData | null> {
  * covers every event up to that window's lastSeq. null when nothing handed off.
  */
 export async function activeMolecule(): Promise<{ launchId: string; events: CarbonEvent[] } | null> {
-  const { bus } = await getCore();
+  const core = await coreOrNull();
+  if (!core) return null;
+  const { bus } = core;
   const r = await bus.pool.query<{ launch_id: string }>("SELECT launch_id FROM events WHERE kind = 'handoff' ORDER BY seq DESC LIMIT 1");
   const launchId = r.rows[0]?.launch_id;
   if (!launchId) return null;
@@ -178,7 +206,9 @@ export async function activeMolecule(): Promise<{ launchId: string; events: Carb
 
 /** The latest global events (thinking feed + receipts panels) and the resume point for SSE. */
 export async function recentGlobalEvents(limit = 60): Promise<{ events: CarbonEvent[]; lastSeq: number }> {
-  const { bus } = await getCore();
+  const core = await coreOrNull();
+  if (!core) return { events: [], lastSeq: 0 };
+  const { bus } = core;
   const lastSeq = await bus.maxSeq();
   const events = await bus.list('*', { afterSeq: Math.max(0, lastSeq - limit) });
   return { events, lastSeq };

@@ -63,6 +63,7 @@ export function handle(fn: () => Promise<Response>): Promise<Response> {
   return fn().catch((err: unknown) => {
     if (err instanceof HttpError) return json({ error: err.message }, err.status);
     const name = err instanceof Error ? err.name : 'Error';
+    if (name === 'LogNotConfiguredError') return json({ error: (err as Error).message }, 503);
     if (name === 'ApprovalError') return json({ error: (err as Error).message }, 409);
     // Unknown failures: no details leak to the client.
     console.error('[carbon/web] request failed:', name);

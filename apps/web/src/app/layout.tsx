@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Nunito, Space_Mono } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { Footer } from '@/components/Footer';
+import { logConfigured } from '@/server/log-config';
 import { Providers } from '@/components/Providers';
 import { SoundToggle } from '@/visual';
 import '@carbon/visual/styles.css';
@@ -32,6 +33,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="sound-corner">
             <SoundToggle className="sound-toggle-wrap" />
           </div>
+          {!logConfigured() && (
+            <p className="meta log-offline" data-testid="log-offline">
+              // LOG_OFFLINE · no event log is connected to this deployment yet, so live views are empty and launching is unavailable.
+            </p>
+          )}
           <Footer />
         </Providers>
       </body>

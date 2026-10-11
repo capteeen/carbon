@@ -18,7 +18,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ launchId: strin
   if (launchId !== '*' && !LAUNCH_ID_RE.test(launchId)) return new Response('bad launch id', { status: 400 });
   const after = new URL(req.url).searchParams.get('after');
   const lastEventId = req.headers.get('last-event-id') ?? after;
-  const { bus } = await getCore();
+  let bus;
+  try {
+    ({ bus } = await getCore());
+  } catch (err) {
+    // No event log on this deployment: 204 tells EventSource there is nothing to stream (and not to retry).
+    if (err instanceof Error && err.name === 'LogNotConfiguredError') return new Response(null, { status: 204 });
+    throw err;
+  }
   const stream = sseStream(bus, launchId, lastEventId, { signal: req.signal, serverTime: true });
   return new Response(stream, { headers: SSE_HEADERS });
 }
