@@ -15,6 +15,8 @@ import {
   type VersionedTransactionResponse,
 } from '@solana/web3.js';
 import bs58 from 'bs58';
+import { TransactionMessage } from '@solana/web3.js';
+import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import type { RpcLike } from '../../src/rpc.js';
 
 export interface TokenBal {
@@ -50,6 +52,9 @@ export class FakeChain {
   balances = new Map<string, bigint>();
   accounts = new Map<string, AccountInfo<Buffer>>();
   landed = new Map<string, Landed>();
+  /** Token TransferChecked instructions applied (airdrops). */
+  tokenTransfers: { mint: string; dst: string; amount: bigint; sig: string }[] = [];
+  lookupTable: import('@solana/web3.js').AddressLookupTableAccount | null = null;
   /** Every system transfer applied, in order. */
   transfers: { from: string; to: string; lamports: bigint; sig: string }[] = [];
   sends = 0;
@@ -73,7 +78,7 @@ export class FakeChain {
     const sig = bs58.encode(tx.signatures[0]!);
     if (this.landed.has(sig)) return; // the same signature lands once
     const msg = tx.message;
-    const keys = msg.staticAccountKeys;
+    const keys = [...msg.staticAccountKeys, ...(this.lookupTable && msg.addressTableLookups.length ? msg.addressTableLookups.flatMap((l) => [...l.writableIndexes, ...l.readonlyIndexes].map((i) => this.lookupTable!.state.addresses[i]!)) : [])];
     const ixs: TransactionInstruction[] = msg.compiledInstructions.map((ci) => ({
       programId: keys[ci.programIdIndex]!,
       keys: ci.accountKeyIndexes.map((i) => ({ pubkey: keys[i]!, isSigner: msg.isAccountSigner(i), isWritable: msg.isAccountWritable(i) })),
@@ -93,11 +98,35 @@ export class FakeChain {
           this.balances.set(to.toBase58(), this.balance(to) + lamports);
           this.transfers.push({ from: from.toBase58(), to: to.toBase58(), lamports, sig });
         }
+        if (ix.programId.equals(TOKEN_2022_PROGRAM_ID) && ix.data[0] === 12) {
+          this.tokenTransfers.push({ mint: ix.keys[1]!.pubkey.toBase58(), dst: ix.keys[2]!.pubkey.toBase58(), amount: ix.data.readBigUInt64LE(1), sig });
+        }
       }
     }
     const post = keys.map((k) => Number(this.balance(k)));
     this.slot += 1;
     this.landed.set(sig, { sig, tx, slot: this.slot, blockTime: this.time, keys, pre, post, effect });
+  }
+
+  /** Record a transaction that some other party landed (a trade, a distribution) with the given effect. */
+  synthetic(keys: PublicKey[], effect: Effect, opts: { blockTime?: number; pre?: bigint[]; post?: bigint[] } = {}): string {
+    const msg = new TransactionMessage({
+      payerKey: keys[0]!,
+      recentBlockhash: bs58.encode(Buffer.alloc(32, 7)),
+      instructions: [{ programId: SystemProgram.programId, keys: keys.slice(1).map((k) => ({ pubkey: k, isSigner: false, isWritable: true })), data: Buffer.alloc(0) }],
+    }).compileToV0Message();
+    const tx = new VersionedTransaction(msg);
+    const sigBytes = new Uint8Array(64);
+    crypto.getRandomValues(sigBytes);
+    tx.signatures[0] = sigBytes;
+    const sig = bs58.encode(sigBytes);
+    const order = msg.staticAccountKeys;
+    const idx = (k: PublicKey) => keys.findIndex((x) => x.equals(k));
+    const pre = order.map((k) => Number(opts.pre?.[idx(k)] ?? 0n));
+    const post = order.map((k) => Number(opts.post?.[idx(k)] ?? 0n));
+    this.slot += 1;
+    this.landed.set(sig, { sig, tx, slot: this.slot, blockTime: opts.blockTime ?? this.time, keys: order, pre, post, effect });
+    return sig;
   }
 
   /** Advance block height past every outstanding blockhash. */
@@ -183,7 +212,7 @@ export class FakeChain {
         return { context: { slot: self.slot }, value: self.programAccounts.get(program.toBase58()) ?? [] };
       },
       async getAddressLookupTable() {
-        return { context: { slot: self.slot }, value: null };
+        return { context: { slot: self.slot }, value: self.lookupTable };
       },
       async simulateTransaction() {
         throw new Error('not simulated in tests');

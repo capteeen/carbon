@@ -114,7 +114,7 @@ describe('wallet-mode split ledger (real Postgres)', () => {
     const r = await makeClient({ env, rpc: chain.rpc(), db }).runSplit(launchId, claimId);
     expectPaidExactlyOnce();
     const attempts = await db.query(`SELECT attempts FROM split_ledger WHERE claim_id=$1 AND leg='launcher'`, [claimId]);
-    expect(attempts.rows[0].attempts).toBe(2);
+    expect(attempts.rows[0]!.attempts).toBe(2);
     expect(r.legs[0]!.status).toBe('confirmed');
   });
 
