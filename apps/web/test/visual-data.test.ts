@@ -1,7 +1,9 @@
 /** Adapters from the web read model to @carbon/visual props: real data in, empty states otherwise. */
 import { describe, expect, it } from 'vitest';
 import { deriveLaunchView } from '@/lib/launch-view';
-import { liveFromEvents, receiptsFromEvents, toVisualDecay, toVisualLaunch, toVisualLaunches, toVisualReplay } from '@/lib/visual-data';
+import { BOND_WINDOW_MS } from '@carbon/core/contracts';
+import { computeBonds } from '@carbon/core/bonds';
+import { foldIntoLogs, liveFromLogs, receiptsFromEvents, toVisualDecay, toVisualLaunch, toVisualLaunches, toVisualReplay } from '@/lib/visual-data';
 import { summarize } from '@/server/readmodel';
 import { ev } from './helpers';
 
@@ -15,7 +17,7 @@ function launchLog(id: string) {
 
 describe('visual-data adapters', () => {
   it('empty log → no live stats, no replay, no crystals, no receipts', () => {
-    expect(liveFromEvents([], null)).toBeNull();
+    expect(liveFromLogs([], new Map(), 0)).toBeNull();
     expect(toVisualReplay(null)).toBeNull();
     expect(toVisualLaunches([])).toEqual([]);
     expect(receiptsFromEvents([])).toEqual([]);
@@ -40,11 +42,32 @@ describe('visual-data adapters', () => {
     expect(r.bondsAtDeploy?.[0]?.lastHash).toBe(log[1]!.id);
   });
 
-  it('live stats come from logged hand-offs only', () => {
+  it('live stats come from logged hand-offs only; BONDS from the active launch full log at display time', () => {
     const log = launchLog('c');
-    const live = liveFromEvents(log, log[3]!.ts)!;
+    const live = liveFromLogs(log, new Map([['c', log]]), log[3]!.ts)!;
     expect(live.recentHandoffs.map((f) => f.hash)).toEqual([log[1]!.id]);
-    expect(live.agents.scout!.bondOrders).toBeGreaterThan(0);
+    expect(live.molecule).toEqual({ launchId: 'c', ticker: 'TKR' });
+    expect(live.agents.scout!.bondOrders).toBe(computeBonds(log, log[3]!.ts)[0]!.order);
+    // 2 minutes later with no new event: the bond has aged out of the 60 s window
+    const later = liveFromLogs(log, new Map([['c', log]]), log[3]!.ts + 2 * BOND_WINDOW_MS)!;
+    expect(later.agents.scout!.bondOrders).toBe(0);
+  });
+
+  it('BONDS is unknown (null) until the active launch full log is loaded; never counted from the window', () => {
+    const log = launchLog('e');
+    const live = liveFromLogs(log.slice(1), new Map(), log[3]!.ts)!;
+    expect(live.molecule?.launchId).toBe('e');
+    expect(live.agents.scout!.bondOrders).toBeNull();
+  });
+
+  it('foldIntoLogs extends only loaded launch logs with newer streamed events', () => {
+    const a = launchLog('f');
+    const b = launchLog('g');
+    const logs = new Map([['f', a.slice(0, 2)]]);
+    const next = foldIntoLogs(logs, [...a, ...b]);
+    expect(next.get('f')!.map((e) => e.id)).toEqual(a.map((e) => e.id));
+    expect(next.has('g')).toBe(false);
+    expect(foldIntoLogs(next, a)).toBe(next);
   });
 
   it('decay: none for stable rules, null for the quiet rule until it collapses, clock from decay.started', () => {

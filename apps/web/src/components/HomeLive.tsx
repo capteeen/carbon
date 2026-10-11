@@ -2,24 +2,74 @@
 import { EMPTY_READOUT, protonLabel, type AgentId, type CarbonEvent } from '@carbon/core/contracts';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { shortId } from '@/lib/launch-view';
 import type { LaunchSummary, ReplayData } from '@/lib/types';
 import { useEventStream, useNow } from '@/lib/use-events';
-import { feedFromEvents, liveFromEvents, receiptsFromEvents, toVisualLaunches, toVisualReplay } from '@/lib/visual-data';
+import {
+  feedFromEvents,
+  foldIntoLogs,
+  lastHandoffLaunch,
+  liveFromLogs,
+  receiptsFromEvents,
+  toVisualLaunches,
+  toVisualReplay,
+} from '@/lib/visual-data';
 import { CarbonStory } from '@/visual';
 
 const REFRESH_KINDS = new Set(['launch.deployed', 'sentinel.score', 'holders.snapshot', 'decay.collapsed']);
+/** Complete logs kept in memory: the active molecule plus a few recent ones. */
+const MAX_LOGS = 4;
 
-export function HomeLive(props: { launches: LaunchSummary[]; replay: ReplayData | null; live: { events: CarbonEvent[]; lastSeq: number } }) {
+export interface HomeLiveProps {
+  launches: LaunchSummary[];
+  replay: ReplayData | null;
+  /** The latest global events (feed, receipts, LOAD) and the SSE resume point. */
+  live: { events: CarbonEvent[]; lastSeq: number };
+  /** The launch that most recently handed off, with its COMPLETE log (BONDS readout). */
+  molecule: { launchId: string; events: CarbonEvent[] } | null;
+  /** Server render time: the display time of the first render. */
+  renderedAt: number;
+}
+
+export function HomeLive(props: HomeLiveProps) {
   const router = useRouter();
   const { events } = useEventStream('*', props.live.events, props.live.lastSeq, { max: 200 });
   const [launches, setLaunches] = useState(props.launches);
   const [agent, setAgent] = useState<AgentId | null>(null);
   const last = events[events.length - 1];
+
+  // Complete per-launch logs: seeded with the server's full log of the active
+  // molecule, extended by the global stream, and fetched in full for a launch
+  // that starts handing off while the page is open.
+  const [logs, setLogs] = useState<ReadonlyMap<string, CarbonEvent[]>>(
+    () => new Map(props.molecule ? [[props.molecule.launchId, props.molecule.events]] : []),
+  );
+  useEffect(() => setLogs((prev) => foldIntoLogs(prev, events)), [events]);
+  const fetching = useRef(new Set<string>());
+  const active = lastHandoffLaunch(events, ...logs.values());
+  useEffect(() => {
+    if (!active || logs.has(active) || fetching.current.has(active)) return;
+    fetching.current.add(active);
+    fetch(`/api/launch/${encodeURIComponent(active)}/events`, { cache: 'no-store' })
+      .then((r) => (r.ok ? (r.json() as Promise<{ events: CarbonEvent[] }>) : null))
+      .then((j) => {
+        if (!j) return;
+        setLogs((prev) => {
+          const next = new Map(prev);
+          next.set(active, j.events);
+          while (next.size > MAX_LOGS) next.delete(next.keys().next().value!);
+          return foldIntoLogs(next, events);
+        });
+      })
+      .catch(() => undefined)
+      .finally(() => fetching.current.delete(active));
+  }, [active, logs, events]);
+
   // Visual props, all derived from the real log (empty log → empty states).
-  const now = useNow(5000);
-  const live = useMemo(() => liveFromEvents(events, now), [events, now]);
+  // Display time ticks every second so bonds age out of the 60 s window.
+  const now = useNow(1000, true, props.renderedAt) ?? props.renderedAt;
+  const live = useMemo(() => liveFromLogs(events, logs, now), [events, logs, now]);
   const replay = useMemo(() => toVisualReplay(props.replay), [props.replay]);
   const crystals = useMemo(() => toVisualLaunches(launches), [launches]);
   const feed = useMemo(() => feedFromEvents(events), [events]);

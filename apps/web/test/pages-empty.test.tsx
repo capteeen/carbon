@@ -24,6 +24,7 @@ vi.mock('@/server/readmodel', () => ({
   listLiveLaunches: async () => [],
   latestReplay: async () => null,
   recentGlobalEvents: async () => ({ events: [], lastSeq: 0 }),
+  activeMolecule: async () => null,
   listReceipts: async () => [],
   listLaunchWallets: async () => [],
   getLaunchByCa: async () => null,
@@ -94,7 +95,7 @@ describe('pages with an empty log', () => {
     const created = ev('L', 'launch.created', { line: 'a line', isotope: 'C-14', shape: 'ring', heavyAgent: null, launcherWallet: '11111111111111111111111111111111', xConnected: false }, 'user');
     render(
       <Providers>
-        <LaunchLive launchId="L" initial={[created]} lastSeq={created.seq} />
+        <LaunchLive launchId="L" initial={[created]} lastSeq={created.seq} renderedAt={created.ts} />
       </Providers>,
     );
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(EMPTY_READOUT);

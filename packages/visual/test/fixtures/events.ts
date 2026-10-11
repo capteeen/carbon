@@ -123,6 +123,7 @@ export function fixtureLive(): LiveStats {
   const now = T0 + 120_000;
   return {
     asOf: now,
+    molecule: { launchId: 'fixture-launch', ticker: 'FIXT' },
     agents: Object.fromEntries(AGENT_IDS.map((a, i) => [a, { bondOrders: (i % 4) + 1, load: 10 + i * 3.25, loadDelta: i - 2.5 }])),
     recentHandoffs: [
       { pairKey: pairKey('scout', 'forge'), hash: fakeId('h1'), at: now - 3000 },

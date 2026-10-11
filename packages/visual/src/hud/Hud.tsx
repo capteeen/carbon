@@ -27,8 +27,12 @@ export function HudLabel({ children, leaderRef, testId }: { children: string; le
   );
 }
 
-export function HudMeta({ children }: { children: string }) {
-  return <div className="carbon-hud__meta">{children.startsWith('//') ? children : meta(children)}</div>;
+export function HudMeta({ children, testId }: { children: string; testId?: string }) {
+  return (
+    <div className="carbon-hud__meta" data-testid={testId}>
+      {children.startsWith('//') ? children : meta(children)}
+    </div>
+  );
 }
 
 export function HudSection({ children }: { children: string }) {

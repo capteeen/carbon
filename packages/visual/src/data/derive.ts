@@ -18,7 +18,7 @@ import {
   type PairKey,
 } from '@carbon/core/contracts';
 import { isEventId } from '../hud/format.js';
-import type { AgentLiveStats, BondFlash, LaunchReplay, LaunchSummary, LiveStats, ThinkingItem } from '../types.js';
+import type { AgentLiveStats, BondFlash, LaunchReplay, LaunchSummary, LiveMolecule, LiveStats, ThinkingItem } from '../types.js';
 
 function isKind<K extends CarbonEvent['kind']>(e: CarbonEvent, k: K): e is CarbonEvent<K> {
   return e.kind === k;
@@ -73,14 +73,18 @@ export function pairAgents(k: PairKey): [AgentId, AgentId] {
  * Live HUD stats from real events and core's bonds.
  * load = hand-offs per minute involving the agent in the last BOND_WINDOW_MS,
  * loadDelta = load minus the previous window's load.
+ * bonds = core's Bond[] for ONE molecule (`molecule`), recomputed by the caller
+ * over that launch's full log at display time; null = not known (→ "--.--").
  * Returns null when there is nothing real to show.
  */
 export function deriveLive(
   events: readonly CarbonEvent[] | null | undefined,
   bonds: readonly Bond[] | null | undefined,
   now?: number,
+  molecule?: LiveMolecule | null,
 ): LiveStats | null {
   const evs = realEvents(events);
+  const known = bonds !== null;
   const bs = validBonds(bonds);
   const handoffs = evs.filter((e): e is CarbonEvent<'handoff'> => isKind(e, 'handoff'));
   if (handoffs.length === 0 && bs.length === 0) return null;
@@ -101,10 +105,10 @@ export function deriveLive(
       const [x, y] = pairAgents(b.pair);
       if (x === a || y === a) orders += b.order;
     }
-    agents[a] = { bondOrders: orders, load: cur * perMin, loadDelta: (cur - prev) * perMin };
+    agents[a] = { bondOrders: known ? orders : null, load: cur * perMin, loadDelta: (cur - prev) * perMin };
   }
   const recentHandoffs = flashesFromEvents(handoffs).slice(-12);
-  return { asOf: t, agents, recentHandoffs };
+  return { asOf: t, molecule: molecule ?? null, agents, recentHandoffs };
 }
 
 /** Builds the chapter 08 replay from a launch's full event log, or null if it never deployed. */

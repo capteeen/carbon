@@ -8,10 +8,11 @@ import { toVisualDaughter, toVisualDecay, toVisualLaunch } from '@/lib/visual-da
 import { useEventStream, useNow } from '@/lib/use-events';
 import { EmbedPlayer } from '@/visual';
 
-export function EmbedLive({ launch, initial, lastSeq, site }: { launch: LaunchSummary; initial: CarbonEvent[]; lastSeq: number; site: string }) {
+/** Display bonds: core's computeBonds over the full log at display time (ticks every second; first render at the server's renderedAt). */
+export function EmbedLive({ launch, initial, lastSeq, site, renderedAt }: { launch: LaunchSummary; initial: CarbonEvent[]; lastSeq: number; site: string; renderedAt: number }) {
   const { events } = useEventStream(launch.launchId, initial, lastSeq);
-  const now = useNow(1000);
-  const bonds = useMemo(() => (now === null ? computeBonds(events) : computeBonds(events, Math.max(now, events[events.length - 1]?.ts ?? 0))), [events, now]);
+  const now = useNow(1000, true, renderedAt) ?? renderedAt;
+  const bonds = useMemo(() => computeBonds(events, Math.max(now, events[events.length - 1]?.ts ?? 0)), [events, now]);
   const v = useMemo(() => deriveLaunchView(launch.launchId, events), [launch.launchId, events]);
   const visual = useMemo(() => toVisualLaunch(launch), [launch]);
   return (

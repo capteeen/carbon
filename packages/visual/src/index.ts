@@ -44,7 +44,7 @@ export {
   realEvents,
 } from './data/derive.js';
 export { gaugeSegments, sentinelPhase } from './data/sentinel.js';
-export type { AgentLiveStats, BondFlash, DaughterView, DecayView, LaunchReplay, LaunchSummary, LiveStats, ReceiptItem, ThinkingItem } from './types.js';
+export type { AgentLiveStats, BondFlash, DaughterView, DecayView, LaunchReplay, LaunchSummary, LiveMolecule, LiveStats, ReceiptItem, ThinkingItem } from './types.js';
 
 // tokens + copy
 export { PALETTE, BLOCK_SIGNAL, FONTS, CSS_VARS, type PaletteKey } from './tokens.js';

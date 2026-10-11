@@ -162,6 +162,20 @@ export async function latestReplay(): Promise<ReplayData | null> {
   return { launchId, ca: dep.payload.ca, ticker, date: new Date(dep.ts).toISOString().slice(0, 10), events: events.filter((e) => e.seq <= dep.seq) };
 }
 
+/**
+ * The molecule the home BONDS readout shows: the launch with the most recent
+ * hand-off, with its COMPLETE log (bonds are recomputed over the full log,
+ * never over the global window). Call after recentGlobalEvents() so the log
+ * covers every event up to that window's lastSeq. null when nothing handed off.
+ */
+export async function activeMolecule(): Promise<{ launchId: string; events: CarbonEvent[] } | null> {
+  const { bus } = await getCore();
+  const r = await bus.pool.query<{ launch_id: string }>("SELECT launch_id FROM events WHERE kind = 'handoff' ORDER BY seq DESC LIMIT 1");
+  const launchId = r.rows[0]?.launch_id;
+  if (!launchId) return null;
+  return { launchId, events: await bus.list(launchId) };
+}
+
 /** The latest global events (thinking feed + receipts panels) and the resume point for SSE. */
 export async function recentGlobalEvents(limit = 60): Promise<{ events: CarbonEvent[]; lastSeq: number }> {
   const { bus } = await getCore();

@@ -79,6 +79,16 @@ describe('story HUD with real-shaped data', () => {
     const s = live.agents.scout!;
     expect(chapterHtml(html, 3)).toContain(`BONDS ${s.bondOrders}/4`);
     expect(chapterHtml(html, 3)).toMatch(/LOAD \d\d\.\d\d [+-]\d\d\.\d\d/);
+    // the readout names the one molecule whose bonds it shows
+    expect(chapterHtml(html, 3)).toContain('bonds in $FIXT');
+  });
+
+  it('BONDS is "--.--" when no molecule full log backs it (never a count from a partial window)', () => {
+    const noMol = { ...live, molecule: null };
+    const h = renderToStaticMarkup(<StoryHud {...base} live={noMol} />);
+    expect(chapterHtml(h, 3)).toContain('BONDS --.--');
+    const unknown = { ...live, agents: Object.fromEntries(Object.entries(live.agents).map(([a, s]) => [a, { ...s!, bondOrders: null }])) };
+    expect(chapterHtml(renderToStaticMarkup(<StoryHud {...base} live={unknown} />), 3)).toContain('BONDS --.--');
   });
 
   it('chapter 08 is labelled "replaying $TICKER, <date>"', () => {

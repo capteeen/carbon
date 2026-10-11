@@ -13,5 +13,5 @@ export default async function EmbedPage({ params }: { params: Promise<{ ca: stri
   const found = await getLaunchByCa(ca);
   if (!found) notFound();
   const lastSeq = found.events.length ? found.events[found.events.length - 1]!.seq : 0;
-  return <EmbedLive launch={found.summary} initial={found.events} lastSeq={lastSeq} site={siteUrl()} />;
+  return <EmbedLive launch={found.summary} initial={found.events} lastSeq={lastSeq} site={siteUrl()} renderedAt={Date.now()} />;
 }
