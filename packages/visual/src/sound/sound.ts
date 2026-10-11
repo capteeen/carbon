@@ -4,6 +4,8 @@
  * tones (inharmonic bell partials). OFF by default; the AudioContext is only
  * created by a user gesture (the toggle). Tones fire ONLY for real bond
  * events: `chime(hash)` requires a real event id and each id chimes once.
+ * The scroll story's own score (score.ts) uses other timbres, never this chime,
+ * so the crystalline tone always means a real hand-off.
  */
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { isEventId } from '../hud/format.js';
@@ -16,6 +18,7 @@ class CarbonSound {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private delay: DelayNode | null = null;
+  private wind: GainNode | null = null;
   private chimed = new Set<string>();
   private subs = new Set<() => void>();
   enabled = false;
@@ -87,6 +90,13 @@ class CarbonSound {
     this.ctx = ctx;
     this.master = master;
     this.delay = delay;
+    this.wind = windGain;
+  }
+
+  /** The live graph for the scroll score (null while sound is off or unavailable). */
+  graph(): { ctx: AudioContext; master: GainNode; delay: DelayNode; wind: GainNode } | null {
+    if (!this.enabled || !this.ctx || !this.master || !this.delay || !this.wind) return null;
+    return { ctx: this.ctx, master: this.master, delay: this.delay, wind: this.wind };
   }
 
   setEnabled(on: boolean): void {

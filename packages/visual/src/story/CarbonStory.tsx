@@ -18,6 +18,7 @@ import { typedCa } from '../hud/format.js';
 import { createDeviceQualityStore, type QualityStore } from '../quality/store.js';
 import { SoundToggle } from '../sound/SoundToggle.js';
 import { useBondChimes } from '../sound/sound.js';
+import { useScrollScore } from '../sound/score.js';
 import { Stage } from '../three/Stage.js';
 import type { InspectApi, InspectTarget } from '../three/inspect.js';
 import { CHAPTERS, TRACK_SCREENS, caCharsAt, chapterLocal, protonAt, replayedCountAt } from './chapters.js';
@@ -96,6 +97,8 @@ export function CarbonStory(props: CarbonStoryProps) {
     if (v !== 'C-13') setHeavy(null);
   }, []);
   const [hovered, setHovered] = useState<LaunchSummary | null>(null);
+  // the story's own sound: a bed per chapter and cues at each moment, on the scroll clock
+  useScrollScore(store, { isotope, shape, replayHandoffs: replay?.handoffs.length ?? 0 });
   // click any agent sphere, in any chapter, for that agent's detail panel
   const [inspected, setInspected] = useState<InspectTarget | null>(null);
   const inspect = useMemo<InspectApi>(() => ({ open: setInspected }), []);
