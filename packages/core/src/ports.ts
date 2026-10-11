@@ -111,9 +111,11 @@ export interface XPost {
 }
 export interface XClient {
   /** Recent search (app or user token). Used by Scout for live trends. */
-  searchRecent(query: string, opts?: { max?: number }): Promise<XPost[]>;
+  searchRecent(query: string, opts?: { max?: number; launchId?: string }): Promise<XPost[]>;
   /** Trends where the API tier allows it; [] with a reason otherwise. */
   trends?(woeid?: number): Promise<{ name: string; volume?: number }[]>;
+  /** Why trends are (un)available, so Scout can say so instead of guessing. */
+  trendsAvailability?(): { status: string; reason: string; checkedAt: number | null };
   /** Post from the user's connected account. Requires a consumed approval. */
   post(launchId: string, text: string, approvalId: string): Promise<{ id: string; url: string }>;
   reply(launchId: string, inReplyTo: string, text: string, approvalId: string): Promise<{ id: string; url: string }>;
