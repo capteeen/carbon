@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TokenCipher, parseTokenKey } from '../src/crypto.js';
 import { X_MIGRATION_0002_SQL, X_MIGRATION_SQL } from '../src/migration.js';
 import { migrate, PgPostLedger, PgTokenStore } from '../src/store.js';
+import { XConnectionTakenError } from '../src/errors.js';
 import { connectedTokens } from './helpers.js';
 
 const url = process.env.CARBON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
@@ -48,8 +49,21 @@ describe('PgTokenStore', () => {
     const store = new PgTokenStore(pool, cipher);
     await store.put(connectedTokens('launch-w', { wallet: 'WalletW' }));
     expect((await store.get('launch-w'))?.wallet).toBe('WalletW');
-    await store.put(connectedTokens('launch-w', { wallet: null }));
-    expect((await store.get('launch-w'))?.wallet).toBeNull();
+    await store.put(connectedTokens('launch-u', { wallet: null }));
+    expect((await store.get('launch-u'))?.wallet).toBeNull();
+  });
+
+  it('[AG-036] a row bound to a wallet is replaced only by that wallet; an unbound row may be bound', async () => {
+    const store = new PgTokenStore(pool, cipher);
+    await store.put(connectedTokens('launch-taken', { wallet: 'WalletA', xHandle: 'a_acct' }));
+    await expect(store.put(connectedTokens('launch-taken', { wallet: 'WalletB', xHandle: 'b_acct' }))).rejects.toBeInstanceOf(XConnectionTakenError);
+    await expect(store.put(connectedTokens('launch-taken', { wallet: null, xHandle: 'nobody' }))).rejects.toBeInstanceOf(XConnectionTakenError);
+    expect(await store.get('launch-taken')).toMatchObject({ wallet: 'WalletA', xHandle: 'a_acct' });
+    await store.put(connectedTokens('launch-taken', { wallet: 'WalletA', xHandle: 'a_acct2' }));
+    expect((await store.get('launch-taken'))?.xHandle).toBe('a_acct2');
+    await store.put(connectedTokens('launch-unbound', { wallet: null }));
+    await store.put(connectedTokens('launch-unbound', { wallet: 'WalletC' }));
+    expect((await store.get('launch-unbound'))?.wallet).toBe('WalletC');
   });
 
   it('stores no plaintext token in any column', async () => {

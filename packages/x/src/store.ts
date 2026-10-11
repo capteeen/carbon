@@ -4,6 +4,7 @@
  * the app can pass its own Pool.
  */
 import { TokenCipher } from './crypto.js';
+import { XConnectionTakenError } from './errors.js';
 import { X_MIGRATION_0002_SQL, X_MIGRATION_SQL } from './migration.js';
 
 export interface Queryable {
@@ -38,6 +39,10 @@ export interface XConnection {
 
 export interface TokenStore {
   get(launchId: string): Promise<StoredTokens | null>;
+  /**
+   * Insert, or replace the launch's row only when it is bound to the same wallet (or to
+   * none). A row bound to another wallet is never overwritten: XConnectionTakenError (AG-036).
+   */
   put(tokens: StoredTokens): Promise<void>;
   delete(launchId: string): Promise<void>;
 }
@@ -96,15 +101,20 @@ export class PgTokenStore implements TokenStore {
       JSON.stringify({ accessToken: t.accessToken, refreshToken: t.refreshToken }),
       aadFor(t.launchId, t.xUserId),
     );
-    await this.db.query(
+    // A connection is replaced only by the wallet that started it (AG-036): an unbound row
+    // (never counted as connected) may be replaced; a row bound to another wallet may not.
+    const { rows } = await this.db.query(
       `INSERT INTO x_tokens (launch_id, x_user_id, x_handle, token_ciphertext, scopes, access_expires_at, wallet)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (launch_id) DO UPDATE SET
          x_user_id = EXCLUDED.x_user_id, x_handle = EXCLUDED.x_handle,
          token_ciphertext = EXCLUDED.token_ciphertext, scopes = EXCLUDED.scopes,
-         access_expires_at = EXCLUDED.access_expires_at, wallet = EXCLUDED.wallet, updated_at = now()`,
+         access_expires_at = EXCLUDED.access_expires_at, wallet = EXCLUDED.wallet, updated_at = now()
+       WHERE x_tokens.wallet IS NULL OR x_tokens.wallet = EXCLUDED.wallet
+       RETURNING launch_id`,
       [t.launchId, t.xUserId, t.xHandle, Buffer.from(sealed), t.scopes, t.accessExpiresAt, t.wallet ?? null],
     );
+    if (rows.length === 0) throw new XConnectionTakenError(t.launchId);
   }
 
   async delete(launchId: string): Promise<void> {

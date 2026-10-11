@@ -9,7 +9,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { launchConfig, type AgentId, type Core } from '@carbon/core';
-import { ApprovalRequiredError, AUTH_COOKIE_NAME, createXClient, PgTokenStore, TokenCipher } from '@carbon/x';
+import { ApprovalRequiredError, AUTH_COOKIE_NAME, createXClient, PgTokenStore, TokenCipher, XConnectionTakenError } from '@carbon/x';
 import { consumedApprovalCheck } from '../../apps/worker/src/x.js';
 import { makeEnv, wallet, type Env } from './support/env.js';
 
@@ -352,6 +352,27 @@ describe('X account binding', () => {
     const workerX = createXClient({ db: webCore.bus.pool, assertApproval: consumedApprovalCheck(webCore.bus.pool), env: X_ENV });
     expect(await workerX.isConnected(launchId)).toBe(false);
     await expect(workerX.post(launchId, 'from the victim account', randomUUID())).rejects.toThrow();
+  });
+
+  // AG-036: x_tokens is keyed by launch id and finishAuth upserted, so anyone who learned a
+  // not-yet-created launch id could finish their own flow for it and overwrite the launcher's
+  // pending connection (which creation then discarded as bound to another wallet).
+  it('[AG-036] a pending X connection cannot be overwritten (or cleared) by a flow another wallet started', async () => {
+    const launcher = wallet();
+    const launchId = randomUUID();
+    const mine = await finish(await signedXConnect(launchId, launcher), xApiFor('1001', 'launcher_acct'));
+    expect(mine.wallet).toBe(launcher.address);
+    // Someone learns the id and completes their own signed flow for it.
+    const other = wallet();
+    await expect(finish(await signedXConnect(launchId, other), xApiFor('2002', 'other_acct'))).rejects.toThrow(XConnectionTakenError);
+    const store = new PgTokenStore(webCore.bus.pool, TokenCipher.fromEnv(X_ENV));
+    expect(await store.get(launchId)).toMatchObject({ xHandle: 'launcher_acct', wallet: launcher.address, accessToken: 'launcher_acct-access' });
+    // The wallet that started it may replace it (reconnect with another account).
+    expect((await finish(await signedXConnect(launchId, launcher), xApiFor('1003', 'launcher_acct2'))).xHandle).toBe('launcher_acct2');
+    const { res } = await launchViaWeb(launcher, 'ring', launchId);
+    expect(res.status).toBe(201);
+    const ev = (await webCore.bus.list(launchId, { kinds: ['launch.created'] }))[0]!;
+    expect((ev.payload as { xConnected: boolean }).xConnected).toBe(true);
   });
 });
 

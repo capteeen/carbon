@@ -62,6 +62,12 @@ export function LaunchFlow() {
     if (x === 'connected' && back && back !== d.launchId && !d.created) d = { ...d, launchId: back };
     if (x === 'connected') setXNote(`X connected: @${q.get('handle') ?? EMPTY_READOUT}`);
     else if (x === 'failed' && q.get('reason') === 'WalletMismatch') setXNote('That X connection was started by a different wallet than the launch, so it was discarded.');
+    else if (x === 'failed' && q.get('reason') === 'XConnectionTakenError' && !d.created) {
+      // Another wallet holds an X connection for this launch id (AG-036): it cannot be
+      // cleared from here, so this draft moves to a fresh launch id.
+      d = { ...d, launchId: crypto.randomUUID() };
+      setXNote('Another wallet already connected X for that launch id. This launch now has a new id; connect X again.');
+    }
     else if (x === 'failed') setXNote('X connection failed. You can launch without X or try again.');
     else if (x === 'unavailable') setXNote('X is not configured on this deployment.');
     else if (x === 'too-late') setXNote('X can only be connected before the launch is created.');

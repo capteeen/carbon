@@ -20,6 +20,16 @@ export class XNotConnectedError extends XError {
 /** OAuth callback rejected: state mismatch, expired flow, provider error. */
 export class XAuthError extends XError {}
 
+/**
+ * The launch id already holds an X connection started by another wallet (AG-036). Only the
+ * wallet that started a pending connection can replace it; nobody else can overwrite it.
+ */
+export class XConnectionTakenError extends XAuthError {
+  constructor(public readonly launchId: string) {
+    super(`Launch ${launchId} already has an X connection started by another wallet`);
+  }
+}
+
 /** The OAuth token endpoint rejected a grant (status 400/401). `code` is X's OAuth error code. */
 export class XTokenRejectedError extends XAuthError {
   constructor(public readonly status: number, public readonly code: string) {
