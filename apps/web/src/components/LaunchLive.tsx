@@ -21,11 +21,17 @@ function clock(ms: number): string {
   return `${d}d ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
-export function LaunchLive({ launchId, initial, lastSeq }: { launchId: string; initial: CarbonEvent[]; lastSeq: number }) {
+/**
+ * renderedAt: the server's render time, the display time of the first render.
+ * Display bonds are core's computeBonds over this launch's full log at display
+ * time, re-evaluated every second, so bonds age out of the 60 s window even with
+ * no new events.
+ */
+export function LaunchLive({ launchId, initial, lastSeq, renderedAt }: { launchId: string; initial: CarbonEvent[]; lastSeq: number; renderedAt: number }) {
   const { events, status } = useEventStream(launchId, initial, lastSeq);
   const v = useMemo(() => deriveLaunchView(launchId, events), [launchId, events]);
-  const now = useNow(1000);
-  const bonds = useMemo(() => (now === null ? computeBonds(events) : computeBonds(events, Math.max(now, events[events.length - 1]?.ts ?? 0))), [events, now]);
+  const now = useNow(1000, true, renderedAt) ?? renderedAt;
+  const bonds = useMemo(() => computeBonds(events, Math.max(now, events[events.length - 1]?.ts ?? 0)), [events, now]);
   const { connected, address, signText } = useSigner();
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -69,7 +75,7 @@ export function LaunchLive({ launchId, initial, lastSeq }: { launchId: string; i
   if (decay.rule === 'none') decayLine = 'STABLE · no decay';
   else if (decay.collapsed) decayLine = `COLLAPSED · ${new Date(decay.collapsed.payload.at).toISOString().replace('T', ' ').slice(0, 19)} UTC`;
   else if (decay.rule === 'clock')
-    decayLine = decay.collapseAt === null || now === null ? `CLOCK ${EMPTY_READOUT}` : `CLOCK ${clock(decay.collapseAt - now)} to collapse`;
+    decayLine = decay.collapseAt === null ? `CLOCK ${EMPTY_READOUT}` : `CLOCK ${clock(decay.collapseAt - now)} to collapse`;
   else decayLine = `QUIET RULE · collapses after ${(decay.quietSec ?? 0) / 60} min with no trades · last trade ${EMPTY_READOUT}`;
 
   return (

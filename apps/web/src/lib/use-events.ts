@@ -81,10 +81,14 @@ export function useEventStream(
   return { events, status };
 }
 
-/** Re-renders every `ms` while `active`, for clocks and the rolling 60 s bond window. */
-export function useNow(ms = 1000, active = true): number | null {
-  // null on the server and the first client render (no hydration mismatch).
-  const [now, setNow] = useState<number | null>(null);
+/**
+ * Re-renders every `ms` while `active`, for clocks and the rolling 60 s bond window.
+ * `initial` is the server's render time (a page prop), so the server render and the
+ * first client render agree (no hydration mismatch) AND are evaluated at a real
+ * display time; without it the first render returns null.
+ */
+export function useNow(ms = 1000, active = true, initial: number | null = null): number | null {
+  const [now, setNow] = useState<number | null>(initial);
   useEffect(() => {
     setNow(Date.now());
     if (!active) return;

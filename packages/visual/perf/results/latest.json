@@ -1,36 +1,37 @@
 {
+  "target": "harness",
   "throttle": 4,
   "viewport": "390x844@2x",
   "dprCap": "quality ladder (≤1.5)",
   "renderer": "SwiftShader (headless Chromium, CPU WebGL)",
-  "fixture": true,
-  "seconds": 12,
+  "data": "test fixture",
+  "seconds": 16,
   "cycles": 3,
-  "firstFrameMs": 1290,
+  "firstFrameMs": 1231,
   "frames": {
-    "n": 223,
-    "median": 133.39999999999782,
-    "p95": 366.59999999999854,
-    "p99": 450,
-    "mean": 161.35381165919284,
-    "medianFps": 7.5,
-    "p95FrameMs": 366.6,
-    "meanFps": 6.2
+    "n": 267,
+    "median": 116.79999999999927,
+    "p95": 499.90000000000146,
+    "p99": 1099.9000000000015,
+    "mean": 181.14119850187268,
+    "medianFps": 8.6,
+    "p95FrameMs": 499.9,
+    "meanFps": 5.5
   },
-  "qualityLevelAfter": 4,
+  "qualityLevelAfter": 5,
   "heap": {
-    "beforeMB": 6.46,
-    "afterWarmupMB": 8.24,
-    "afterMeasuredMB": 8.77,
+    "beforeMB": 6.72,
+    "afterWarmupMB": 7.99,
+    "afterMeasuredMB": 8.89,
     "afterEachCycleMB": [
-      8.351,
-      8.529,
-      8.773
+      8.538,
+      8.8,
+      8.894
     ],
-    "growthAcrossMeasuredCyclesKB": 530,
-    "growthLastCycleKB": 245,
-    "idleAllocKBPerFrame": 7.004,
-    "idleFrames": 22
+    "growthAcrossMeasuredCyclesKB": 900,
+    "growthLastCycleKB": 94,
+    "idleAllocKBPerFrame": 11.328,
+    "idleFrames": 8
   },
   "perfErrors": [],
   "sync": {

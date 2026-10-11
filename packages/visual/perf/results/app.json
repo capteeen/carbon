@@ -5,33 +5,33 @@
   "dprCap": "quality ladder (≤1.5)",
   "renderer": "SwiftShader (headless Chromium, CPU WebGL)",
   "data": "whatever the app log holds",
-  "seconds": 12,
+  "seconds": 16,
   "cycles": 3,
-  "firstFrameMs": 1726,
+  "firstFrameMs": 1962,
   "frames": {
-    "n": 391,
-    "median": 66.70000000000073,
-    "p95": 233.3000000000011,
-    "p99": 333.3999999999978,
-    "mean": 91.94040920716114,
-    "medianFps": 15,
-    "p95FrameMs": 233.3,
-    "meanFps": 10.9
+    "n": 783,
+    "median": 50,
+    "p95": 166.59999999999854,
+    "p99": 283.2000000000007,
+    "mean": 61.06615581098344,
+    "medianFps": 20,
+    "p95FrameMs": 166.6,
+    "meanFps": 16.4
   },
   "qualityLevelAfter": 7,
   "heap": {
-    "beforeMB": 8.9,
-    "afterWarmupMB": 9.98,
-    "afterMeasuredMB": 10.82,
+    "beforeMB": 8.94,
+    "afterWarmupMB": 10.16,
+    "afterMeasuredMB": 11.07,
     "afterEachCycleMB": [
-      10.355,
-      10.637,
-      10.817
+      10.529,
+      10.856,
+      11.074
     ],
-    "growthAcrossMeasuredCyclesKB": 833,
-    "growthLastCycleKB": 181,
-    "idleAllocKBPerFrame": 13.867,
-    "idleFrames": 51
+    "growthAcrossMeasuredCyclesKB": 911,
+    "growthLastCycleKB": 217,
+    "idleAllocKBPerFrame": 7.861,
+    "idleFrames": 60
   },
   "perfErrors": [],
   "sync": {

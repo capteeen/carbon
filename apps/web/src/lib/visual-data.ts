@@ -57,23 +57,77 @@ export function toVisualReplay(r: ReplayData | null): LaunchReplay | null {
   return buildReplay(r.events, computeBonds(r.events, dep.ts));
 }
 
-/**
- * Live HUD stats from the global event window.
- * LOAD: hand-offs per minute per agent across every launch (agents serve all of them).
- * BONDS: core's bond orders in the molecule that most recently handed off (one
- * molecule, so a count never exceeds valence).
- */
-export function liveFromEvents(events: readonly CarbonEvent[], now: number | null): LiveStats | null {
-  let lastLaunch: string | null = null;
-  for (let i = events.length - 1; i >= 0; i--) {
-    if (events[i]!.kind === 'handoff') {
-      lastLaunch = events[i]!.launchId;
-      break;
+/** Complete per-launch event logs held by the home page (launchId → full log, seq order). */
+export type LaunchLogs = ReadonlyMap<string, readonly CarbonEvent[]>;
+
+/** The launch of the most recent hand-off (highest seq) across the given seq-ordered lists, or null. */
+export function lastHandoffLaunch(...lists: (readonly CarbonEvent[])[]): string | null {
+  let best: CarbonEvent | null = null;
+  for (const list of lists) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const e = list[i]!;
+      if (e.kind !== 'handoff') continue;
+      if (!best || e.seq > best.seq) best = e;
+      break; // seq-ordered: the last hand-off is this list's newest
     }
   }
-  const at = now ?? undefined;
-  const bonds = lastLaunch ? computeBonds(events.filter((e) => e.launchId === lastLaunch), at) : [];
-  return deriveLive(events, bonds, at);
+  return best?.launchId ?? null;
+}
+
+/**
+ * Home HUD stats (chapter 03).
+ * LOAD: hand-offs per minute per agent across every launch in the global stream
+ * (agents serve all launches).
+ * BONDS: ONE molecule, named in the HUD: the launch that most recently handed
+ * off. Its bond orders are core's computeBonds over that launch's COMPLETE log
+ * (from `logs`), evaluated at display time `now`, never over the global window.
+ * If that launch's full log is not loaded yet the BONDS readout is unknown
+ * ("--.--"), not a count from a partial slice.
+ */
+export function liveFromLogs(window: readonly CarbonEvent[], logs: LaunchLogs, now: number): LiveStats | null {
+  const active = lastHandoffLaunch(window, ...logs.values());
+  const log = active ? logs.get(active) : undefined;
+  const at = Math.max(now, lastTs(window), log ? lastTs(log) : 0);
+  const bonds = log ? computeBonds(log, at) : null;
+  // the molecule's own recent hand-offs reach the LOAD/seam readouts even if the window lost them
+  const forLoad = log ? mergeBySeq(window, log.filter((e) => e.kind === 'handoff')) : window;
+  const molecule = active ? { launchId: active, ticker: tickerOf(log ?? window.filter((e) => e.launchId === active)) } : null;
+  return deriveLive(forLoad, bonds, at, molecule);
+}
+
+function lastTs(events: readonly CarbonEvent[]): number {
+  return events.length ? events[events.length - 1]!.ts : 0;
+}
+
+function tickerOf(events: readonly CarbonEvent[]): string | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i]!;
+    if (e.kind === 'forge.draft') return (e as CarbonEvent<'forge.draft'>).payload.ticker;
+  }
+  return null;
+}
+
+function mergeBySeq(a: readonly CarbonEvent[], b: readonly CarbonEvent[]): CarbonEvent[] {
+  const m = new Map<number, CarbonEvent>();
+  for (const e of a) m.set(e.seq, e);
+  for (const e of b) m.set(e.seq, e);
+  return [...m.values()].sort((x, y) => x.seq - y.seq);
+}
+
+/**
+ * Folds newly streamed events into the complete logs we hold (only launches
+ * whose full log was loaded). Returns the same map when nothing changed.
+ */
+export function foldIntoLogs(logs: ReadonlyMap<string, CarbonEvent[]>, incoming: readonly CarbonEvent[]): ReadonlyMap<string, CarbonEvent[]> {
+  let next: Map<string, CarbonEvent[]> | null = null;
+  for (const [id, log] of logs) {
+    const tail = log.length ? log[log.length - 1]!.seq : 0;
+    const add = incoming.filter((e) => e.launchId === id && e.seq > tail);
+    if (!add.length) continue;
+    next ??= new Map(logs);
+    next.set(id, mergeBySeq(log, add));
+  }
+  return next ?? logs;
 }
 
 export function feedFromEvents(events: readonly CarbonEvent[]): ThinkingItem[] {

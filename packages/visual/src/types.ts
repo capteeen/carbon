@@ -15,8 +15,12 @@ export interface BondFlash {
 }
 
 export interface AgentLiveStats {
-  /** Sum of bond orders this agent holds right now, from core's Bond[] (0..4). */
-  bondOrders: number;
+  /**
+   * Sum of bond orders this agent holds right now in `LiveStats.molecule`, from
+   * core's Bond[] recomputed over that launch's FULL log (0..4). null when that
+   * log is not loaded (rendered "--.--", never a guess from a partial window).
+   */
+  bondOrders: number | null;
   /** Hand-offs per minute involving this agent over the 60 s bond window. */
   load: number;
   /** Change vs the previous 60 s window. */
@@ -25,11 +29,24 @@ export interface AgentLiveStats {
 
 /** Live agent stats for the story HUD. Absent agent → "--.--". */
 export interface LiveStats {
-  /** ms timestamp of the newest event considered. */
+  /** ms timestamp the stats were evaluated at (display time). */
   asOf: number;
+  /**
+   * The one molecule (launch) whose bonds the BONDS readouts show: the launch
+   * that most recently handed off. Bonds are per molecule, so a count never
+   * exceeds valence. null → no bonds readout ("--.--").
+   */
+  molecule?: LiveMolecule | null;
   agents: Partial<Record<AgentId, AgentLiveStats>>;
   /** Most recent real hand-offs (newest last); ride the seams in chapter 05 and fire sound. */
   recentHandoffs: BondFlash[];
+}
+
+/** The launch named next to the home BONDS readout. */
+export interface LiveMolecule {
+  launchId: string;
+  /** Latest forge.draft ticker in that launch's log, if any. */
+  ticker: string | null;
 }
 
 /** A real recorded launch, replayed in chapter 08. Build with buildReplay(events). */

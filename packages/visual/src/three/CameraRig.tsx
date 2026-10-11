@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useMemo } from 'react';
 import { Vector3, type PerspectiveCamera } from 'three';
 import { fitFor } from '../story/timeline.js';
+import { useKit } from './Stage.js';
 
 /**
  * Static framing for standalone views: camera at `position`, looking at
@@ -15,6 +16,8 @@ export function CameraRig({
   fit = 1,
   fov = 38,
   focus,
+  fogMargin,
+  fogDensity,
 }: {
   position: [number, number, number];
   target?: [number, number, number];
@@ -22,7 +25,11 @@ export function CameraRig({
   fov?: number;
   /** Optional mutable focus override (fly-in): t 0..1 toward `point`. */
   focus?: { t: number; point: Vector3 };
+  /** Fog starts this far in front of the target, so the subject stays crisp at any portrait push-back. */
+  fogMargin?: number;
+  fogDensity?: number;
 }) {
+  const kit = useKit();
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const size = useThree((s) => s.size);
   const s = useMemo(() => ({ look: new Vector3(), pos: new Vector3(), tmp: new Vector3() }), []);
@@ -38,6 +45,8 @@ export function CameraRig({
     }
     camera.position.copy(s.pos);
     camera.lookAt(s.look);
+    if (fogMargin !== undefined) kit.post.fogStart = Math.max(2, s.pos.distanceTo(s.look) - fogMargin);
+    if (fogDensity !== undefined) kit.post.fogDensity = fogDensity;
     if (camera.fov !== fov) {
       camera.fov = fov;
       camera.updateProjectionMatrix();

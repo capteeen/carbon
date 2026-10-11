@@ -41,5 +41,5 @@ export default async function LaunchPage({ params }: { params: Promise<{ ca: str
   const found = await load(ca);
   if (!found) notFound();
   const lastSeq = found.events.length ? found.events[found.events.length - 1]!.seq : 0;
-  return <LaunchLive launchId={found.summary.launchId} initial={found.events} lastSeq={lastSeq} />;
+  return <LaunchLive launchId={found.summary.launchId} initial={found.events} lastSeq={lastSeq} renderedAt={Date.now()} />;
 }

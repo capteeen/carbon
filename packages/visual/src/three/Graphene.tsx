@@ -1,10 +1,13 @@
 'use client';
 /**
- * Live graphene crystals: every REAL launch is a crystal standing in a hex
- * cell of the frozen sheet. Crystal form = shape (chain prism / ring /
- * diamond octahedron); height = neutron count (isotope); unstable isotopes
- * shimmer; collapsed launches are dimmed. Clicking one calls onSelect.
- * With zero launches nothing is drawn here; the HUD shows the empty state.
+ * Live graphene crystals: every REAL launch is a crystal SET in one hex cell
+ * of the sheet: a hexagonal socket plate aligned with the lattice cell, the
+ * crystal standing in it (no spin). Crystal form = shape (CHAIN: hex column
+ * with a point, RING: faceted hex ring, DIAMOND: octahedron on its tip);
+ * size = neutron count (C-11 smallest … C-14 largest); unstable isotopes
+ * shimmer; collapsed launches are dimmed. Clicking a crystal or its socket
+ * calls onSelect. With zero launches nothing is drawn here; the HUD shows
+ * the empty state.
  */
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
@@ -13,9 +16,11 @@ import {
   Group,
   InstancedBufferAttribute,
   InstancedMesh,
+  LatheGeometry,
   Object3D,
   OctahedronGeometry,
   TorusGeometry,
+  Vector2,
   Vector3,
   type BufferGeometry,
 } from 'three';
@@ -39,9 +44,17 @@ export function placeCrystals(launches: readonly LaunchSummary[]): CrystalPlacem
   return launches.map((l, i) => {
     const [q, r] = hexSpiral(i);
     const [x, z] = hexCellWorld(q, r);
-    return { launch: l, x, z, height: 0.35 + (ISOTOPES[l.isotope].neutrons - 5) * 0.12 };
+    return { launch: l, x, z, height: crystalSize(l.isotope) };
   });
 }
+
+/** Crystal size by isotope: proportional to the neutron count (C-11 5 … C-14 8). */
+export function crystalSize(isotope: LaunchSummary['isotope']): number {
+  return ISOTOPES[isotope].neutrons / 7;
+}
+
+/** Socket circumradius: inset inside the lattice cell (cell circumradius = 0.577 / GRAPHENE_SCALE). */
+const SOCKET_R = 0.58;
 
 /** World centre of the placed crystals (for camera framing). */
 export function crystalsCentre(p: readonly CrystalPlacement[], out: Vector3): Vector3 {
@@ -58,22 +71,32 @@ export function crystalsCentre(p: readonly CrystalPlacement[], out: Vector3): Ve
 function shapeGeometry(shape: ShapeId): BufferGeometry {
   switch (shape) {
     case 'chain': {
-      const g = new CylinderGeometry(0.16, 0.2, 1, 6, 1);
-      g.translate(0, 0.5, 0);
+      // quartz-like hexagonal column with a pointed termination, standing in the socket
+      const g = new LatheGeometry([new Vector2(0, 0), new Vector2(0.28, 0), new Vector2(0.25, 0.8), new Vector2(0, 1.12)], 6);
       return g;
     }
     case 'ring': {
-      const g = new TorusGeometry(0.24, 0.07, 8, 6);
-      g.translate(0, 0.32, 0);
+      // faceted hexagonal ring standing upright in the socket
+      const g = new TorusGeometry(0.34, 0.1, 6, 6);
+      g.rotateZ(Math.PI / 6);
+      g.translate(0, 0.44, 0);
       return g;
     }
     case 'diamond': {
-      const g = new OctahedronGeometry(0.3, 0);
-      g.scale(1, 1.5, 1);
-      g.translate(0, 0.45, 0);
+      // octahedron set on its lower point
+      const g = new OctahedronGeometry(0.4, 0);
+      g.scale(1, 1.4, 1);
+      g.translate(0, 0.56, 0);
       return g;
     }
   }
+}
+
+function socketGeometry(): BufferGeometry {
+  // hex plate whose corners point along z, like the lattice cells (pointy-top in xz)
+  const g = new CylinderGeometry(SOCKET_R, SOCKET_R + 0.05, 0.07, 6, 1);
+  g.translate(0, 0.035, 0);
+  return g;
 }
 
 export function GrapheneCrystals({
@@ -103,6 +126,7 @@ export function GrapheneCrystals({
 
   return (
     <group ref={group} position={[0, y, 0]}>
+      {placed.length ? <SocketSet items={placed} visibility={visibility} onSelect={onSelect} hovered={hovered} onHover={onHover} shared={kit.shared} /> : null}
       {SHAPE_IDS.map((s) => {
         const list = byShape.get(s)!;
         if (list.length === 0) return null;
@@ -161,9 +185,11 @@ function CrystalSet({
       const it = items[i]!;
       const unstable = !ISOTOPES[it.launch.isotope].stable;
       const grow = Math.min(1, vis * 1.3 - (i % 7) * 0.03);
-      res.o.position.set(it.x, 0, it.z);
-      res.o.rotation.set(0, t * 0.15 + i, 0);
-      res.o.scale.set(1, Math.max(0.001, it.height * 2.2 * grow), 1);
+      // set in the socket: fixed orientation (faces aligned with the cell), grows out of it
+      res.o.position.set(it.x, 0.07, it.z);
+      res.o.rotation.set(0, shape === 'ring' ? Math.PI / 6 : 0, 0);
+      const k = Math.max(0.001, grow);
+      res.o.scale.set(it.height * (0.6 + 0.4 * k), it.height * k, it.height * (0.6 + 0.4 * k));
       res.o.updateMatrix();
       m.setMatrixAt(i, res.o.matrix);
       const hov = hovered === it.launch.ca ? 0.6 : 0;
@@ -180,6 +206,85 @@ function CrystalSet({
     if (id === undefined) return null;
     return items[id] ?? null;
   };
+  return (
+    <instancedMesh
+      ref={mesh}
+      args={[res.geo, res.mat, Math.max(1, items.length)]}
+      frustumCulled={false}
+      onClick={(e) => {
+        const it = pick(e);
+        if (!it || !onSelect) return;
+        e.stopPropagation();
+        res.w.set(it.x, 0, it.z);
+        mesh.current?.parent?.localToWorld(res.w);
+        onSelect(it.launch, res.w.clone());
+      }}
+      onPointerOver={(e) => {
+        const it = pick(e);
+        if (it) onHover?.(it.launch);
+      }}
+      onPointerOut={() => onHover?.(null)}
+    />
+  );
+}
+
+/** One hex socket plate per crystal, sitting in its lattice cell. */
+function SocketSet({
+  items,
+  visibility,
+  onSelect,
+  hovered,
+  onHover,
+  shared,
+}: {
+  items: CrystalPlacement[];
+  visibility?: MutableNumber;
+  onSelect?: (l: LaunchSummary, world: Vector3) => void;
+  hovered?: string | null;
+  onHover?: (l: LaunchSummary | null) => void;
+  shared: ReturnType<typeof useKit>['shared'];
+}) {
+  const mesh = useRef<InstancedMesh>(null);
+  const res = useMemo(() => {
+    const geo = socketGeometry();
+    const n = Math.max(1, items.length);
+    const aGlow = new InstancedBufferAttribute(new Float32Array(n), 1);
+    const aFade = new InstancedBufferAttribute(new Float32Array(n).fill(1), 1);
+    geo.setAttribute('aGlow', aGlow);
+    geo.setAttribute('aFade', aFade);
+    geo.setAttribute('aEmblem', new InstancedBufferAttribute(new Float32Array(n).fill(-1), 1));
+    const mat: FrostMaterial = createFrostMaterial(shared, { instancedAttrs: true, base: COLORS.slate, shade: COLORS.ink, rough: 0.8 });
+    return { geo, mat, aGlow, aFade, o: new Object3D(), w: new Vector3() };
+  }, [items.length, shared]);
+  useEffect(
+    () => () => {
+      res.geo.dispose();
+      res.mat.dispose();
+    },
+    [res],
+  );
+  useFrame(() => {
+    const m = mesh.current;
+    if (!m) return;
+    const vis = visibility ? visibility.value : 1;
+    m.visible = vis > 0.005;
+    if (!m.visible) return;
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i]!;
+      const k = Math.min(1, vis * 1.6);
+      res.o.position.set(it.x, 0, it.z);
+      res.o.scale.set(k, 1, k);
+      res.o.updateMatrix();
+      m.setMatrixAt(i, res.o.matrix);
+      res.aGlow.setX(i, hovered === it.launch.ca ? 0.5 : 0);
+      res.aFade.setX(i, (it.launch.collapsed ? 0.5 : 1) * k);
+    }
+    m.count = items.length;
+    m.instanceMatrix.needsUpdate = true;
+    res.aGlow.needsUpdate = true;
+    res.aFade.needsUpdate = true;
+  });
+  const pick = (e: ThreeEvent<MouseEvent | PointerEvent>) => (e.instanceId === undefined ? null : (items[e.instanceId] ?? null));
   return (
     <instancedMesh
       ref={mesh}

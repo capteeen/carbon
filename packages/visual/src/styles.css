@@ -194,6 +194,13 @@
 .carbon-frame--launch { aspect-ratio: 3 / 4; max-height: 86svh; }
 .carbon-frame--graphene { aspect-ratio: 4 / 5; max-height: 90svh; }
 .carbon-frame--embed { aspect-ratio: 16 / 9; min-height: 0; }
+/* phones: the live views fill the viewport height (no empty half-screen under a 3:4 box) */
+@media (max-width: 767px) {
+  .carbon-frame--launch { aspect-ratio: auto; height: 88svh; min-height: 560px; }
+  .carbon-frame--graphene { aspect-ratio: auto; height: 88svh; min-height: 560px; }
+  /* the chamber is a tall subject (nucleus on a pedestal) */
+  .carbon-frame--picker.carbon-frame--chamber-picker { aspect-ratio: 1 / 1; max-height: 64svh; }
+}
 
 @media (min-width: 768px) {
   :root { --carbon-hud-size: 11.5px; --carbon-gutter: 24px; }

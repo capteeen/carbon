@@ -317,7 +317,8 @@ export function LaunchScene(props: LaunchSceneProps) {
   return (
     <div ref={setFrame} className={`carbon-frame ${props.compact ? 'carbon-frame--embed' : 'carbon-frame--launch'}${props.className ? ' ' + props.className : ''}`} data-testid="launch-scene">
       <Stage quality={q} leaders={leaders} reducedMotion={still} eventSource={frame} ariaLabel="Live launch molecule: agents, bonds and Sentinel check">
-        <CameraRig position={[0, 0.6, 9]} fit={1} />
+        {/* the HUD stacks are taller at the top (bonds, Sentinel) than at the bottom: aim a little high so the molecule sits centre-low */}
+        <CameraRig position={[0, props.compact ? 0.6 : 1.0, 9]} target={[0, props.compact ? 0 : 0.45, 0]} fit={props.compact ? 1 : 0.78} fogMargin={3} />
         <LaunchObjects d={d} bonds={bonds} decay={decay} daughter={daughter} leaders={leaders} />
       </Stage>
       <div className="carbon-hud">

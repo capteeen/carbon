@@ -20,7 +20,7 @@ import {
 } from '@carbon/core/contracts';
 import type { Ref } from 'react';
 import { COPY } from '../copy.js';
-import type { LaunchReplay, LaunchSummary, LiveStats, ReceiptItem, ThinkingItem } from '../types.js';
+import type { LaunchReplay, LaunchSummary, LiveMolecule, LiveStats, ReceiptItem, ThinkingItem } from '../types.js';
 import { HudLabel, HudMeta, HudPanel, HudReadout, HudSection } from './Hud.js';
 import {
   fmtBonds,
@@ -53,24 +53,31 @@ export function ProtonHud({
 }) {
   const stats = live?.agents[agent];
   const i = AGENT_IDS.indexOf(agent) + 1;
+  const mol = live?.molecule ?? null;
+  const orders = stats && mol ? stats.bondOrders : null;
   return (
     <div data-testid="proton-hud" data-agent={agent}>
+      <span className="carbon-sr-only">{protonLabel(agent)}</span>
       <HudLabel leaderRef={leaderRef('focus')} testId="proton-label">{`PROTON_${String(i).padStart(2, '0')}`}</HudLabel>
       <div className="carbon-title">{agent.toUpperCase()}</div>
       <div className="carbon-hud__note" style={{ marginBottom: 6 }}>
         {AGENT_ROLES[agent]}
       </div>
-      <HudReadout value={fmtBonds(stats ? stats.bondOrders : null)} testId="proton-bonds" />
+      <HudReadout value={fmtBonds(orders)} testId="proton-bonds" />
+      <HudMeta testId="proton-molecule">{mol ? `bonds in ${moleculeName(mol)} · most recent hand-off` : 'bonds: no molecule handing off yet'}</HudMeta>
       <HudReadout value={fmtLoad(stats ? stats.load : null, stats ? stats.loadDelta : null)} testId="proton-load" />
-      <HudMeta>{live && stats ? `live · ${fmtClock(live.asOf)}` : 'no live data yet'}</HudMeta>
+      <HudMeta>{live && stats ? `load across all launches · live · ${fmtClock(live.asOf)}` : 'no live data yet'}</HudMeta>
       {onOpenAgent ? (
         <button type="button" className="carbon-hud__btn" style={{ marginTop: 8 }} onClick={() => onOpenAgent(agent)} data-testid="proton-explore">
           {COPY.protons.explore}
         </button>
       ) : null}
-      <span className="carbon-sr-only">{protonLabel(agent)}</span>
     </div>
   );
+}
+
+function moleculeName(m: LiveMolecule): string {
+  return m.ticker ? `$${m.ticker}` : `launch ${m.launchId.slice(0, 8)}`;
 }
 
 // ───────────────────────────── 06 chamber ─────────────────────────────
@@ -247,6 +254,7 @@ export function GrapheneHud({
       ) : (
         <>
           <HudReadout label="MOLECULES" value={String(launches.length)} testId="graphene-count" />
+          <HudMeta testId="graphene-legend">one crystal per launch · form = shape · size = neutrons (isotope) · shimmer = decaying</HudMeta>
           <HudMeta>{COPY.live.fly}</HudMeta>
           {hovered ? (
             <div data-testid="graphene-hovered" style={{ marginTop: 6 }}>
