@@ -21,7 +21,7 @@ export const AGENT_ROLES: Record<AgentId, string> = {
   forge: 'Creates the coin: name, ticker, lore, logo, banner, site; prepares the pump.fun deploy',
   herald: "Drafts posts and, after approval, posts from the user's connected X account",
   keeper: 'Community: replies, holder milestones, recruiting drafts',
-  treasurer: 'Per-launch wallet, fee claims, the 50/30/20 split, $CARBON buybacks, public receipts',
+  treasurer: 'Per-launch fee address, fee claims, the 50/30/20 split, $CARBON buybacks, public receipts',
   sentinel: 'Risk checks; computes the stability score; can BLOCK a launch',
 };
 
@@ -194,7 +194,8 @@ export const SHAPES: Record<ShapeId, ShapeSpec> = {
   diamond: {
     id: 'diamond',
     label: 'SHAPE_DIAMOND',
-    description: 'Every agent triple-bonded. Max budget. Every action gated behind your approval.',
+    description:
+      'Every agent may bond with every other, so each can hold a triple bond (valence 4 still caps its total). Max budget. Every action gated behind your approval.',
     sentinelThreshold: 85,
     topology: ALL_PAIRS,
     gateEveryAction: true,
