@@ -2,7 +2,7 @@
 /**
  * ATOM: 12 instanced frosted nucleons (6 protons engraved with agent emblems,
  * 6 plain neutrons) inside two translucent electron shells (inner 2, outer 4
- * electrons), an electron point cloud the cursor disturbs, and the 4 bond
+ * electrons), an electron point cloud the cursor and touch disturb, and the 4 bond
  * arms the outer electrons become. Driven entirely by a mutable `drive`
  * object read in useFrame; nothing here keeps its own clock except idle spin.
  */
@@ -52,16 +52,13 @@ export function createAtomDrive(): AtomDrive {
 }
 
 export interface AtomPointer {
-  /** World-space cursor point near the atom, and force 0..1. */
-  cursor: Vector3;
-  force: number;
   /** Drag rotation (radians), already eased by the owner. */
   rotX: number;
   rotY: number;
 }
 
 export function createAtomPointer(): AtomPointer {
-  return { cursor: new Vector3(99, 99, 99), force: 0, rotX: 0, rotY: 0 };
+  return { rotX: 0, rotY: 0 };
 }
 
 export interface AtomAnchors {
@@ -315,15 +312,11 @@ export function Atom({ drive, pointer, anchors, cloudCount = 1600 }: { drive: At
       res.armMat.uniforms.uGlow.value = 0.2 * d.arms;
     }
 
-    // electron cloud (cursor disturbs it)
+    // electron cloud (the shared pointer push disturbs it, see materials.ts)
     const c = cloud.current!;
     const cv = d.cloud * shellVis;
     c.visible = cv > 0.01;
     res.cloudMat.uniforms.uOpacity.value = 0.55 * cv;
-    if (pointer) {
-      res.cloudMat.uniforms.uCursor.value.copy(pointer.cursor);
-      res.cloudMat.uniforms.uCursorForce.value = pointer.force;
-    }
 
     // HUD anchors
     if (anchors) {

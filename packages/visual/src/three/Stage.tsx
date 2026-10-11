@@ -197,10 +197,67 @@ function Precompiler() {
   return null;
 }
 
+/**
+ * Real cursor / touch position over the canvas (window listeners, so HUD
+ * overlays never block it). A mouse counts while it is over the canvas; a
+ * touch while the finger is down.
+ */
+function usePointerTarget(canvas: HTMLCanvasElement) {
+  const p = useRef({ x: 9, y: 9, active: false, moved: 0 });
+  useEffect(() => {
+    const t = p.current;
+    const at = (e: { clientX: number; clientY: number }) => {
+      const r = canvas.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return false;
+      const x = ((e.clientX - r.left) / r.width) * 2 - 1;
+      const y = -((e.clientY - r.top) / r.height) * 2 + 1;
+      const inside = x >= -1 && x <= 1 && y >= -1 && y <= 1;
+      if (inside) {
+        t.x = x;
+        t.y = y;
+        t.moved = performance.now();
+      }
+      return inside;
+    };
+    // mouse and pen: active while over the canvas
+    const move = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') t.active = at(e);
+    };
+    const out = (e: PointerEvent) => {
+      if (!e.relatedTarget) t.active = false;
+    };
+    // touch: touch events keep firing while the page scrolls (pointer events cancel)
+    const touch = (e: TouchEvent) => {
+      const f = e.touches[0];
+      t.active = f ? at(f) : false;
+    };
+    const opts = { passive: true } as const;
+    window.addEventListener('pointermove', move, opts);
+    window.addEventListener('pointerdown', move, opts);
+    document.addEventListener('pointerout', out, opts);
+    window.addEventListener('touchstart', touch, opts);
+    window.addEventListener('touchmove', touch, opts);
+    window.addEventListener('touchend', touch, opts);
+    window.addEventListener('touchcancel', touch, opts);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerdown', move);
+      document.removeEventListener('pointerout', out);
+      window.removeEventListener('touchstart', touch);
+      window.removeEventListener('touchmove', touch);
+      window.removeEventListener('touchend', touch);
+      window.removeEventListener('touchcancel', touch);
+    };
+  }, [canvas]);
+  return p;
+}
+
 function FrameDriver({ kit, onFirstFrame, onFrame }: { kit: Kit; onFirstFrame?: () => void; onFrame?: (dt: number) => void }) {
   const first = useRef(true);
   const gl = useThree((s) => s.gl);
+  const size = useThree((s) => s.size);
   const scene = useThree((s) => s.scene);
+  const target = usePointerTarget(gl.domElement);
   useEffect(() => {
     // clear to fog-light exactly (values passed through untouched: linear output, no tone mapping)
     const [r, g, b] = hexToRgb01(PALETTE.fogLight);
@@ -210,6 +267,8 @@ function FrameDriver({ kit, onFirstFrame, onFrame }: { kit: Kit; onFirstFrame?: 
     const dtMs = delta * 1000;
     if (!kit.reducedMotion) kit.shared.uTime.value += Math.min(delta, 0.1);
     kit.shared.uPixelRatio.value = gl.getPixelRatio();
+    kit.shared.uAspect.value = size.width / Math.max(1, size.height);
+    easePointer(kit, target.current, Math.min(delta, 0.1));
     if (first.current) {
       first.current = false;
       onFirstFrame?.();
@@ -220,6 +279,39 @@ function FrameDriver({ kit, onFirstFrame, onFrame }: { kit: Kit; onFirstFrame?: 
     onFrame?.(dtMs);
   }, -10);
   return null;
+}
+
+/**
+ * Eases the shared pointer toward the real one, so particles push away from the
+ * cursor and settle back when it stops or leaves (no motion without input).
+ */
+function easePointer(kit: Kit, t: { x: number; y: number; active: boolean; moved: number }, dt: number): void {
+  const s = kit.shared;
+  const p = s.uPointer.value;
+  const v = s.uPointerVel.value;
+  if (kit.reducedMotion) {
+    s.uPointerForce.value = 0;
+    v.set(0, 0);
+    return;
+  }
+  if (dt <= 0) return;
+  if (s.uPointerForce.value < 0.001 && t.active) p.set(t.x, t.y);
+  const k = 1 - Math.exp(-dt * 14);
+  const nx = p.x + (t.x - p.x) * k;
+  const ny = p.y + (t.y - p.y) * k;
+  // velocity in NDC-height units/s, eased; idle pointers stop dragging the cloud
+  const aspect = s.uAspect.value;
+  const idle = performance.now() - t.moved > 120;
+  const vx = idle ? 0 : ((nx - p.x) * aspect) / dt;
+  const vy = idle ? 0 : (ny - p.y) / dt;
+  const kv = 1 - Math.exp(-dt * 8);
+  v.set(v.x + (vx - v.x) * kv, v.y + (vy - v.y) * kv);
+  const len = v.length();
+  if (len > 3) v.multiplyScalar(3 / len);
+  p.set(nx, ny);
+  const goal = t.active ? 1 : 0;
+  const kf = 1 - Math.exp(-dt * (goal > s.uPointerForce.value ? 6 : 2.2));
+  s.uPointerForce.value += (goal - s.uPointerForce.value) * kf;
 }
 
 /**

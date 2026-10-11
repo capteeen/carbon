@@ -13,6 +13,7 @@ import {
   DoubleSide,
   NormalBlending,
   ShaderMaterial,
+  Vector2,
   Vector3,
   type Texture,
 } from 'three';
@@ -36,11 +37,56 @@ export interface SharedUniforms {
   uPixelRatio: { value: number };
   /** Freeze factor for reduced motion (0 = frozen). */
   uMotion: { value: number };
+  /** Eased cursor/touch position in canvas NDC, its velocity (NDC-height units/s) and presence 0..1. */
+  uPointer: { value: Vector2 };
+  uPointerVel: { value: Vector2 };
+  uPointerForce: { value: number };
+  /** Canvas width / height. */
+  uAspect: { value: number };
 }
 
 export function createSharedUniforms(): SharedUniforms {
-  return { uTime: { value: 0 }, uPoints: { value: 1 }, uPixelRatio: { value: 1 }, uMotion: { value: 1 } };
+  return {
+    uTime: { value: 0 },
+    uPoints: { value: 1 },
+    uPixelRatio: { value: 1 },
+    uMotion: { value: 1 },
+    uPointer: { value: new Vector2(9, 9) },
+    uPointerVel: { value: new Vector2() },
+    uPointerForce: { value: 0 },
+    uAspect: { value: 1 },
+  };
 }
+
+/** The pointer uniforms every point cloud links to (same objects, so one write per frame drives all). */
+function pointerUniforms(shared: SharedUniforms) {
+  return { uPointer: shared.uPointer, uPointerVel: shared.uPointerVel, uPointerForce: shared.uPointerForce, uAspect: shared.uAspect };
+}
+
+/**
+ * Cursor/touch push for point clouds, in screen space so it works at any depth
+ * and in every scene: points near the pointer are pushed away from it and
+ * dragged a little along its motion, then ease back as the pointer leaves.
+ * Takes and returns a view-space position.
+ */
+const POINTER_PUSH = /* glsl */ `
+uniform vec2 uPointer;
+uniform vec2 uPointerVel;
+uniform float uPointerForce;
+uniform float uAspect;
+vec4 pointerPush(vec4 mv) {
+  if (uPointerForce < 0.001) return mv;
+  vec4 clip = projectionMatrix * mv;
+  if (clip.w <= 0.0) return mv;
+  vec2 d = (clip.xy / clip.w - uPointer) * vec2(uAspect, 1.0);
+  float r2 = dot(d, d);
+  float fall = exp(-r2 * 11.0);
+  vec2 push = (d * inversesqrt(r2 + 1e-4) * 0.15 + uPointerVel * 0.04) * fall * uPointerForce;
+  // NDC-height units -> view space at this depth (same scale on both axes)
+  mv.xy += push * clip.w / projectionMatrix[1][1];
+  return mv;
+}
+`;
 
 const COMMON = /* glsl */ `
 vec3 toLin(vec3 c) { return pow(c, vec3(2.2)); }
@@ -326,6 +372,7 @@ uniform float uMotion;
 varying float vAlpha;
 varying float vSeed;
 varying float vTone;
+${POINTER_PUSH}
 void main() {
   int c = int(aCluster + 0.5);
   vTone = uTone[c];
@@ -338,7 +385,7 @@ void main() {
   float cs = cos(ang), sn = sin(ang);
   o.xz = mat2(cs, -sn, sn, cs) * o.xz;
   o += sh * 0.05 * vec3(sin(t * 7.0 + aSeed * 50.0), cos(t * 6.0 + aSeed * 40.0), sin(t * 5.0 + aSeed * 30.0));
-  vec4 mv = modelViewMatrix * vec4(center + o * s, 1.0);
+  vec4 mv = pointerPush(modelViewMatrix * vec4(center + o * s, 1.0));
   gl_Position = projectionMatrix * mv;
   // quality ladder: drop a fraction of points by seed (stable subset)
   float keep = step(aSeed, uPoints);
@@ -408,6 +455,7 @@ export function createClusterMaterial(shared: SharedUniforms, size = 2.2): Clust
       uPixelRatio: shared.uPixelRatio,
       uPoints: shared.uPoints,
       uMotion: shared.uMotion,
+      ...pointerUniforms(shared),
       uCenters: { value: Array.from({ length: MAX_CLUSTERS }, () => new Vector3()) },
       uScales: { value: new Array<number>(MAX_CLUSTERS).fill(1) },
       uAlphas: { value: new Array<number>(MAX_CLUSTERS).fill(0) },
@@ -430,12 +478,11 @@ uniform float uTime;
 uniform float uPixelRatio;
 uniform float uPoints;
 uniform float uMotion;
-uniform vec3 uCursor;
-uniform float uCursorForce;
 uniform float uSize;
 uniform float uSpread;
 varying float vAlpha;
 varying float vSeed;
+${POINTER_PUSH}
 void main() {
   float t = uTime * uMotion;
   vec3 p = position * uSpread;
@@ -443,11 +490,7 @@ void main() {
   float cs = cos(ang), sn = sin(ang);
   p.xz = mat2(cs, -sn, sn, cs) * p.xz;
   p.y += sin(t * 0.7 + aSeed * 30.0) * 0.04;
-  vec4 wp = modelMatrix * vec4(p, 1.0);
-  vec3 d = wp.xyz - uCursor;
-  float dist = length(d);
-  wp.xyz += normalize(d + 1e-4) * uCursorForce * exp(-dist * dist * 2.2) * 0.9;
-  vec4 mv = viewMatrix * wp;
+  vec4 mv = pointerPush(modelViewMatrix * vec4(p, 1.0));
   gl_Position = projectionMatrix * mv;
   float keep = step(aSeed, uPoints);
   vAlpha = keep * (0.25 + 0.75 * fract(aSeed * 13.7));
@@ -457,7 +500,7 @@ void main() {
 `;
 
 export type CloudMaterial = ShaderMaterial & {
-  uniforms: { uCursor: { value: Vector3 }; uCursorForce: { value: number }; uOpacity: { value: number }; uSpread: { value: number } };
+  uniforms: { uOpacity: { value: number }; uSpread: { value: number } };
 };
 
 export function createCloudMaterial(shared: SharedUniforms): CloudMaterial {
@@ -469,8 +512,7 @@ export function createCloudMaterial(shared: SharedUniforms): CloudMaterial {
       uPixelRatio: shared.uPixelRatio,
       uPoints: shared.uPoints,
       uMotion: shared.uMotion,
-      uCursor: { value: new Vector3(99, 99, 99) },
-      uCursorForce: { value: 0 },
+      ...pointerUniforms(shared),
       uSize: { value: 2.6 },
       uSpread: { value: 1 },
       uFrost: { value: COLORS.frost },
@@ -699,11 +741,12 @@ uniform float uAmount;
 uniform float uSize;
 varying float vAlpha;
 varying float vSeed;
+${POINTER_PUSH}
 void main() {
   vec3 dir = normalize(position);
   float life = fract(uTime * (0.08 + aSeed * 0.12) + aSeed * 7.0);
   vec3 p = dir * (0.4 + life * 3.2) + vec3(0.0, -life * 0.6, 0.0);
-  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  vec4 mv = pointerPush(modelViewMatrix * vec4(p, 1.0));
   gl_Position = projectionMatrix * mv;
   float keep = step(aSeed, uPoints) * step(aSeed, uAmount);
   vAlpha = keep * (1.0 - life) * 0.9;
@@ -722,6 +765,7 @@ export function createShedMaterial(shared: SharedUniforms): ShedMaterial {
       uTime: shared.uTime,
       uPixelRatio: shared.uPixelRatio,
       uPoints: shared.uPoints,
+      ...pointerUniforms(shared),
       uAmount: { value: 0 },
       uSize: { value: 2.0 },
       uFrost: { value: COLORS.frost },

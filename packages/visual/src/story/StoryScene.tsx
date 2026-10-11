@@ -6,7 +6,7 @@
  */
 import { useFrame, useThree } from '@react-three/fiber';
 import { memo, useEffect, useMemo, useReducer, useRef, type RefObject } from 'react';
-import { Plane, Raycaster, Vector2, Vector3, type PerspectiveCamera } from 'three';
+import { Vector3, type PerspectiveCamera } from 'three';
 import { AGENT_IDS, type AgentId, type IsotopeId, type ShapeId } from '@carbon/core/contracts';
 import { chapterFade, chapterAt, chapterCenter, chapterLocal, replayedCountAt } from './chapters.js';
 import { createStoryState, evalStory } from './timeline.js';
@@ -119,15 +119,11 @@ export const StoryScene = memo(function StoryScene(props: StorySceneProps) {
   const replayFlash = useRef<Map<string, string>>(new Map());
   const replayState = useRef({ count: -1 });
 
-  // drag rotation with heavy inertial easing (hero only); cursor disturbs the electron cloud
-  const drag = useRef({ down: false, x: 0, y: 0, vx: 0, vy: 0, inside: false, ndc: new Vector2(), ray: new Raycaster(), plane: new Plane(new Vector3(0, 0, 1), 0) });
+  // drag rotation with heavy inertial easing (hero only); the cursor push itself lives in Stage
+  const drag = useRef({ down: false, x: 0, y: 0, vx: 0, vy: 0 });
   useEffect(() => {
     if (!pin) return;
     const d = drag.current;
-    const toNdc = (e: PointerEvent) => {
-      const r = pin.getBoundingClientRect();
-      d.ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-    };
     const down = (e: PointerEvent) => {
       if ((e.target as HTMLElement)?.closest?.('button,a,[data-interactive]')) return;
       d.down = true;
@@ -135,8 +131,6 @@ export const StoryScene = memo(function StoryScene(props: StorySceneProps) {
       d.y = e.clientY;
     };
     const move = (e: PointerEvent) => {
-      toNdc(e);
-      d.inside = true;
       if (!d.down || !st.drag) return;
       const dx = e.clientX - d.x;
       const dy = e.clientY - d.y;
@@ -149,7 +143,6 @@ export const StoryScene = memo(function StoryScene(props: StorySceneProps) {
       d.down = false;
     };
     const leave = () => {
-      d.inside = false;
       d.down = false;
     };
     pin.addEventListener('pointerdown', down);
@@ -225,12 +218,6 @@ export const StoryScene = memo(function StoryScene(props: StorySceneProps) {
       pointer.rotY *= Math.exp(-dt * 2.2);
       pointer.rotX *= Math.exp(-dt * 2.2);
     }
-    if (d.inside && st.chapter === 0) {
-      d.ray.setFromCamera(d.ndc, camera);
-      d.ray.ray.intersectPlane(d.plane, pointer.cursor);
-      pointer.force += (1 - pointer.force) * Math.min(1, dt * 4);
-    } else pointer.force += (0 - pointer.force) * Math.min(1, dt * 3);
-    if (kit.reducedMotion) pointer.force = 0;
 
     // atom
     drive.atom = st.atom;
