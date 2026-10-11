@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "cd ../.. && git submodule update --init && pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm build",
+  "functions": {
+    "src/app/api/events/[launchId]/route.ts": { "maxDuration": 300 }
+  }
+}

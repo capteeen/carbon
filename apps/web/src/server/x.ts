@@ -1,0 +1,28 @@
+/**
+ * X (OAuth 2.0 PKCE) on the web side: connect and callback only. The web app
+ * never posts: it builds the client WITHOUT an assertApproval hook, so post()
+ * and reply() refuse here by construction. The worker posts, after approvals.
+ */
+import { createXClient, type CarbonXClient } from '@carbon/x';
+import { getCore } from './core';
+import { xConfigured } from './env';
+
+const g = globalThis as typeof globalThis & { __carbonX?: Promise<CarbonXClient> };
+
+export function getX(): Promise<CarbonXClient> {
+  if (!g.__carbonX) {
+    g.__carbonX = getCore()
+      .then(({ bus }) => createXClient({ db: bus.pool }))
+      .catch((err: unknown) => {
+        g.__carbonX = undefined;
+        throw err;
+      });
+  }
+  return g.__carbonX;
+}
+
+/** Whether the launch's X account is connected. false when X is not configured at all. */
+export async function xConnectedFor(launchId: string): Promise<boolean> {
+  if (!xConfigured()) return false;
+  return (await getX()).isConnected(launchId);
+}

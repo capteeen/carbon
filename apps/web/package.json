@@ -1,0 +1,43 @@
+{
+  "name": "@carbon/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "gen:how": "tsx scripts/gen-how.ts"
+  },
+  "dependencies": {
+    "@carbon/agents": "workspace:*",
+    "@carbon/core": "workspace:*",
+    "@carbon/x": "workspace:*",
+    "@noble/curves": "2.3.0",
+    "@solana/wallet-adapter-base": "0.9.28",
+    "@solana/wallet-adapter-react": "0.15.40",
+    "@solana/web3.js": "1.99.0",
+    "bs58": "6.0.0",
+    "next": "15.5.26",
+    "pg": "8.23.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@testing-library/react": "16.3.0",
+    "@types/node": "22.18.8",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "jsdom": "27.0.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}
