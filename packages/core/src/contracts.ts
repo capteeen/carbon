@@ -312,7 +312,11 @@ export interface EventPayloads {
   'sentinel.score': SentinelReport;
   'approval.requested': { approvalId: string; action: ApprovalAction; draft: unknown; expiresAt: number | null };
   'approval.granted': { approvalId: string; by: string; viaAutopilot: boolean };
+  'approval.consumed': { approvalId: string; action: ApprovalAction };
   'approval.rejected': { approvalId: string; by: string; reason?: string };
+  /** Per-launch public fee address (native mode: the sharing-config PDA; wallet mode: the per-launch creator wallet). Emitted once per launch. */
+  'wallet.created': { address: string; mode: 'native' | 'wallet' };
+  /** creatorWallet = the per-launch fee address (see wallet.created), not necessarily the coin's creator. */
   'launch.deployed': { ca: string; txSig: string; creatorWallet: string; devBuySol: number; network: 'devnet' | 'mainnet-beta' };
   'post.published': { postId: string; url: string; text: string; approvalId: string; kind: 'post' | 'reply' };
   'fee.claimed': { claimId: string; lamports: string; txSig: string };
@@ -321,6 +325,7 @@ export interface EventPayloads {
   'autopilot.changed': { actionClass: AutopilotClass; enabled: boolean; by: string };
   'killswitch.engaged': { by: string; reason?: string };
   'holders.snapshot': { slot: number; holderCount: number; merkleRoot?: string };
+  'decay.started': { rule: 'quiet' | 'clock'; collapseAt: number | null };
   'decay.collapsed': { at: number; reason: 'quiet' | 'clock'; snapshotEventId: string };
   'daughter.launched': { motherCa: string; daughterCa: string; txSig: string; allocationRoot: string };
   'airdrop.sent': { daughterCa: string; wallet: string; units: string; txSig: string };

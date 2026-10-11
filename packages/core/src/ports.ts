@@ -32,7 +32,7 @@ export interface EventBus {
   /** Ordered by seq. */
   list(launchId: string | '*', opts?: { afterSeq?: number; kinds?: EventKind[]; limit?: number }): Promise<CarbonEvent[]>;
   /** Live tail. Returns an unsubscribe function. */
-  subscribe(launchId: string | '*', cb: (e: CarbonEvent) => void): () => void;
+  subscribe(launchId: string | '*', cb: (e: CarbonEvent) => void, opts?: { afterSeq?: number }): () => void;
   /** Verify hash and signature of a stored event. */
   verify(e: CarbonEvent): boolean;
 }
@@ -115,7 +115,7 @@ export interface XClient {
   /** Trends where the API tier allows it; [] with a reason otherwise. */
   trends?(woeid?: number): Promise<{ name: string; volume?: number }[]>;
   /** Why trends are (un)available, so Scout can say so instead of guessing. */
-  trendsAvailability?(): { status: string; reason: string; checkedAt: number | null };
+  trendsAvailability?(): { status: string; reason: string | null; checkedAt: number | null };
   /** Post from the user's connected account. Requires a consumed approval. */
   post(launchId: string, text: string, approvalId: string): Promise<{ id: string; url: string }>;
   reply(launchId: string, inReplyTo: string, text: string, approvalId: string): Promise<{ id: string; url: string }>;
