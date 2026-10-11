@@ -40,7 +40,7 @@ export async function checkHealth(env: NodeJS.ProcessEnv = process.env): Promise
       checks.push({
         name: 'schema',
         state: r.rows[0]?.t ? 'ok' : 'not_migrated',
-        fix: 'Start the worker once (it migrates at boot) or run `DATABASE_URL=... pnpm --filter @carbon/worker migrate`.',
+        fix: 'Redeploy on Vercel (the build creates the tables when DATABASE_URL is set), or start the worker once (it migrates at boot).',
       });
     } catch {
       checks.push({ name: 'DATABASE_URL', state: 'unreachable', fix: 'Check the URL, that the database accepts outside connections, and SSL (add ?sslmode=require for hosted Postgres).' });
