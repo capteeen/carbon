@@ -1,56 +1,45 @@
 /**
- * THE one seam that constructs the ChainClient (@carbon/solana, Agent E).
+ * THE one seam that constructs the ChainClient: @carbon/solana's createChainClient.
  *
- * Until @carbon/solana is wired at integration, the client returned here refuses
- * every call with ChainUnavailableError. It never returns data, so nothing on
- * chain is ever faked: Sentinel scores chain inputs as "source unavailable" and
- * Treasurer stops before any launch.
- *
- * Integration (one place):
- *   import { createChainClient as createSolana, migrations as solanaMigrations } from '@carbon/solana';
- *   export function createChainClient(deps) { return createSolana({ db: deps.pool, assertApproval: deps.assertApproval }); }
- *   export const chainMigrations = solanaMigrations;
+ * - assertLaunchAllowed only CHECKS (a consumed 'launch' approval for the launch
+ *   and a passing latest Sentinel score). It never consumes: Treasurer already did.
+ * - The chain client never writes events; agents (and the decay loop here) append them.
+ * - If the chain config is missing (env not set), the worker still boots, and every
+ *   chain call refuses with ChainUnavailableError naming the reason. Nothing is faked.
  */
-import type { ApprovalAction, ChainClient, PumpCoinInfo, SplitReceipt } from '@carbon/core';
+import { getLaunchConfig, type ChainClient, type EventBus, type PumpCoinInfo, type SplitReceipt } from '@carbon/core';
+import { ChainUnavailableError, createChainClient as createSolana, ensureSchema, loadSolanaConfig, type CarbonChainClient } from '@carbon/solana';
+import { Connection } from '@solana/web3.js';
 import type pg from 'pg';
 
-export class ChainUnavailableError extends Error {
-  constructor(what: string) {
-    super(`chain unavailable: ${what} (the @carbon/solana client is not wired into the worker yet)`);
-    this.name = 'ChainUnavailableError';
-  }
-}
-
-/** Approval CHECK for chain calls that need one (never a second consume). */
-export type AssertConsumed = (launchId: string, approvalId: string, action: ApprovalAction) => Promise<void>;
+export { ChainUnavailableError };
 
 export interface ChainDeps {
   pool: pg.Pool;
-  network: 'devnet' | 'mainnet-beta';
-  assertApproval: AssertConsumed;
+  bus: EventBus;
+  env?: NodeJS.ProcessEnv;
 }
 
-/** Decay support the ChainClient port does not have yet (proposed to the integrator). */
-export interface DecayChain {
-  /** Holder snapshot of the mother coin at the current slot (via @qsd/protocol). */
-  snapshotHolders(launchId: string, ca: string): Promise<{ slot: number; holderCount: number; merkleRoot: string }>;
-  /** Launch the daughter and airdrop it from the snapshot; idempotent per launchId. */
-  launchDaughter(
-    launchId: string,
-    motherCa: string,
-    snapshotEventId: string,
-  ): Promise<{ daughterCa: string; txSig: string; allocationRoot: string; airdrops: { wallet: string; units: string; txSig: string }[] }>;
+/** Check, never consume: approval consumed for this launch + action 'launch', and Sentinel's latest score passed. */
+export function launchAllowedCheck(pool: pg.Pool, bus: EventBus) {
+  return async (launchId: string, approvalId: string): Promise<void> => {
+    const r = await pool.query<{ status: string }>("SELECT status FROM approvals WHERE id = $1 AND launch_id = $2 AND action = 'launch'", [approvalId, launchId]);
+    if (r.rows[0]?.status !== 'consumed') throw new Error('launch approval is not consumed for this launch');
+    const scores = await bus.list(launchId, { kinds: ['sentinel.score'] });
+    const last = scores[scores.length - 1];
+    const p = last?.payload as { passed?: boolean; hardFail?: boolean } | undefined;
+    if (!p || p.passed !== true || p.hardFail === true) throw new Error('latest Sentinel score did not pass');
+  };
 }
 
-export function hasDecaySupport(c: ChainClient): c is ChainClient & DecayChain {
-  const d = c as Partial<DecayChain>;
-  return typeof d.snapshotHolders === 'function' && typeof d.launchDaughter === 'function';
-}
-
-class UnwiredChainClient implements ChainClient {
-  constructor(readonly network: 'devnet' | 'mainnet-beta') {}
+/** A ChainClient that refuses every call, with the reason the real one could not be built. */
+class UnavailableChainClient implements ChainClient {
+  constructor(
+    readonly network: 'devnet' | 'mainnet-beta',
+    private readonly reason: string,
+  ) {}
   private no(what: string): Promise<never> {
-    return Promise.reject(new ChainUnavailableError(what));
+    return Promise.reject(new ChainUnavailableError(`${what}: ${this.reason}`));
   }
   createLaunchWallet(): Promise<{ address: string }> {
     return this.no('createLaunchWallet');
@@ -84,13 +73,31 @@ class UnwiredChainClient implements ChainClient {
   }
 }
 
-export function createChainClient(deps: ChainDeps): ChainClient {
-  void deps.pool;
-  void deps.assertApproval;
-  return new UnwiredChainClient(deps.network);
+export type WorkerChain = { kind: 'solana'; client: CarbonChainClient } | { kind: 'unavailable'; client: ChainClient; reason: string };
+
+export function createChainClient(deps: ChainDeps): WorkerChain {
+  const env = deps.env ?? process.env;
+  try {
+    const config = loadSolanaConfig(env);
+    const client = createSolana({
+      config,
+      rpc: new Connection(config.rpcUrl, 'confirmed'),
+      db: deps.pool,
+      assertLaunchAllowed: launchAllowedCheck(deps.pool, deps.bus),
+      launchConfig: (launchId) => getLaunchConfig(deps.bus, launchId),
+      env,
+    });
+    return { kind: 'solana', client };
+  } catch (err) {
+    // Config errors name the missing variable, never a value.
+    const reason = err instanceof Error ? err.message : 'chain configuration failed';
+    const network = env.CARBON_NETWORK === 'mainnet-beta' && env.CARBON_MAINNET_ENABLED === 'true' ? 'mainnet-beta' : 'devnet';
+    return { kind: 'unavailable', client: new UnavailableChainClient(network, reason), reason };
+  }
 }
 
-/** Extra migrations the chain package needs (none until @carbon/solana is wired). */
-export async function chainMigrations(_pool: pg.Pool): Promise<string[]> {
-  return [];
+/** The chain package's schema (sol_* tables). */
+export async function chainMigrations(pool: pg.Pool): Promise<string[]> {
+  await ensureSchema(pool);
+  return ['solana/schema'];
 }

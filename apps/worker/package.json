@@ -12,7 +12,9 @@
   "dependencies": {
     "@carbon/agents": "workspace:*",
     "@carbon/core": "workspace:*",
+    "@carbon/solana": "workspace:*",
     "@carbon/x": "workspace:*",
+    "@solana/web3.js": "1.98.4",
     "pg": "8.23.0",
     "tsx": "4.20.6"
   },
