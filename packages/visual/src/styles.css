@@ -1,0 +1,198 @@
+/* @carbon/visual styles. Import once from the app layout:
+ *   import '@carbon/visual/styles.css'
+ * Colours are the five palette tokens only (plus the Sentinel block signal). */
+
+:root {
+  --carbon-fog-light: #b9c0cb;
+  --carbon-fog-mid: #9aa2af;
+  --carbon-slate: #5c6472;
+  --carbon-frost: #e6ebf2;
+  --carbon-ink: #2b313b;
+  --carbon-block-signal: #b5525a;
+  --carbon-font-display: var(--font-carbon-display, 'Nunito'), ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --carbon-font-mono: var(--font-carbon-mono, 'Space Mono'), ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --carbon-hud-size: 10.5px;
+  --carbon-gutter: 16px;
+}
+
+/* ───────────── story shell ───────────── */
+.carbon-story {
+  position: relative;
+  width: 100%;
+  background: var(--carbon-fog-light);
+  color: var(--carbon-ink);
+}
+.carbon-story__pin {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--carbon-fog-light);
+}
+.carbon-story__markers {
+  position: absolute;
+  inset: 0 0 auto 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+.carbon-story__marker {
+  position: absolute;
+  left: 0;
+  width: 1px;
+}
+.carbon-canvas {
+  position: absolute;
+  inset: 0;
+  touch-action: pan-y;
+}
+.carbon-canvas canvas {
+  display: block;
+}
+
+/* ───────────── HUD primitives ───────────── */
+.carbon-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--carbon-font-mono);
+  font-size: var(--carbon-hud-size);
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  color: var(--carbon-ink);
+  -webkit-font-smoothing: antialiased;
+}
+.carbon-hud button,
+.carbon-hud a,
+.carbon-hud [data-interactive] {
+  pointer-events: auto;
+}
+.carbon-hud__corner {
+  position: absolute;
+  max-width: min(46vw, 340px);
+}
+.carbon-hud__corner--tl { top: var(--carbon-gutter); left: var(--carbon-gutter); }
+.carbon-hud__corner--tr { top: var(--carbon-gutter); right: var(--carbon-gutter); text-align: right; }
+.carbon-hud__corner--bl { bottom: var(--carbon-gutter); left: var(--carbon-gutter); }
+.carbon-hud__corner--br { bottom: var(--carbon-gutter); right: var(--carbon-gutter); text-align: right; }
+.carbon-hud__corner--ml { top: 50%; left: var(--carbon-gutter); transform: translateY(-50%); }
+.carbon-hud__corner--mr { top: 50%; right: var(--carbon-gutter); transform: translateY(-50%); text-align: right; }
+.carbon-hud__corner--bc { bottom: calc(var(--carbon-gutter) * 3.2); left: 50%; transform: translateX(-50%); text-align: center; max-width: calc(100vw - 2 * var(--carbon-gutter)); width: max-content; }
+
+.carbon-wordmark {
+  font-family: var(--carbon-font-display);
+  font-weight: 900;
+  font-size: clamp(30px, 9vw, 64px);
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  color: var(--carbon-ink);
+  margin: 0 0 6px;
+}
+.carbon-title {
+  font-family: var(--carbon-font-display);
+  font-weight: 900;
+  font-size: clamp(18px, 5vw, 30px);
+  line-height: 1;
+  margin: 2px 0 6px;
+  color: var(--carbon-ink);
+}
+.carbon-hud__label { text-transform: uppercase; letter-spacing: 0.06em; }
+.carbon-hud__meta { color: var(--carbon-slate); }
+.carbon-hud__section { color: var(--carbon-ink); letter-spacing: 0.04em; }
+.carbon-hud__readout { font-variant-numeric: tabular-nums; white-space: pre; }
+.carbon-hud__readout[data-empty='true'] { color: var(--carbon-slate); }
+.carbon-hud__note { color: var(--carbon-ink); max-width: 34ch; }
+.carbon-hud__tag {
+  display: inline-block;
+  border: 1px solid var(--carbon-frost);
+  padding: 2px 6px;
+  color: var(--carbon-ink);
+  background: color-mix(in srgb, var(--carbon-frost) 55%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.carbon-hud__btn {
+  font: inherit;
+  color: var(--carbon-ink);
+  background: color-mix(in srgb, var(--carbon-frost) 70%, transparent);
+  border: 1px solid var(--carbon-frost);
+  padding: 6px 10px;
+  min-height: 32px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.carbon-hud__btn:hover,
+.carbon-hud__btn:focus-visible { background: var(--carbon-frost); outline: 1px solid var(--carbon-ink); outline-offset: 1px; }
+.carbon-hud__btn[aria-pressed='true'] { background: var(--carbon-ink); color: var(--carbon-frost); }
+.carbon-hud__btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.carbon-hud__panel {
+  border: 1px solid var(--carbon-frost);
+  background: color-mix(in srgb, var(--carbon-fog-light) 70%, transparent);
+  padding: 8px 10px;
+  max-height: 28vh;
+  overflow: auto;
+}
+.carbon-hud__panel ul { list-style: none; margin: 0; padding: 0; }
+.carbon-hud__panel li { margin: 0 0 4px; overflow-wrap: anywhere; }
+.carbon-hud__empty { color: var(--carbon-slate); }
+
+/* chapter layers: anime.js drives opacity/transform; reduced motion uses stepped fades */
+.carbon-chapter { position: absolute; inset: 0; opacity: 0; visibility: hidden; }
+.carbon-chapter[data-active='true'] { visibility: visible; }
+.carbon-story[data-reduced-motion='true'] .carbon-chapter { transition: opacity 360ms steps(4, end); }
+.carbon-story[data-reduced-motion='true'] .carbon-chapter[data-active='true'] { opacity: 1; }
+
+/* leader lines */
+.carbon-leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.carbon-leaders line { stroke: var(--carbon-frost); stroke-width: 1; shape-rendering: crispEdges; vector-effect: non-scaling-stroke; }
+.carbon-leaders circle { fill: var(--carbon-frost); }
+
+/* carousel */
+.carbon-carousel { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.carbon-carousel .carbon-hud__btn { padding: 6px 8px; }
+
+/* sound toggle */
+.carbon-sound {
+  position: absolute;
+  left: var(--carbon-gutter);
+  bottom: var(--carbon-gutter);
+  z-index: 3;
+  font-family: var(--carbon-font-mono);
+  font-size: var(--carbon-hud-size);
+  pointer-events: auto;
+}
+
+/* standalone frames (chamber, shape picker, launch scene, graphene, embed) */
+.carbon-frame {
+  position: relative;
+  width: 100%;
+  min-height: 320px;
+  background: var(--carbon-fog-light);
+  color: var(--carbon-ink);
+  overflow: hidden;
+}
+.carbon-frame--chamber { aspect-ratio: 3 / 4; max-height: 82svh; }
+.carbon-frame--shapes { aspect-ratio: 4 / 5; max-height: 82svh; }
+.carbon-frame--launch { aspect-ratio: 3 / 4; max-height: 86svh; }
+.carbon-frame--graphene { aspect-ratio: 4 / 5; max-height: 90svh; }
+.carbon-frame--embed { aspect-ratio: 16 / 9; min-height: 0; }
+
+@media (min-width: 768px) {
+  :root { --carbon-hud-size: 11.5px; --carbon-gutter: 24px; }
+  .carbon-frame--chamber, .carbon-frame--shapes, .carbon-frame--launch { aspect-ratio: 16 / 10; }
+  .carbon-frame--graphene { aspect-ratio: 16 / 9; }
+}
+
+.carbon-sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+[data-testid='graphene-empty'] { color: var(--carbon-ink); font-size: calc(var(--carbon-hud-size) * 1.15); max-width: 26ch; }
+.carbon-picker { display: grid; gap: 12px; color: var(--carbon-ink); font-family: var(--carbon-font-mono); font-size: var(--carbon-hud-size); }
+.carbon-picker__hud { padding: 0 var(--carbon-gutter) var(--carbon-gutter); }
+.carbon-picker .carbon-frame { min-height: 0; }
+.carbon-frame--picker { aspect-ratio: 4 / 3; max-height: 60svh; }
+@media (min-width: 768px) { .carbon-frame--picker { aspect-ratio: 16 / 9; } }

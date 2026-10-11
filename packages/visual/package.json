@@ -1,0 +1,48 @@
+{
+  "name": "@carbon/visual",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": ["*.css"],
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens": "./src/tokens.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "harness": "vite --config harness/vite.config.ts",
+    "harness:build": "vite build --config harness/vite.config.ts",
+    "perf": "vite build --config harness/vite.config.ts && node perf/perf.mjs"
+  },
+  "dependencies": {
+    "@carbon/core": "workspace:*",
+    "@react-three/fiber": "9.7.0",
+    "@react-three/postprocessing": "3.0.5",
+    "animejs": "4.5.0",
+    "lenis": "1.3.26",
+    "postprocessing": "6.39.4",
+    "three": "0.185.1"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0 <19.3.0",
+    "react-dom": ">=19.0.0 <19.3.0"
+  },
+  "devDependencies": {
+    "@fontsource/nunito": "5.2.7",
+    "@fontsource/space-mono": "5.2.9",
+    "@types/node": "22.18.8",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@types/three": "0.185.1",
+    "playwright-core": "1.56.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "3.2.4"
+  }
+}
