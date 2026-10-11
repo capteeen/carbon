@@ -29,6 +29,8 @@ import type { LeaderAnchor } from '../hud/leaders.js';
 import { COLORS, createCloudMaterial, createFrostMaterial } from './materials.js';
 import { useKit } from './Stage.js';
 import { getEmblemAtlas } from './textures.js';
+import { inspectHandlers } from './inspect.js';
+import { AGENT_IDS } from '@carbon/core/contracts';
 
 export interface AtomDrive {
   atom: number;
@@ -106,6 +108,23 @@ export function Atom({ drive, pointer, anchors, cloudCount = 1600 }: { drive: At
   const outerRing = useRef<Mesh>(null);
   const cloud = useRef<Points>(null);
   const bubbles = useRef<Group>(null);
+  const hovered = useRef<number | null>(null);
+  // click a proton for its agent's detail panel; a neutron for what neutrons mean
+  const handlers = useMemo(
+    () =>
+      inspectHandlers(
+        kit.inspect,
+        (i) => {
+          if (i === undefined || drive.atom < 0.3) return null;
+          if (drive.isolate > 0.5 && i !== drive.focus) return null;
+          return i < 6 ? { kind: 'agent', agent: AGENT_IDS[i]! } : { kind: 'neutron' };
+        },
+        (i) => {
+          hovered.current = i;
+        },
+      ),
+    [kit.inspect, drive],
+  );
 
   const res = useMemo(() => {
     const layout = nucleonLayout();
@@ -245,9 +264,11 @@ export function Atom({ drive, pointer, anchors, cloudCount = 1600 }: { drive: At
       s.o.updateMatrix();
       nm.setMatrixAt(i, s.o.matrix);
       res.aFade.setX(i, fade);
-      res.aGlow.setX(i, d.coreGlow * 0.9);
+      res.aGlow.setX(i, d.coreGlow * 0.9 + (hovered.current === i ? 0.45 : 0));
     }
     nm.instanceMatrix.needsUpdate = true;
+    // instanced raycasts use a cached bounding sphere; keep it current (explode moves nucleons) so clicks land
+    if (kit.inspect) nm.computeBoundingSphere();
     res.aFade.needsUpdate = true;
     res.aGlow.needsUpdate = true;
     res.nucleonMat.uniforms.uIrid.value = d.irid;
@@ -352,7 +373,7 @@ export function Atom({ drive, pointer, anchors, cloudCount = 1600 }: { drive: At
   return (
     <group ref={group}>
       <group ref={spin}>
-        <instancedMesh ref={nucleons} args={[res.sphere, res.nucleonMat, 12]} frustumCulled={false} />
+        <instancedMesh ref={nucleons} args={[res.sphere, res.nucleonMat, 12]} frustumCulled={false} {...handlers} />
         <mesh ref={innerRing} geometry={res.innerGeo} material={res.ringMat} matrixAutoUpdate />
         <mesh ref={outerRing} geometry={res.outerGeo} material={res.ringMat} />
         <group ref={bubbles}>

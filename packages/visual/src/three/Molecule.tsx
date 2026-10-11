@@ -24,6 +24,7 @@ import { moleculeLayout } from './layouts.js';
 import { COLORS, createFrostMaterial, createSeamMaterial } from './materials.js';
 import { useKit } from './Stage.js';
 import { getEmblemAtlas } from './textures.js';
+import { inspectHandlers } from './inspect.js';
 
 export interface MutableNumber {
   value: number;
@@ -49,6 +50,18 @@ export function AgentAtoms({
 }) {
   const kit = useKit();
   const mesh = useRef<InstancedMesh>(null);
+  const hovered = useRef<number | null>(null);
+  const handlers = useMemo(
+    () =>
+      inspectHandlers(
+        kit.inspect,
+        (i) => ((visibility ? visibility.value : 1) > 0.3 && i !== undefined && i < 6 ? { kind: 'agent', agent: AGENT_IDS[i]! } : null),
+        (i) => {
+          hovered.current = i;
+        },
+      ),
+    [kit.inspect, visibility],
+  );
   const res = useMemo(() => {
     const geo = new SphereGeometry(radius, 32, 22);
     const emblem = new Float32Array(6);
@@ -82,15 +95,17 @@ export function AgentAtoms({
       res.o.scale.setScalar(vis * (highlight === a ? 1.35 : 1));
       res.o.updateMatrix();
       m.setMatrixAt(i, res.o.matrix);
-      res.aGlow.setX(i, glow ? glow[a] : 0);
+      res.aGlow.setX(i, (glow ? glow[a] : 0) + (hovered.current === i ? 0.45 : 0));
       res.aFade.setX(i, vis);
     }
     m.instanceMatrix.needsUpdate = true;
+    // instanced raycasts use a cached bounding sphere; keep it current so clicks land
+    if (kit.inspect) m.computeBoundingSphere();
     res.aGlow.needsUpdate = true;
     res.aFade.needsUpdate = true;
     res.mat.uniforms.uDim.value = dim ? dim.value : 1;
   });
-  return <instancedMesh ref={mesh} args={[res.geo, res.mat, 6]} frustumCulled={false} />;
+  return <instancedMesh ref={mesh} args={[res.geo, res.mat, 6]} frustumCulled={false} {...handlers} />;
 }
 
 /** Illustrative bonds, instanced. `edges` endpoints are read every frame. */

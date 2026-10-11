@@ -25,6 +25,7 @@ import type { LeaderAnchor } from '../hud/leaders.js';
 import { COLORS, MAX_CLUSTERS, createClusterMaterial, createFrostMaterial } from './materials.js';
 import type { MutableNumber } from './Molecule.js';
 import { useKit } from './Stage.js';
+import { inspectHandlers } from './inspect.js';
 
 export const NUC_Y = 0.55;
 const PROTON_R = 0.66;
@@ -241,8 +242,14 @@ export function ChamberObject({
     if (best && onHeavyDrop) onHeavyDrop(best);
   };
   // Tap a proton (touch or mouse) to give it the extra neutron: same choice as dragging.
-  const onProtonTap = (agent: AgentId) => (e: ThreeEvent<MouseEvent>) => {
-    if (!canDrag || drag.current.active) return;
+  // Otherwise a tap opens that agent's detail panel (cursor shows it is clickable).
+  const protonHandlers = useMemo(
+    () => AGENT_IDS.map((a) => inspectHandlers(kit.inspect, () => ({ kind: 'agent', agent: a }))),
+    [kit.inspect],
+  );
+  const onProtonTap = (agent: AgentId, i: number) => (e: ThreeEvent<MouseEvent>) => {
+    if (drag.current.active) return;
+    if (!canDrag) return protonHandlers[i]!.onClick(e);
     e.stopPropagation();
     onHeavyDrop?.(agent);
   };
@@ -284,8 +291,8 @@ export function ChamberObject({
       const m = protonHits.current[i];
       if (!m) continue;
       m.position.copy(u.uCenters.value[i]!);
-      m.visible = canDrag;
-      m.raycast = canDrag ? Mesh.prototype.raycast : noRaycast;
+      m.visible = vis > 0.3;
+      m.raycast = m.visible ? Mesh.prototype.raycast : noRaycast;
     }
     if (anchors) {
       const f = vis * (anchorFade ? anchorFade.value : 1);
@@ -323,7 +330,9 @@ export function ChamberObject({
             }}
             geometry={res.hitGeo}
             material={res.handleMat}
-            onClick={onProtonTap(a)}
+            onClick={onProtonTap(a, i)}
+            onPointerOver={protonHandlers[i]!.onPointerOver}
+            onPointerOut={protonHandlers[i]!.onPointerOut}
           />
         ))}
         <mesh

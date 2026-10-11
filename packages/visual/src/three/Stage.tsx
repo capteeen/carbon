@@ -14,6 +14,7 @@ import type { LeaderRegistry } from '../hud/leaders.js';
 import { settingsFor, useQualityLevel, type QualityStore } from '../quality/store.js';
 import { createSharedUniforms, type SharedUniforms } from './materials.js';
 import { CarbonPostEffect, createPostParams, type PostParams } from './post.js';
+import type { InspectApi } from './inspect.js';
 
 export interface Kit {
   shared: SharedUniforms;
@@ -21,6 +22,8 @@ export interface Kit {
   post: PostParams;
   leaders: LeaderRegistry | null;
   reducedMotion: boolean;
+  /** Click-an-agent detail panel; null where the page has none. */
+  inspect: InspectApi | null;
 }
 
 const KitContext = createContext<Kit | null>(null);
@@ -47,6 +50,7 @@ export interface StageProps {
   ariaLabel?: string;
   /** Hard cap on device pixel ratio (the quality ladder may lower it further). */
   maxDpr?: number;
+  inspect?: InspectApi | null;
 }
 
 /**
@@ -115,14 +119,15 @@ export function Stage({
   onFrame,
   ariaLabel,
   maxDpr,
+  inspect = null,
 }: StageProps) {
   const level = useQualityLevel(quality);
   const dpr = useDeviceDpr(Math.min(settingsFor(level).dpr, maxDpr ?? Infinity));
   const shared = useMemo(() => createSharedUniforms(), []);
   const postParams = useMemo(() => post ?? createPostParams(), [post]);
   const kit = useMemo<Kit>(
-    () => ({ shared, quality, post: postParams, leaders, reducedMotion }),
-    [shared, quality, postParams, leaders, reducedMotion],
+    () => ({ shared, quality, post: postParams, leaders, reducedMotion, inspect }),
+    [shared, quality, postParams, leaders, reducedMotion, inspect],
   );
   postParams.still = reducedMotion;
   shared.uMotion.value = reducedMotion ? 0 : 1;

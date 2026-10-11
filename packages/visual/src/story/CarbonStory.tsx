@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from 'react';
 import type { AgentId, IsotopeId, ShapeId } from '@carbon/core/contracts';
 import { isValidReplay, validFlashes, validLaunches } from '../data/derive.js';
+import { AgentPanel } from '../hud/AgentPanel.js';
 import { HudLeaders } from '../hud/Hud.js';
 import { LeaderRegistry } from '../hud/leaders.js';
 import { typedCa } from '../hud/format.js';
@@ -18,6 +19,7 @@ import { createDeviceQualityStore, type QualityStore } from '../quality/store.js
 import { SoundToggle } from '../sound/SoundToggle.js';
 import { useBondChimes } from '../sound/sound.js';
 import { Stage } from '../three/Stage.js';
+import type { InspectApi, InspectTarget } from '../three/inspect.js';
 import { CHAPTERS, TRACK_SCREENS, caCharsAt, chapterLocal, protonAt, replayedCountAt } from './chapters.js';
 import { progressStore as defaultStore, useChapter, type ProgressStore } from './progress.js';
 import { useReducedMotion, useStoreSelector, useStoryScroll } from './scroll.js';
@@ -94,6 +96,10 @@ export function CarbonStory(props: CarbonStoryProps) {
     if (v !== 'C-13') setHeavy(null);
   }, []);
   const [hovered, setHovered] = useState<LaunchSummary | null>(null);
+  // click any agent sphere, in any chapter, for that agent's detail panel
+  const [inspected, setInspected] = useState<InspectTarget | null>(null);
+  const inspect = useMemo<InspectApi>(() => ({ open: setInspected }), []);
+  const closeInspect = useCallback(() => setInspected(null), []);
 
   const onFade = useCallback((i: number, o: number) => leaders.setLayerFade(i, o), [leaders]);
   useStoryScroll({ track, markers, layers, store, smooth: props.smoothScroll !== false && !reduced, anime: !reduced, onFade });
@@ -176,6 +182,7 @@ export function CarbonStory(props: CarbonStoryProps) {
           onFirstFrame={props.onFirstFrame}
           onFrame={props.onFrame}
           maxDpr={props.maxDpr}
+          inspect={inspect}
           ariaLabel="Animated carbon atom; the chapter text describes each scene"
         >
           <StoryScene
@@ -223,6 +230,7 @@ export function CarbonStory(props: CarbonStoryProps) {
         </div>
         {props.soundToggle !== false ? <SoundToggle /> : null}
       </div>
+      <AgentPanel target={inspected} onClose={closeInspect} onOpenLog={props.onOpenAgent} />
     </section>
   );
 }

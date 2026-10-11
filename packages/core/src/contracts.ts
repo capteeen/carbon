@@ -25,6 +25,93 @@ export const AGENT_ROLES: Record<AgentId, string> = {
   sentinel: 'Risk checks; computes the stability score; can BLOCK a launch',
 };
 
+/**
+ * What each agent does, in plain language, for the click-a-proton detail panel
+ * and /how. Describes the code in packages/agents; keep the two in step.
+ */
+export interface AgentDetail {
+  /** What it does in a launch, in order. */
+  does: string[];
+  /** What it reads. */
+  inputs: string[];
+  /** What it produces and who receives it. */
+  outputs: string[];
+  /** Where your approval is required. */
+  approval: string;
+  /** Limits it can never cross. */
+  never: string[];
+}
+
+export const AGENT_DETAILS: Record<AgentId, AgentDetail> = {
+  scout: {
+    does: [
+      'Reads live trends on X, plus Gemini search grounding for the wider web.',
+      'Proposes 3-5 narratives, each with a name, a ticker, why it could work and the sources it used.',
+      'Drops any source it was not actually given, and any narrative left with no source.',
+    ],
+    inputs: ['Live X trends and posts', 'Gemini search grounding results'],
+    outputs: ['Narratives with names, tickers and cited sources, handed to Forge'],
+    approval: 'You choose which narrative goes ahead. Scout publishes nothing.',
+    never: ['Invents sources', 'Posts or trades'],
+  },
+  forge: {
+    does: [
+      'Turns the chosen narrative into a coin: name, ticker, lore, logo, banner and a one-page site.',
+      'Hands the draft to Sentinel for checks.',
+      'Only after Sentinel clears it, uploads the metadata to pump.fun IPFS and prepares the deploy.',
+    ],
+    inputs: ["Scout's chosen narrative"],
+    outputs: ['The coin draft (text, images, site, logo fingerprint) for Sentinel', 'The metadata URI the launch transaction uses'],
+    approval: 'Nothing goes live until you approve the launch.',
+    never: ['Publishes content that failed the content rules'],
+  },
+  herald: {
+    does: [
+      'Drafts posts about the launch.',
+      "Posts from your connected X account only after your one-tap approval (or the 'posts' autopilot you turned on).",
+      "Publishes Keeper's approved milestone and recruiting posts.",
+    ],
+    inputs: ['The deployed launch', "Keeper's approved drafts"],
+    outputs: ['Posts on your X account, each logged with its approval'],
+    approval: 'Every post needs your approval unless you turned on posts autopilot. Never on DIAMOND.',
+    never: ['Posts outside the shape’s posting window or above its posts per hour', 'Creates accounts'],
+  },
+  keeper: {
+    does: [
+      'Reads mentions of the coin and drafts replies.',
+      'Drafts holder-milestone and recruiting posts.',
+      'Hands approved top-level posts to Herald rather than posting them itself.',
+    ],
+    inputs: ['Mentions on X', 'Holder counts'],
+    outputs: ['Replies on your X account', 'Milestone and recruiting drafts for Herald'],
+    approval: "Every reply needs your approval unless you turned on the 'replies' autopilot.",
+    never: ['Replies above the shape’s replies per hour'],
+  },
+  treasurer: {
+    does: [
+      "Sets up the launch's fee address with pump.fun native fee sharing: 50% to you, 30% to $CARBON buybacks, 20% to the treasury.",
+      'Builds and sends the launch transaction, including your dev buy, once you approve and Sentinel passes it.',
+      'Claims fees on a schedule and publishes a receipt for every split.',
+      'Buys back $CARBON using only the 30% share.',
+    ],
+    inputs: ['Your launch approval', "Sentinel's passing score", 'Claimed creator fees'],
+    outputs: ['The launch transaction', 'Fee-split receipts', '$CARBON buyback receipts'],
+    approval: 'The launch always needs your approval. Autopilot is never available for launches.',
+    never: ['Trades anything except $CARBON buybacks and the launch’s own dev buy', 'Moves money without a receipt'],
+  },
+  sentinel: {
+    does: [
+      'Scores the draft 0-100 for stability from six public inputs: name and ticker collisions, logo similarity, the launching wallet, bundle and sniper risk, narrative freshness and content rules.',
+      "Blocks the launch until the score reaches the shape's threshold.",
+      'Hard-fails content-rule breaks and impersonation, whatever the score.',
+    ],
+    inputs: ["Forge's draft (text, logo, banner, site)", 'Public chain and pump.fun data', "Scout's sources"],
+    outputs: ['A stability score bound to the exact draft it checked', 'A block, when the launch is not safe'],
+    approval: 'Sentinel can stop a launch you approved. It cannot start one.',
+    never: ['Guesses: an input it cannot measure scores 0'],
+  },
+};
+
 /** HUD label, e.g. PROTON_01_SCOUT. */
 export function protonLabel(agent: AgentId): string {
   const i = AGENT_IDS.indexOf(agent) + 1;

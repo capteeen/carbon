@@ -1,5 +1,5 @@
 /**
- * HONESTY (SPEC §5): chapters 00-07 are labelled as an illustration; live
+ * HONESTY (SPEC §5): chapters 00-07 are an illustrated explainer; live
  * readouts come only from props or show "--.--"; chapter 08 replays a real
  * launch or shows an empty state; chapter 09 shows real launches or
  * "No molecules yet. Launch the first one."; nothing in src/ carries sample data.
