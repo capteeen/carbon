@@ -1,0 +1,8 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "tests"
+  # @qsd/protocol and its two workspace deps, imported from capteeen/QSD-market (never reimplemented)
+  - "vendor/qsd-market/packages/protocol"
+  - "vendor/qsd-market/packages/crypto"
+  - "vendor/qsd-market/packages/quantum"

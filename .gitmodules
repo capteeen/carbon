@@ -1,0 +1,3 @@
+[submodule "vendor/qsd-market"]
+	path = vendor/qsd-market
+	url = https://github.com/capteeen/QSD-market

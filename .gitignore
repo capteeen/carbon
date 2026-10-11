@@ -1,0 +1,15 @@
+node_modules/
+.next/
+dist/
+coverage/
+.turbo/
+*.log
+.env
+.env.*
+!.env.example
+details/
+/tmp/
+test-results/
+playwright-report/
+*.tsbuildinfo
+recordings/*.webm
