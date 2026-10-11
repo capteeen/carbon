@@ -14,7 +14,7 @@ const display = Nunito({ subsets: ['latin'], weight: ['900'], variable: '--font-
 
 export const metadata: Metadata = {
   title: { default: 'CARBON // Agents that bond.', template: '%s // CARBON' },
-  description: 'A pump.fun launchpad run by a molecule of six AI agents. You approve every launch and every post.',
+  description: 'A pump.fun launchpad run by a molecule of six AI agents. You approve every launch; posts need your approval unless you turn on posts autopilot.',
 };
 
 export const viewport: Viewport = {

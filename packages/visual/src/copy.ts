@@ -19,7 +19,8 @@ export const COPY = {
     manifesto: [
       'Six AI agents form one nucleus.',
       'Every bond is a signed hand-off.',
-      'You approve every launch and post.',
+      'You approve every launch.',
+      'Posts need your approval unless you turn on posts autopilot (off by default).',
     ],
     dragHint: '// Drag to rotate',
     scrollHint: '// Scroll',
@@ -40,8 +41,8 @@ export const COPY = {
   },
   shells: {
     head: '////// 04 Shells',
-    note: 'Every agent holds exactly 4 bonds.',
-    lines: ['// Inner shell · 2 electrons', '// Outer shell · 4 electrons = 4 bonds'],
+    note: 'Every agent has exactly 4 bond arms.',
+    lines: ['// Inner shell · 2 electrons', '// Outer shell · 4 electrons = 4 bond arms (at most 4 bond orders)'],
   },
   bonding: {
     head: '////// 05 Bonding',

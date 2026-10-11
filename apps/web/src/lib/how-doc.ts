@@ -1,6 +1,6 @@
 /**
  * docs/how.md is rendered verbatim on /how. Parts of it are generated from code
- * (the config table, the Sentinel formula, the fee split) between markers:
+ * (the shapes table, the config table, the Sentinel formula, the fee split) between markers:
  *
  *   <!-- generated:NAME:start -->
  *   ...generated markdown...
@@ -9,9 +9,9 @@
  * `pnpm --filter @carbon/web gen:how` rewrites those blocks; a test fails if the
  * file and the code ever disagree.
  */
-import { FEE_SPLIT_BPS } from '@carbon/core/contracts';
+import { FEE_SPLIT_BPS, SHAPES, SHAPE_IDS } from '@carbon/core/contracts';
 
-export const GENERATED_SECTIONS = ['config-table', 'sentinel-formula', 'fee-split'] as const;
+export const GENERATED_SECTIONS = ['shapes-table', 'config-table', 'sentinel-formula', 'fee-split'] as const;
 export type GeneratedSection = (typeof GENERATED_SECTIONS)[number];
 
 const start = (n: string) => `<!-- generated:${n}:start -->`;
@@ -42,5 +42,18 @@ export function renderFeeSplitMarkdown(): string {
     `| The launcher's wallet | ${pct(FEE_SPLIT_BPS.launcher)} | ${FEE_SPLIT_BPS.launcher} |`,
     `| $CARBON buyback wallet | ${pct(FEE_SPLIT_BPS.carbonBuyback)} | ${FEE_SPLIT_BPS.carbonBuyback} |`,
     `| Carbon treasury | ${pct(FEE_SPLIT_BPS.treasury)} | ${FEE_SPLIT_BPS.treasury} |`,
+  ].join('\n');
+}
+
+/** The shapes table, from SHAPES (one row per shape, the description the code ships). */
+export function renderShapesMarkdown(): string {
+  return [
+    '| Shape | What it does |',
+    '|---|---|',
+    ...SHAPE_IDS.map((id) => {
+      const sh = SHAPES[id];
+      const gate = sh.gateEveryAction ? ' Autopilot is unavailable.' : '';
+      return `| ${sh.label.replace(/^SHAPE_/, '')} | ${sh.description}${gate} |`;
+    }),
   ].join('\n');
 }

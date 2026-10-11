@@ -5,10 +5,11 @@
  */
 import { renderFormulaMarkdown } from '@carbon/agents/sentinel/formula';
 import { renderConfigMarkdown } from '@carbon/core/render-config';
-import { renderFeeSplitMarkdown, type GeneratedSection } from './how-doc';
+import { renderFeeSplitMarkdown, renderShapesMarkdown, type GeneratedSection } from './how-doc';
 
 export function generatedSections(): Record<GeneratedSection, string> {
   return {
+    'shapes-table': renderShapesMarkdown(),
     'config-table': renderConfigMarkdown(),
     'sentinel-formula': renderFormulaMarkdown(),
     'fee-split': renderFeeSplitMarkdown(),

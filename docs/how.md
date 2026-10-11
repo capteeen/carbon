@@ -3,7 +3,8 @@
 Carbon is a pump.fun launchpad run by a molecule of six AI agents. You connect
 your Solana wallet (and, if you want, your project's X account), type one line,
 pick an isotope and a shape, and the agents research, create, check and launch
-a coin. You approve the launch and every post.
+a coin. You approve every launch. Posts need your approval unless you turn on
+posts autopilot (off by default).
 
 Carbon is element 6 because it has 6 protons. Carbon has 6 agents.
 
@@ -87,11 +88,13 @@ quantum measurement.
 
 ## Shapes
 
+<!-- generated:shapes-table:start -->
 | Shape | What it does |
 |---|---|
 | CHAIN | Linear Scout→Forge→Sentinel→Herald, with Treasurer on Sentinel and Keeper on Herald. Short posting window. |
-| RING | A benzene ring of all six. A timed loop: Herald posts and Treasurer buys back every loop; Keeper responds between loops. |
-| DIAMOND | Every agent bonded to every other. Maximum budget. Every action needs your approval, and autopilot is unavailable. |
+| RING | Benzene ring of all six. Timed loop: Herald posts and Treasurer buys back every loop, Keeper responds between. |
+| DIAMOND | Every agent may bond with every other, so each can hold a triple bond (valence 4 still caps its total). Max budget. Every action gated behind your approval. Autopilot is unavailable. |
+<!-- generated:shapes-table:end -->
 
 Graphene is not a shape: it is the live sheet of every real launch on the home
 page.
@@ -185,7 +188,9 @@ Denylist (whole-word, case-insensitive): **real_person**: elon, musk, trump, bid
 
 ## Approvals and autopilot
 
-- You approve every launch and every X post. Approval cards are pre-drafted
+- You approve every launch. Every X post or reply needs your approval unless
+  you turned on posts or replies autopilot for that launch (off by default).
+  Approval cards are pre-drafted
   with the exact values that will be used, so approval is one tap.
 - Every approval is signed by your wallet (a message signature, not a
   transaction) and checked against the wallet that created the launch.

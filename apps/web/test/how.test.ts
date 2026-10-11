@@ -2,12 +2,15 @@ import { readFileSync } from 'node:fs';
 import { renderConfigMarkdown } from '@carbon/core/render-config';
 import { renderFormulaMarkdown } from '@carbon/agents/sentinel/formula';
 import { describe, expect, it } from 'vitest';
-import { GENERATED_SECTIONS, extractSection, renderFeeSplitMarkdown } from '@/lib/how-doc';
+import { GENERATED_SECTIONS, extractSection, renderFeeSplitMarkdown, renderShapesMarkdown } from '@/lib/how-doc';
 import { howDocPath } from '@/lib/how-path';
 
 const doc = readFileSync(howDocPath(), 'utf8');
 
 describe('/how is docs/how.md, and its generated parts equal the code', () => {
+  it('shapes table block === SHAPES descriptions (AG-028)', () => {
+    expect(extractSection(doc, 'shapes-table')).toBe(renderShapesMarkdown().trim());
+  });
   it('config table block === renderConfigMarkdown()', () => {
     expect(extractSection(doc, 'config-table')).toBe(renderConfigMarkdown().trim());
   });
