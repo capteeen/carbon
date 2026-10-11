@@ -1,6 +1,8 @@
 export {
   PgEventBus,
   createEventBus,
+  ONCE_KEYS,
+  onceProbe,
   type PgEventBusOptions,
   type CreateEventBusOptions,
   type ResumableEventBus,

@@ -43,6 +43,18 @@ CREATE TABLE IF NOT EXISTS sol_launches (
   updated_at        timestamptz NOT NULL DEFAULT now()
 );
 
+-- AG-002: one launch approval authorises exactly one set of launch values.
+CREATE TABLE IF NOT EXISTS sol_launch_approvals (
+  approval_id       text PRIMARY KEY,
+  launch_id         text NOT NULL REFERENCES sol_launches(launch_id),
+  name              text NOT NULL,
+  symbol            text NOT NULL,
+  metadata_uri      text NOT NULL,
+  dev_buy_lamports  numeric NOT NULL,
+  payer             text NOT NULL,
+  bound_at          timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS sol_claims (
   claim_id      text PRIMARY KEY,
   launch_id     text NOT NULL REFERENCES sol_launches(launch_id),
@@ -84,8 +96,12 @@ CREATE TABLE IF NOT EXISTS split_ledger (
   PRIMARY KEY (claim_id, leg)
 );
 
+-- One row per buy (tranche) of a split's buyback leg; at most one unacknowledged per split.
 CREATE TABLE IF NOT EXISTS sol_buybacks (
-  split_id      text PRIMARY KEY REFERENCES sol_splits(split_id),
+  split_id      text NOT NULL REFERENCES sol_splits(split_id),
+  tranche       integer NOT NULL DEFAULT 1,
+  acked         boolean NOT NULL DEFAULT false,
+  lamports_spent numeric,
   launch_id     text NOT NULL,
   lamports_in   numeric NOT NULL CHECK (lamports_in > 0),
   venue         text,
@@ -96,8 +112,21 @@ CREATE TABLE IF NOT EXISTS sol_buybacks (
   carbon_out    numeric,
   attempts      integer NOT NULL DEFAULT 0,
   last_error    text,
-  updated_at    timestamptz NOT NULL DEFAULT now()
+  updated_at    timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (split_id, tranche)
 );
+-- Databases created before tranches: add the columns and widen the key (once).
+ALTER TABLE sol_buybacks ADD COLUMN IF NOT EXISTS tranche integer NOT NULL DEFAULT 1;
+ALTER TABLE sol_buybacks ADD COLUMN IF NOT EXISTS acked boolean NOT NULL DEFAULT false;
+ALTER TABLE sol_buybacks ADD COLUMN IF NOT EXISTS lamports_spent numeric;
+DO $$
+BEGIN
+  IF (SELECT count(*) FROM pg_index i JOIN pg_class c ON c.oid = i.indrelid
+      WHERE c.oid = to_regclass('sol_buybacks') AND i.indisprimary AND array_length(i.indkey::int2[], 1) = 1) > 0 THEN
+    ALTER TABLE sol_buybacks DROP CONSTRAINT sol_buybacks_pkey;
+    ALTER TABLE sol_buybacks ADD PRIMARY KEY (split_id, tranche);
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS sol_decay (
   launch_id           text PRIMARY KEY,
@@ -118,6 +147,10 @@ CREATE TABLE IF NOT EXISTS sol_decay (
   emitted             jsonb NOT NULL DEFAULT '{}'::jsonb,
   updated_at          timestamptz NOT NULL DEFAULT now()
 );
+
+-- Additive columns (idempotent on existing databases).
+ALTER TABLE sol_claims ADD COLUMN IF NOT EXISTS origin text NOT NULL DEFAULT 'carbon';
+ALTER TABLE sol_launches ADD COLUMN IF NOT EXISTS foreign_scan_until text;
 
 CREATE TABLE IF NOT EXISTS sol_airdrops (
   daughter_mint text NOT NULL,

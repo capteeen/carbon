@@ -10,6 +10,10 @@
  *
  * Over budget: nothing is recorded, a `budget.exceeded` event is appended, and
  * BudgetExceededError is thrown. Check+record is atomic per (launch, kind, agent).
+ *
+ * A spend may carry a key (PgBudgets.spend's 5th argument, e.g. a buyback's splitId):
+ * the first spend under a key is recorded; a later spend under the same key (a resumed
+ * action) is a no-op, so one action is never counted twice (AG-022).
  */
 import type pg from 'pg';
 import type { AgentId, LaunchConfig } from './contracts.js';
@@ -96,7 +100,7 @@ export class PgBudgets implements Budgets {
     return this.sum(this.pool, launchId, agent, kind, rule, this.now());
   }
 
-  async spend(launchId: string, agent: AgentId, kind: BudgetKind, amount = 1): Promise<void> {
+  async spend(launchId: string, agent: AgentId, kind: BudgetKind, amount = 1, key?: string): Promise<void> {
     if (!Number.isSafeInteger(amount) || amount <= 0) throw new RangeError('budget amount must be a positive integer');
     const rule = budgetRule(await this.config(launchId), agent, kind);
     const client = await this.pool.connect();
@@ -107,17 +111,25 @@ export class PgBudgets implements Budgets {
         const lockKey = `carbon:budget:${launchId}:${kind}:${rule.launchWide ? '*' : agent}`;
         await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [lockKey]);
         const t = this.now();
+        if (key !== undefined) {
+          const seen = await client.query('SELECT 1 FROM budget_ledger WHERE launch_id = $1 AND kind = $2 AND spend_key = $3', [launchId, kind, key]);
+          if (seen.rowCount) {
+            await client.query('COMMIT');
+            return; // already spent for this action
+          }
+        }
         const used = await this.sum(client, launchId, agent, kind, rule, t);
         if (used + amount > rule.limit) {
           over = { used };
           await client.query('ROLLBACK');
         } else {
-          await client.query('INSERT INTO budget_ledger (launch_id, agent, kind, amount, ts) VALUES ($1, $2, $3, $4, $5)', [
+          await client.query('INSERT INTO budget_ledger (launch_id, agent, kind, amount, ts, spend_key) VALUES ($1, $2, $3, $4, $5, $6)', [
             launchId,
             agent,
             kind,
             amount,
             t,
+            key ?? null,
           ]);
           await client.query('COMMIT');
         }

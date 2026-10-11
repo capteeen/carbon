@@ -143,9 +143,54 @@ export function parseSecretKey(raw: string, name: string): Keypair {
 }
 
 /**
+ * The two owner flags, read the same way everywhere (this config, the client's
+ * re-check, the worker seam and the web display): EXACT values, never trimmed or
+ * case-folded. An unset or empty CARBON_NETWORK means devnet; anything else must be
+ * exactly 'devnet' or 'mainnet-beta'. Mainnet is enabled only by exactly 'true'
+ * (AG-018: a padded " true" is refused here as it is in the worker and the web app).
+ */
+export function readNetworkFlags(env: EnvLike): { network: string; mainnetEnabled: string | undefined } {
+  const n = env[ENV.NETWORK];
+  return { network: n === undefined || n === '' ? 'devnet' : n, mainnetEnabled: env[ENV.MAINNET_ENABLED] };
+}
+
+/** Genesis hashes of the public clusters. The cluster is decided by these, never by URL text. */
+export const GENESIS_HASH = {
+  devnet: 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG',
+  'mainnet-beta': '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d',
+  testnet: '4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY',
+} as const;
+
+/** The cluster an RPC serves, from its genesis hash. */
+export function clusterOfGenesis(hash: string): 'devnet' | 'mainnet-beta' | 'testnet' | 'unknown' {
+  for (const [k, v] of Object.entries(GENESIS_HASH)) if (v === hash) return k as keyof typeof GENESIS_HASH;
+  return 'unknown';
+}
+
+/**
+ * The authoritative check (AG-011): the RPC's genesis hash must be the configured
+ * network's. A mainnet genesis is refused unless the config is mainnet-beta (which
+ * itself needs both flags); an unknown or testnet genesis is always refused.
+ */
+export function assertGenesisMatches(network: Network, genesisHash: string): Network {
+  const cluster = clusterOfGenesis(genesisHash);
+  if (cluster !== network) {
+    throw new NetworkGuardError(
+      cluster === 'mainnet-beta'
+        ? `${ENV.RPC_URL} serves mainnet-beta (genesis hash) but the client is ${network}; mainnet needs ${ENV.NETWORK}=mainnet-beta and ${ENV.MAINNET_ENABLED}=true`
+        : `${ENV.RPC_URL} serves ${cluster === 'unknown' ? 'an unknown cluster' : cluster} (genesis hash), not ${network}`,
+    );
+  }
+  return network;
+}
+
+/**
  * The network guard. Throws NetworkGuardError unless the network is devnet,
- * or mainnet-beta with CARBON_MAINNET_ENABLED=true. Also refuses a devnet
- * config pointed at a mainnet RPC (and the reverse).
+ * or mainnet-beta with CARBON_MAINNET_ENABLED=true (exact). A devnet config must
+ * point at an RPC whose URL names devnet, and a mainnet config at one that does
+ * not name devnet/testnet. These URL checks are only a fast first filter: the
+ * client then verifies the cluster by genesis hash before anything is built or
+ * sent (assertGenesisMatches).
  */
 export function assertNetworkAllowed(network: string, mainnetEnabledRaw: string | undefined, rpcUrl: string): Network {
   if (network !== 'devnet' && network !== 'mainnet-beta') {
@@ -158,6 +203,9 @@ export function assertNetworkAllowed(network: string, mainnetEnabledRaw: string 
   if (network === 'devnet' && u.includes('mainnet')) {
     throw new NetworkGuardError(`${ENV.RPC_URL} names mainnet while ${ENV.NETWORK}=devnet`);
   }
+  if (network === 'devnet' && !u.includes('devnet')) {
+    throw new NetworkGuardError(`${ENV.RPC_URL} must be a devnet endpoint (its URL names devnet) while ${ENV.NETWORK}=devnet`);
+  }
   if (network === 'mainnet-beta' && (u.includes('devnet') || u.includes('testnet'))) {
     throw new NetworkGuardError(`${ENV.RPC_URL} names devnet/testnet while ${ENV.NETWORK}=mainnet-beta`);
   }
@@ -165,9 +213,10 @@ export function assertNetworkAllowed(network: string, mainnetEnabledRaw: string 
 }
 
 export function loadSolanaConfig(env: EnvLike = process.env): SolanaConfig {
-  const networkRaw = opt(env, ENV.NETWORK) ?? 'devnet';
+  const flags = readNetworkFlags(env);
+  const networkRaw = flags.network;
   const rpcUrlCandidate = opt(env, ENV.RPC_URL) ?? DEFAULT_RPC_URL[networkRaw === 'mainnet-beta' ? 'mainnet-beta' : 'devnet'];
-  const network = assertNetworkAllowed(networkRaw, opt(env, ENV.MAINNET_ENABLED), rpcUrlCandidate);
+  const network = assertNetworkAllowed(networkRaw, flags.mainnetEnabled, rpcUrlCandidate);
   if (!/^https?:\/\//.test(rpcUrlCandidate)) throw new ChainConfigError(`${ENV.RPC_URL} must be an http(s) URL`);
 
   const feeModeRaw = opt(env, ENV.FEE_MODE) ?? 'native';

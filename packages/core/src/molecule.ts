@@ -12,7 +12,7 @@
  *   draft             → scouting           first event whose actor is 'scout'
  *   scouting          → forging            scout.proposals
  *   forging|blocked   → checking           forge.draft
- *   checking          → awaiting_approval  sentinel.score with passed && !hardFail
+ *   checking          → awaiting_approval  sentinel.score with passed && !hardFail && score >= the config row's threshold
  *   checking          → blocked            sentinel.score otherwise
  *   awaiting_approval → deploying          approval.granted for an approval.requested with action 'launch'
  *                                          (never via autopilot: such a grant is ignored)
@@ -121,7 +121,9 @@ export function stepMolecule(s: MoleculeSnapshot, e: CarbonEvent): MoleculeSnaps
     case 'checking':
       if (e.kind === 'sentinel.score') {
         const r = e.payload as EventPayloads['sentinel.score'];
-        const ok = r.passed === true && r.hardFail !== true && r.score >= r.threshold;
+        // The threshold is the launch's config row, never the one carried in the payload (AG-015).
+        const threshold = s.config?.sentinelThreshold ?? Infinity;
+        const ok = r.passed === true && r.hardFail !== true && r.score >= threshold && r.score >= r.threshold;
         return next(ok ? 'awaiting_approval' : 'blocked', { lastScore: r });
       }
       if (e.kind === 'forge.draft') return next('checking', { launchApprovalId: null }); // a revision restarts the check

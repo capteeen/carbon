@@ -18,6 +18,7 @@ import bs58 from 'bs58';
 import { TransactionMessage } from '@solana/web3.js';
 import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import type { RpcLike } from '../../src/rpc.js';
+import { GENESIS_HASH } from '../../src/config.js';
 
 export interface TokenBal {
   accountIndex: number;
@@ -58,6 +59,8 @@ export class FakeChain {
   /** Every system transfer applied, in order. */
   transfers: { from: string; to: string; lamports: bigint; sig: string }[] = [];
   sends = 0;
+  /** The cluster this double claims to serve (getGenesisHash). Devnet unless a test says otherwise. */
+  genesisHash: string = GENESIS_HASH.devnet;
   /** Fault switches, consumed when hit. */
   faults: { throwBeforeSend?: number; throwAfterSend?: number; dropSends?: number; statusThrows?: number } = {};
   /** Optional per-transaction effect (events, token balances). */
@@ -142,6 +145,9 @@ export class FakeChain {
       },
       async getBlockHeight() {
         return self.height;
+      },
+      async getGenesisHash() {
+        return self.genesisHash;
       },
       async getSlot() {
         return self.slot;

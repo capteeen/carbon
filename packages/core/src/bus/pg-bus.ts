@@ -87,6 +87,34 @@ function rowToEvent(r: Row): CarbonEvent {
 
 const COLS = 'seq, id, launch_id, ts, kind, actor, payload, signer, sig';
 
+/**
+ * Facts that happen once. Appending one again (a crash between the append and the
+ * caller's own bookkeeping, then a resume) returns the event already in the log
+ * instead of publishing a second copy (AG-005, AG-017). The key is deterministic:
+ * the launch, the kind and these payload fields ('*' = the whole payload).
+ */
+export const ONCE_KEYS: Partial<Record<EventKind, readonly string[] | '*'>> = {
+  'holders.snapshot': '*',
+  'decay.started': [],
+  'decay.collapsed': [],
+  'daughter.launched': ['daughterCa'],
+  'airdrop.sent': ['daughterCa', 'wallet'],
+  'fee.claimed': ['claimId'],
+  'buyback.executed': ['txSig'],
+  'split.receipt': '*',
+};
+
+/** The JSONB containment probe for a once-kind, or null when the kind may repeat. */
+export function onceProbe(kind: EventKind, payload: unknown): { sql: string; value: string } | null {
+  const k = ONCE_KEYS[kind];
+  if (k === undefined) return null;
+  if (k === '*') return { sql: 'payload = $3::jsonb', value: JSON.stringify(payload) };
+  const p = (payload ?? {}) as Record<string, unknown>;
+  const sub: Record<string, unknown> = {};
+  for (const f of k) sub[f] = p[f];
+  return { sql: 'payload @> $3::jsonb', value: JSON.stringify(sub) };
+}
+
 export class PgEventBus implements ResumableEventBus {
   readonly pool: pg.Pool;
   readonly keys: KeyRing;
@@ -143,6 +171,17 @@ export class PgEventBus implements ResumableEventBus {
       await client.query('BEGIN');
       try {
         await client.query('SELECT pg_advisory_xact_lock($1)', [APPEND_LOCK_KEY]);
+        const probe = onceProbe(input.kind, input.payload);
+        if (probe) {
+          const existing = await client.query<Row>(
+            `SELECT ${COLS} FROM events WHERE launch_id = $1 AND kind = $2 AND ${probe.sql} ORDER BY seq ASC LIMIT 1`,
+            [input.launchId, input.kind, probe.value],
+          );
+          if (existing.rows[0]) {
+            await client.query('COMMIT');
+            return rowToEvent(existing.rows[0]) as CarbonEvent<K>;
+          }
+        }
         const last = await client.query<{ seq: string; ts: string }>('SELECT seq, ts FROM events ORDER BY seq DESC LIMIT 1');
         prevSeq = last.rows[0] ? Number(last.rows[0].seq) : 0;
         // ts never goes backwards in seq order, so windows over ts agree with seq order.

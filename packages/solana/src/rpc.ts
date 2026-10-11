@@ -21,6 +21,7 @@ export type RpcLike = Pick<
   | 'getMinimumBalanceForRentExemption'
   | 'getBalance'
   | 'getSlot'
+  | 'getGenesisHash'
 >;
 
 /** The pump SDKs type their argument as Connection but only call RpcLike methods on it. */
