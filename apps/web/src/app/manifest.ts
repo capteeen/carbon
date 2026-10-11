@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Agents that bond. A pump.fun launchpad run by six AI agents.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#B9C0CB',
+    background_color: '#2B313B',
     theme_color: '#B9C0CB',
     icons: [
       { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
