@@ -67,7 +67,7 @@ describe('chemistry and half-lives', () => {
 
   // DIAMOND's copy says every agent is TRIPLE-bonded to every other. With valence 4 and five
   // neighbours that is impossible (5 × 3 = 15 bond orders > 4), and the runtime never does it.
-  it.fails('[AG-020] shape copy is chemically possible under valence 4 (DIAMOND is not "every agent triple-bonded")', () => {
+  it('[AG-020] shape copy is chemically possible under valence 4 (DIAMOND is not "every agent triple-bonded")', () => {
     expect(SHAPES.diamond.description).not.toMatch(/triple-bonded/i);
   });
 
@@ -154,7 +154,7 @@ describe('fee split: native pump.fun fee sharing, 50/30/20', () => {
 
   // The Treasurer's role (contracts.ts AGENT_ROLES, shown on the home page) still says
   // "Per-launch wallet", the pre-native design; how.md says "The launch's fee address".
-  it.fails('[AG-021] the Treasurer role copy matches native fee sharing (no "per-launch wallet")', () => {
+  it('[AG-021] the Treasurer role copy matches native fee sharing (no "per-launch wallet")', () => {
     expect(AGENT_ROLES.treasurer).not.toMatch(/per-launch wallet/i);
   });
 
