@@ -144,7 +144,7 @@ export interface ChainClient {
   buildLaunchTx(args: { launchId: string; payer: string; name: string; symbol: string; metadataUri: string; devBuySol: number; approvalId: string }): Promise<{ txBase64: string; mint: string }>;
   /** Submit the user-signed tx; confirms; returns signature. */
   /** bornAtMs = the deploy tx's block time (C-14 clock origin). */
-  submitLaunchTx(launchId: string, signedTxBase64: string): Promise<{ txSig: string; ca: string; bornAtMs?: number }>;
+  submitLaunchTx(launchId: string, signedTxBase64: string): Promise<{ txSig: string; ca: string; bornAtMs?: number | null }>;
   uploadMetadata(args: { name: string; symbol: string; description: string; image: Uint8Array; twitter?: string; website?: string }): Promise<{ metadataUri: string; imageUri: string }>;
   /** Existing coins matching name/ticker, for Sentinel. Throws ChainUnavailableError when the source is unreachable. */
   searchCoins(query: string): Promise<PumpCoinInfo[]>;
