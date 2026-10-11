@@ -164,6 +164,10 @@ describe('fee claim: kill between the on-chain claim and its public event', () =
       this.pending = 0n;
       return { claimId, lamports, txSig: sig };
     }
+    /** The chain's durable claim ledger (CarbonChainClient.confirmedClaims: sol_claims rows in state confirmed). */
+    async confirmedClaims() {
+      return this.ledger.filter((x) => x.kind === 'claim').map((x) => ({ claimId: x.claimId, lamports: x.lamports, txSig: x.sig, origin: 'carbon' as const }));
+    }
     async runSplit(_l: string, claimId: string): Promise<SplitReceipt> {
       const c = this.ledger.find((x) => x.kind === 'claim' && x.claimId === claimId);
       if (!c) throw new Error('unknown claim');
@@ -175,7 +179,7 @@ describe('fee claim: kill between the on-chain claim and its public event', () =
   // leaves a confirmed claim (money moved: in wallet mode it now sits in Carbon's per-launch
   // wallet) with no fee.claimed event; resumeSplits only walks fee.claimed events and the
   // next claim finds nothing pending, so that claim never gets a split or a public receipt.
-  it.fails('[AG-007] every on-chain claim ends up with a fee.claimed event and a split receipt after a crash and restart', async () => {
+  it('[AG-007] every on-chain claim ends up with a fee.claimed event and a split receipt after a crash and restart', async () => {
     const { launchId } = await deployedLaunch(env);
     await env.core.bus.append({ launchId, kind: 'launch.deployed', actor: 'treasurer', payload: { ca: 'Mint', txSig: 's', creatorWallet: 'Fee', devBuySol: 0.25, network: 'devnet' } });
     const chain = new LedgerChain();
@@ -212,7 +216,7 @@ describe('fee claim: kill between the on-chain claim and its public event', () =
   // MoleculeRunner.tick returns early once the kill switch is engaged, so no fee claim or
   // split ever runs again for that launch. SPEC/docs: the kill switch turns AUTOPILOT off;
   // fee claims are scheduled Treasurer work, not autopilot.
-  it.fails('[AG-008] after the kill switch, the scheduled fee claim + split still runs (only autopilot stops)', async () => {
+  it('[AG-008] after the kill switch, the scheduled fee claim + split still runs (only autopilot stops)', async () => {
     const w = wallet();
     const launchId = await createLaunch(env.core, 'chain', 'C-12', null, w.address);
     await env.core.bus.append({ launchId, kind: 'launch.deployed', actor: 'treasurer', payload: { ca: 'Mint', txSig: 's', creatorWallet: 'Fee', devBuySol: 0.1, network: 'devnet' } });
@@ -300,7 +304,7 @@ describe('$CARBON buyback: receipts match the chain, one receipt per buy', () =>
 
   // Treasurer emits `lamportsIn: amount` (what it asked for) and ignores the chain
   // client's own event, whose lamportsIn is read from the on-chain TradeEvent.
-  it.fails('[AG-006] buyback.executed.lamportsIn equals the SOL the on-chain trade actually spent', async () => {
+  it('[AG-006] buyback.executed.lamportsIn equals the SOL the on-chain trade actually spent', async () => {
     const s = await setup();
     const b = await s.treasurer.buyback();
     expect(BigInt(b!.payload.lamportsIn)).toBe(s.spentOnChain[0]);
@@ -310,7 +314,7 @@ describe('$CARBON buyback: receipts match the chain, one receipt per buy', () =>
   // the per-tick cap, Treasurer sees "remaining funds" on the next tick and calls buyCarbon
   // again for the same split; the client returns the FIRST buy's signature and Treasurer
   // publishes a second buyback.executed for a purchase that never happened.
-  it.fails('[AG-005] two ticks never publish two buyback receipts for one on-chain buy', async () => {
+  it('[AG-005] two ticks never publish two buyback receipts for one on-chain buy', async () => {
     const s = await setup();
     await s.treasurer.buyback();
     env.clock.advance(11 * 60_000); // next RING tick: the per-tick budget window has rolled
@@ -349,7 +353,7 @@ describe('airdrops: kill mid-send and resume', () => {
   // Supervisor.decayTick appends each event the watcher offers and THEN acks it in sol_decay.
   // A crash between the two re-offers the same event on the next tick, so the public log
   // gets a second holders.snapshot (and, later, duplicate airdrop.sent receipts).
-  it.fails('[AG-017] a crash between appending a decay event and acking it does not publish that event twice', async () => {
+  it('[AG-017] a crash between appending a decay event and acking it does not publish that event twice', async () => {
     const k = keys();
     const chain = new FakeChain();
     let failAck = true;

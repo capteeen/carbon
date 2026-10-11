@@ -1,6 +1,6 @@
 export { CarbonChainClient, createChainClient, spentFromTradeEvents, PUMP_DECIMALS } from './client.js';
-export type { AssertLaunchAllowed, ChainClientDeps, EventData } from './client.js';
-export { loadSolanaConfig, describeConfig, assertNetworkAllowed, parseSecretKey, parseVaultKey, ENV, DEFAULT_RPC_URL, SolanaSecrets } from './config.js';
+export type { AssertLaunchAllowed, ChainClientDeps, ClaimRecord, EventData } from './client.js';
+export { loadSolanaConfig, describeConfig, assertNetworkAllowed, assertGenesisMatches, clusterOfGenesis, readNetworkFlags, GENESIS_HASH, parseSecretKey, parseVaultKey, ENV, DEFAULT_RPC_URL, SolanaSecrets } from './config.js';
 export type { SolanaConfig, Network, FeeMode, EnvLike } from './config.js';
 export { ensureSchema, SCHEMA_SQL, withLock } from './db.js';
 export type { Db } from './db.js';

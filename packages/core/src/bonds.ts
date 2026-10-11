@@ -14,6 +14,8 @@
  *
  * Valence is enforced in the replay itself, so computeBonds never reports > 4 for
  * any agent even for a log written by something that bypassed Handoffs:
+ * - an event whose ts is earlier than the previous event's ts in seq order is ignored
+ *   (the bus never writes one; only a writer that bypassed it could);
  * - a `handoff` counts only if it was ACCEPTED: it passes the payload checks (from≠to,
  *   actor === from, pair in the launch's shape topology when launch.created is in the
  *   log) and, at its own ts, counting it would keep both agents' total order <= 4;
@@ -122,8 +124,18 @@ export function analyzeBonds(events: readonly CarbonEvent[], at?: number): BondA
   const accepted: Accepted[] = [];
   const ignored: { id: string; reason: string }[] = [];
 
+  // The bus appends with non-decreasing ts in seq order. A row that breaks that (written
+  // around the bus, e.g. raw SQL) is not trusted: its ts would let it be judged against a
+  // window it was never in (AG-012). Valence is checked at each accepted event's own ts
+  // against the state at its seq.
+  let floor = -Infinity;
   for (const e of sorted) {
-    if (e.ts > t) break; // the log as it stood at `at` (ts is non-decreasing in seq order)
+    if (e.ts < floor) {
+      if (e.kind === 'handoff') ignored.push({ id: e.id, reason: 'ts earlier than its predecessor in seq order' });
+      continue;
+    }
+    if (e.ts > t) break; // the log as it stood at `at` (every later trusted event has ts >= this one)
+    floor = e.ts;
     switch (e.kind) {
       case 'launch.created': {
         const p = e.payload as EventPayloads['launch.created'];

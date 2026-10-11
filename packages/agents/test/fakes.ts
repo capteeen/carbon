@@ -231,6 +231,10 @@ export class FakeChain implements ChainClient {
   splits = new Map<string, SplitReceipt>();
   payouts: { splitId: string; to: string; lamports: string }[] = [];
   buys: { lamports: bigint; splitId: string }[] = [];
+  /** Block time the create transaction reports (CarbonChainClient: from getTransaction). */
+  bornAtMs: number | null = null;
+  /** SOL a buy actually spends for a requested maximum (default: all of it). */
+  buySpend: (requested: bigint) => bigint = (r) => r;
   uploads = 0;
   constructor(private approvals: FakeApprovals) {}
   walletsCreated = 0;
@@ -245,7 +249,7 @@ export class FakeChain implements ChainClient {
   }
   async submitLaunchTx(_l: string, signed: string) {
     if (signed !== 'signed:dHg=') throw new Error('bad signature');
-    return { txSig: 'LaunchSig111', ca: 'MintAddr1111111111111111111111111111111pump' };
+    return { txSig: 'LaunchSig111', ca: 'MintAddr1111111111111111111111111111111pump', bornAtMs: this.bornAtMs };
   }
   async uploadMetadata() {
     this.uploads++;
@@ -284,7 +288,8 @@ export class FakeChain implements ChainClient {
   }
   async buyCarbon(lamports: bigint, splitId: string) {
     this.buys.push({ lamports, splitId });
-    return { txSig: `buy-${this.buys.length}`, carbonOut: lamports * 1000n };
+    // Like CarbonChainClient: lamportsIn is what the trade spent, reported by the chain.
+    return { txSig: `buy-${this.buys.length}`, carbonOut: lamports * 1000n, lamportsIn: this.buySpend(lamports) };
   }
   async lastTradeAt() {
     return null;

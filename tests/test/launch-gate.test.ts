@@ -145,7 +145,7 @@ describe('launch gate at the chain seam (worker launchAllowedCheck + CarbonChain
   // assertLaunchAllowed only CHECKS that the approval is consumed; it never binds the
   // approval to one build. A consumed approval therefore authorises any number of
   // rebuilds, with any name/symbol/uri, until the tx is submitted.
-  it.fails('[AG-002] a consumed launch approval cannot be reused to build a second, different launch tx', async () => {
+  it('[AG-002] a consumed launch approval cannot be reused to build a second, different launch tx', async () => {
     const { args } = await setup();
     await client.buildLaunchTx(args);
     await expect(client.buildLaunchTx({ ...args, name: 'Something Else', symbol: 'ELSE', metadataUri: URI + '?v=2' })).rejects.toThrow();
@@ -220,7 +220,7 @@ describe('launch gate in the agents and core', () => {
 
   // The molecule state (shown on /launch and /l/[ca]) trusts the threshold carried in the
   // sentinel.score payload instead of the launch's config row.
-  it.fails('[AG-015] the molecule fold does not show "awaiting_approval" for a score computed against a lower threshold than the row', async () => {
+  it('[AG-015] the molecule fold does not show "awaiting_approval" for a score computed against a lower threshold than the row', async () => {
     const launchId = await createLaunch(env.core, 'diamond');
     await env.core.bus.append({ launchId, kind: 'scout.proposals', actor: 'scout', payload: { narratives: [] } });
     await env.core.bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: { name: 'F', ticker: 'F', lore: 'x', logoUri: 'u', logoHash: '0'.repeat(16), bannerUri: 'u', siteUri: 'u' } });

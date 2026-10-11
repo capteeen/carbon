@@ -144,7 +144,7 @@ describe('valence 4: a fifth bond order must fail', () => {
   // enforces non-decreasing ts, but the events table has no such constraint, so a row
   // inserted with SQL (or a future second writer) can carry an earlier ts than its seq
   // predecessor. analyzeBonds then accepts it in isolation and the sum exceeds 4.
-  it.fails('[AG-012] computeBonds stays ≤ 4 even when ts goes backwards in seq order (raw SQL insert)', () => {
+  it('[AG-012] computeBonds stays ≤ 4 even when ts goes backwards in seq order (raw SQL insert)', () => {
     const L = 'probe-backwards';
     let seq = 0;
     const mk = (ts: number, kind: CarbonEvent['kind'], actor: CarbonEvent['actor'], payload: unknown): CarbonEvent =>

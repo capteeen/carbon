@@ -91,6 +91,55 @@ describe('Treasurer', () => {
     expect(total).toBe(300_000_000n);
     expect(await t.buyback()).toBeNull();
   });
+
+  it('[AG-006/AG-005] the buyback receipt carries what the chain says the trade spent, once per buy', async () => {
+    const cfg = launchConfig('C-12', 'ring');
+    const { h, c, forge, draft } = await scored(cfg);
+    await forge.prepareDeploy(draft);
+    const t = new Treasurer(h.ctx);
+    await t.deploy({ launcherWallet: c.payload.launcherWallet, sign });
+    await h.bus.append({ launchId: 'L1', kind: 'fee.claimed', actor: 'treasurer', payload: { claimId: 'c7', lamports: '1000000000', txSig: 's' } });
+    await t.resumeSplits();
+    h.chain.buySpend = (r) => r - 75_000n; // slippage + fees left part of the max unspent
+    const b = await t.buyback();
+    expect(b!.payload.lamportsIn).toBe((10_000_000n - 75_000n).toString());
+    // The unspent part stays in the leg for the next buy.
+    expect((await t.buybackFunds())[0]!.remaining).toBe(300_000_000n - 10_000_000n + 75_000n);
+    expect(new Set(h.bus.ofKind('buyback.executed').map((e) => e.payload.txSig)).size).toBe(h.bus.ofKind('buyback.executed').length);
+  });
+
+  it('[AG-007] claims in the chain ledger without a receipt (crash, or a third-party crank) get fee.claimed and a split receipt', async () => {
+    const cfg = launchConfig('C-12', 'chain');
+    const { h, c, forge, draft } = await scored(cfg);
+    await forge.prepareDeploy(draft);
+    const t = new Treasurer(h.ctx);
+    await t.deploy({ launcherWallet: c.payload.launcherWallet, sign });
+    let scans = 0;
+    const ledger = [
+      { claimId: 'crashed', lamports: 5n, txSig: 'sigA', origin: 'carbon' as const },
+      { claimId: 'foreign_sigB', lamports: 7n, txSig: 'sigB', origin: 'foreign' as const },
+    ];
+    Object.assign(h.chain, { scanForeignDistributions: async () => (scans++, []), confirmedClaims: async () => ledger });
+    await t.resumeSplits();
+    await t.resumeSplits();
+    expect(scans).toBe(2);
+    const claimed = h.bus.ofKind('fee.claimed').map((e) => e.payload.claimId);
+    expect(claimed.sort()).toEqual(['crashed', 'foreign_sigB']);
+    for (const id of ['crashed', 'foreign_sigB']) expect(h.bus.ofKind('split.receipt').some((r) => r.payload.claimId === id)).toBe(true);
+    expectReasoningForEveryAction(h.bus);
+  });
+
+  it('[AG-025] a C-14 clock starts at the create transaction block time, recorded in decay.started', async () => {
+    const cfg = launchConfig('C-14', 'chain');
+    const { h, c, forge, draft } = await scored(cfg);
+    await forge.prepareDeploy(draft);
+    const born = h.clock.now() - 42_000; // the block landed 42 s before the event is appended
+    h.chain.bornAtMs = born;
+    await new Treasurer(h.ctx).deploy({ launcherWallet: c.payload.launcherWallet, sign });
+    const started = h.bus.ofKind('decay.started');
+    expect(started).toHaveLength(1);
+    expect(started[0]!.payload).toEqual({ rule: 'clock', collapseAt: born + 7 * 24 * 3600_000 });
+  });
 });
 
 describe('Herald', () => {

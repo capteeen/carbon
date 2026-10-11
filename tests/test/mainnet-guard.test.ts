@@ -59,12 +59,12 @@ describe('mainnet only with CARBON_NETWORK=mainnet-beta AND CARBON_MAINNET_ENABL
     });
   }
 
-  // Fails safe, but inconsistent: loadSolanaConfig trims the flag (" true" → mainnet-beta)
-  // while CarbonChainClient re-checks the raw env value and refuses, so the worker boots
-  // with the chain "unavailable" and the web app shows devnet.
-  it('[AG-018] a whitespace-padded flag never yields a mainnet client (config and client disagree, but fail safe)', () => {
+  // AG-018 fixed: the flags are read exactly (never trimmed) by loadSolanaConfig, the
+  // CarbonChainClient re-check, the worker seam and the web app, so all four agree: a padded
+  // " true" is refused everywhere (the config used to trim it to mainnet-beta).
+  it('[AG-018] a whitespace-padded flag never yields a mainnet client, and config, client, worker and web agree', () => {
     const env = base({ CARBON_NETWORK: 'mainnet-beta', CARBON_MAINNET_ENABLED: ' true' });
-    expect(loadSolanaConfig(env).network).toBe('mainnet-beta');
+    expect(() => loadSolanaConfig(env)).toThrow(NetworkGuardError);
     const w = workerChain({ pool: {} as never, bus: {} as never, env: env as NodeJS.ProcessEnv });
     expect(w.kind).toBe('unavailable');
     expect(webNetwork(env as NodeJS.ProcessEnv)).toBe('devnet');
@@ -86,7 +86,7 @@ describe('mainnet only with CARBON_NETWORK=mainnet-beta AND CARBON_MAINNET_ENABL
   // not contain it (e.g. https://rpc.ankr.com/solana, https://solana-rpc.publicnode.com,
   // private/self-hosted nodes). With neither flag set, such a URL yields a client that
   // labels itself devnet and moves real SOL. A genesis-hash check (getGenesisHash) would close it.
-  it.fails('[AG-011] without the two flags, an RPC endpoint that is mainnet but does not say so in its URL is refused', () => {
+  it('[AG-011] without the two flags, an RPC endpoint that is mainnet but does not say so in its URL is refused', () => {
     expect(() => loadSolanaConfig(base({ CARBON_RPC_URL: 'https://rpc.ankr.com/solana' }))).toThrow(NetworkGuardError);
   });
 

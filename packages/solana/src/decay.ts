@@ -176,6 +176,9 @@ export class DecayWatcher {
   }
 
   private async step(t: DecayTarget): Promise<DecayTickResult> {
+    // The clock starts at the create transaction's block time when Carbon has it on record
+    // (AG-025); the caller's value (the launch.deployed event time) is only the fallback.
+    const bornAtMs = (await this.deps.client.launchBornAtMs(t.launchId)) ?? t.bornAtMs;
     const { client, db } = this.deps;
     await db.query(`INSERT INTO sol_decay (launch_id, state, rule) VALUES ($1,'watching',$2) ON CONFLICT (launch_id) DO NOTHING`, [t.launchId, JSON.stringify(t.rule)]);
     let row = (await this.row(t.launchId))!;
@@ -185,12 +188,12 @@ export class DecayWatcher {
     if (row.state === 'watching') {
       const lastTrade = t.rule.kind === 'quiet' ? await client.lastTradeAt(t.ca) : null;
       const now = this.now();
-      const readout = decayReadout(t.rule, t.bornAtMs, lastTrade, now);
+      const readout = decayReadout(t.rule, bornAtMs, lastTrade, now);
       if (readout.collapseAt === null || now < readout.collapseAt) return { state: 'watching', readout, events };
       const collapseSec = Math.floor(readout.collapseAt / 1000);
       // Quiet period start: the last trade (C-11), or for C-14 the last trade before the clock ran out.
       const lastTradeForQuiet = t.rule.kind === 'quiet' ? lastTrade : await client.lastTradeAt(t.ca);
-      const quietStart = Math.min(collapseSec, Math.floor(Math.max(t.bornAtMs, lastTradeForQuiet ?? t.bornAtMs) / 1000));
+      const quietStart = Math.min(collapseSec, Math.floor(Math.max(bornAtMs, lastTradeForQuiet ?? bornAtMs) / 1000));
       const snap = await client.holderSnapshot({ mint: t.ca, collapseAt: collapseSec, quietPeriodStart: quietStart, excludeOwners: [client.crankAddress()] });
       await db.query(
         `UPDATE sol_decay SET state='snapshotted', collapse_at=$2, quiet_period_start=$3, snapshot=$4::jsonb, snapshot_slot=$5, updated_at=now() WHERE launch_id=$1 AND state='watching'`,
@@ -232,7 +235,7 @@ export class DecayWatcher {
       allocation = computeAllocation({
         snapshot: holders,
         measurements: [],
-        bornAt: Math.floor(t.bornAtMs / 1000),
+        bornAt: Math.floor(bornAtMs / 1000),
         collapseAt: Math.floor(collapseAt / 1000),
         quietPeriodStart: Number(row.quiet_period_start),
         totalDaughterUnits: d.unitsReceived,

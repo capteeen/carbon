@@ -156,13 +156,19 @@ export class MoleculeRunner {
     const ctx = this.ctx;
     const result: TickResult = { claimed: false, buyback: null, posts: [], replies: [] };
     if (this.ticking) return { ...result, stopped: 'previous tick still running' };
-    if (await killSwitchEngaged(ctx)) return { ...result, stopped: 'kill switch engaged' };
     if (!(await latest(ctx, 'launch.deployed'))) return { ...result, stopped: 'not deployed' };
     this.ticking = true;
     try {
+      // Money owed to people and its public receipts run regardless of the kill switch:
+      // the switch turns autopilot (posts, replies, buybacks) off, not fee claims,
+      // splits or receipts for money that already moved (AG-008).
       await this.step('treasurer', () => this.treasurer.resumeSplits());
       const claim = await this.step('treasurer', () => this.treasurer.claimAndSplit());
       result.claimed = !!claim;
+      if (await killSwitchEngaged(ctx)) {
+        result.buyback = (await this.step('treasurer', () => this.treasurer.resumeBuyback())) ?? null;
+        return { ...result, stopped: 'kill switch engaged: posts, replies and new buybacks stopped; fee claims, splits and receipts still run' };
+      }
       result.buyback = (await this.step('treasurer', () => this.treasurer.buyback())) ?? null;
 
       if (ctx.config.loopMinutes !== null) {

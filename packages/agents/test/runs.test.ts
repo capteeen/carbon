@@ -116,10 +116,22 @@ describe('RING full run', () => {
     handoffsWithinTopology(h, 'ring');
     expectReasoningForEveryAction(h.bus);
 
-    // Kill switch stops the loop.
+    // Kill switch stops the autopilot loop (posts, replies, new buybacks) but not fee claims,
+    // splits or their receipts (AG-008).
     await h.approvals.killSwitch('L1', 'wallet');
+    h.clock.advance(cfg.loopMinutes! * 60_000);
+    h.chain.pendingClaims.push({ claimId: 'c2', lamports: 1_000_000_000n, txSig: 'claimSig2' });
+    const posts = h.x.posts.length;
+    const buys = h.chain.buys.length;
     const t3 = await runner.tick();
-    expect(t3.stopped).toBe('kill switch engaged');
+    expect(t3.stopped).toMatch(/^kill switch engaged/);
+    expect(t3.claimed).toBe(true);
+    expect(h.bus.ofKind('split.receipt').some((r) => r.payload.claimId === 'c2')).toBe(true);
+    expect(t3.posts).toHaveLength(0);
+    expect(t3.replies).toHaveLength(0);
+    expect(t3.buyback).toBeNull();
+    expect(h.x.posts.length).toBe(posts);
+    expect(h.chain.buys.length).toBe(buys);
   });
 });
 
