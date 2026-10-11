@@ -252,6 +252,8 @@ export function ChamberObject({
     if (!canDrag) return protonHandlers[i]!.onClick(e);
     e.stopPropagation();
     onHeavyDrop?.(agent);
+    // C-13: the tap gives this agent the extra neutron, then shows what that means for it
+    kit.inspect?.open({ kind: 'agent', agent });
   };
 
   useFrame((_, delta) => {

@@ -18,8 +18,9 @@ export interface InspectApi {
 /** Pixels the pointer may travel between down and up and still count as a click (drags rotate the atom). */
 const CLICK_SLOP_PX = 8;
 
+/** Visible all the way up. A hit proxy (an invisible, larger copy used only for clicks) skips its own flag. */
 function shown(o: Object3D | null): boolean {
-  for (let n = o; n; n = n.parent) if (!n.visible) return false;
+  for (let n = o; n; n = n.parent) if (!n.visible && !(n === o && n.userData.hitProxy)) return false;
   return true;
 }
 

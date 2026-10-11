@@ -598,6 +598,11 @@ void main() {
   col = mix(col, uFrost, uGraphene * line * 0.75);
   float dist = length(p);
   float fade = 1.0 - smoothstep(6.0, 22.0, dist);
+  // The plain writes no depth (so the post fog never washes out transparent
+  // shells and rings drawn over it), so it carries the post pass's distance fog itself.
+  float fd = max(0.0, distance(cameraPosition, vWorld) - 5.0);
+  float pf = 1.0 - exp(-0.0072 * fd * fd);
+  col = mix(col, uFog, pf);
   gl_FragColor = vec4(mix(uFog, col, fade), uOpacity * fade);
 }
 `;
@@ -618,7 +623,7 @@ export function createPlainMaterial(shared: SharedUniforms): PlainMaterial {
       uGraphene: { value: 0 },
     },
     transparent: true,
-    depthWrite: true,
+    depthWrite: false,
   }) as PlainMaterial;
 }
 

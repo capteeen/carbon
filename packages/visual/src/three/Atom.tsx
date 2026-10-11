@@ -102,6 +102,7 @@ export function Atom({ drive, pointer, anchors, cloudCount = 1600 }: { drive: At
   const group = useRef<Group>(null);
   const spin = useRef<Group>(null);
   const nucleons = useRef<InstancedMesh>(null);
+  const hits = useRef<InstancedMesh>(null);
   const electrons = useRef<InstancedMesh>(null);
   const arms = useRef<InstancedMesh>(null);
   const innerRing = useRef<Mesh>(null);
@@ -129,6 +130,8 @@ export function Atom({ drive, pointer, anchors, cloudCount = 1600 }: { drive: At
   const res = useMemo(() => {
     const layout = nucleonLayout();
     const sphere = new SphereGeometry(NUCLEON_R, 40, 28);
+    // click target: a coarser, larger sphere per nucleon so a tap lands even while the atom spins or glitches
+    const hitGeo = new SphereGeometry(NUCLEON_R * 1.6, 10, 8);
     const emblem = new Float32Array(12);
     const glow = new Float32Array(12);
     const fade = new Float32Array(12).fill(1);
@@ -178,12 +181,13 @@ export function Atom({ drive, pointer, anchors, cloudCount = 1600 }: { drive: At
 
     const tumbleAxis = Array.from({ length: 12 }, (_, i) => new Vector3(seeded(i + 1) - 0.5, seeded(i + 2) - 0.5, seeded(i + 3) - 0.5).normalize());
     const lift = Array.from({ length: 12 }, (_, i) => 0.35 + seeded(i + 40) * 0.9);
-    return { layout, sphere, aGlow, aFade, nucleonMat, eGeo, eMat, ringMat, innerGeo, outerGeo, bubbleGeo, bubbleMat, armGeo, armMat, cloudGeo, cloudMat, tumbleAxis, lift };
+    return { layout, sphere, hitGeo, aGlow, aFade, nucleonMat, eGeo, eMat, ringMat, innerGeo, outerGeo, bubbleGeo, bubbleMat, armGeo, armMat, cloudGeo, cloudMat, tumbleAxis, lift };
   }, [kit.shared, cloudCount]);
 
   useEffect(
     () => () => {
       res.sphere.dispose();
+      res.hitGeo.dispose();
       res.nucleonMat.dispose();
       res.eGeo.dispose();
       res.eMat.dispose();
@@ -267,8 +271,16 @@ export function Atom({ drive, pointer, anchors, cloudCount = 1600 }: { drive: At
       res.aGlow.setX(i, d.coreGlow * 0.9 + (hovered.current === i ? 0.45 : 0));
     }
     nm.instanceMatrix.needsUpdate = true;
-    // instanced raycasts use a cached bounding sphere; keep it current (explode moves nucleons) so clicks land
-    if (kit.inspect) nm.computeBoundingSphere();
+    // click proxies follow the nucleons; instanced raycasts cache a bounding sphere, so refresh it
+    const hm = hits.current;
+    if (hm && kit.inspect) {
+      for (let i = 0; i < 12; i++) {
+        nm.getMatrixAt(i, s.m);
+        hm.setMatrixAt(i, s.m);
+      }
+      hm.instanceMatrix.needsUpdate = true;
+      hm.computeBoundingSphere();
+    }
     res.aFade.needsUpdate = true;
     res.aGlow.needsUpdate = true;
     res.nucleonMat.uniforms.uIrid.value = d.irid;
@@ -373,7 +385,8 @@ export function Atom({ drive, pointer, anchors, cloudCount = 1600 }: { drive: At
   return (
     <group ref={group}>
       <group ref={spin}>
-        <instancedMesh ref={nucleons} args={[res.sphere, res.nucleonMat, 12]} frustumCulled={false} {...handlers} />
+        <instancedMesh ref={nucleons} args={[res.sphere, res.nucleonMat, 12]} frustumCulled={false} />
+        <instancedMesh ref={hits} args={[res.hitGeo, undefined, 12]} visible={false} userData={{ hitProxy: true }} frustumCulled={false} {...handlers} />
         <mesh ref={innerRing} geometry={res.innerGeo} material={res.ringMat} matrixAutoUpdate />
         <mesh ref={outerRing} geometry={res.outerGeo} material={res.ringMat} />
         <group ref={bubbles}>

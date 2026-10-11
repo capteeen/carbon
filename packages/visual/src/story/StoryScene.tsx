@@ -24,6 +24,11 @@ import { useKit } from '../three/Stage.js';
 import type { BondFlash, LaunchReplay, LaunchSummary } from '../types.js';
 import { pairAgents } from '../data/derive.js';
 
+/** Drag-to-rotate: radians per pixel dragged, max coasting speed (rad/s) and how fast coasting stops. */
+const DRAG_RAD_PER_PX = 0.0042;
+const DRAG_MAX_SPEED = 2.4;
+const DRAG_COAST_DAMP = 3.2;
+
 export interface StorySceneProps {
   store: ProgressStore;
   leaders: LeaderRegistry;
@@ -119,8 +124,9 @@ export const StoryScene = memo(function StoryScene(props: StorySceneProps) {
   const replayFlash = useRef<Map<string, string>>(new Map());
   const replayState = useRef({ count: -1 });
 
-  // drag rotation with heavy inertial easing (hero only); the cursor push itself lives in Stage
-  const drag = useRef({ down: false, x: 0, y: 0, vx: 0, vy: 0 });
+  // drag rotation (hero only): the atom follows the drag at a calm rate, then
+  // coasts to a stop with a capped speed. The cursor push itself lives in Stage.
+  const drag = useRef({ down: false, x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, lastTx: 0, lastTy: 0 });
   useEffect(() => {
     if (!pin) return;
     const d = drag.current;
@@ -136,8 +142,8 @@ export const StoryScene = memo(function StoryScene(props: StorySceneProps) {
       const dy = e.clientY - d.y;
       d.x = e.clientX;
       d.y = e.clientY;
-      d.vy += dx * 0.0016;
-      if (e.pointerType !== 'touch') d.vx += dy * 0.0011;
+      d.ty += dx * DRAG_RAD_PER_PX;
+      if (e.pointerType !== 'touch') d.tx = Math.max(-0.6, Math.min(0.6, d.tx + dy * DRAG_RAD_PER_PX * 0.7));
     };
     const up = () => {
       d.down = false;
@@ -208,16 +214,32 @@ export const StoryScene = memo(function StoryScene(props: StorySceneProps) {
 
     // drag inertia + cursor
     const d = drag.current;
-    pointer.rotY += d.vy;
-    pointer.rotX = Math.max(-0.6, Math.min(0.6, pointer.rotX + d.vx));
-    const damp = Math.exp(-dt * 1.7);
-    d.vy *= damp;
-    d.vx *= damp;
+    const sdt = Math.max(dt, 1e-3);
+    if (d.down && st.drag) {
+      // release speed: eased estimate of how fast the drag was moving (rad/s), capped
+      const k = 1 - Math.exp(-sdt * 14);
+      d.vy += ((d.ty - d.lastTy) / sdt - d.vy) * k;
+      d.vx += ((d.tx - d.lastTx) / sdt - d.vx) * k;
+    } else {
+      d.ty += d.vy * sdt;
+      d.tx = Math.max(-0.6, Math.min(0.6, d.tx + d.vx * sdt));
+      const damp = Math.exp(-sdt * DRAG_COAST_DAMP);
+      d.vy *= damp;
+      d.vx *= damp;
+    }
+    d.vy = Math.max(-DRAG_MAX_SPEED, Math.min(DRAG_MAX_SPEED, d.vy));
+    d.vx = Math.max(-DRAG_MAX_SPEED, Math.min(DRAG_MAX_SPEED, d.vx));
     if (!st.drag) {
       // outside the hero the atom eases back to its rest orientation
-      pointer.rotY *= Math.exp(-dt * 2.2);
-      pointer.rotX *= Math.exp(-dt * 2.2);
+      d.vx = d.vy = 0;
+      d.ty *= Math.exp(-sdt * 2.2);
+      d.tx *= Math.exp(-sdt * 2.2);
     }
+    d.lastTy = d.ty;
+    d.lastTx = d.tx;
+    const follow = 1 - Math.exp(-sdt * 9);
+    pointer.rotY += (d.ty - pointer.rotY) * follow;
+    pointer.rotX += (d.tx - pointer.rotX) * follow;
 
     // atom
     drive.atom = st.atom;
