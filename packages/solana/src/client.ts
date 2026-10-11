@@ -92,6 +92,8 @@ interface LaunchRow {
   state: 'wallet' | 'built' | 'sent' | 'confirmed';
   born_at_ms: string | null;
   foreign_scan_until: string | null;
+  foreign_scan_head: string | null;
+  foreign_scan_before: string | null;
 }
 
 /** A confirmed claim (or distribution) in the chain ledger. */
@@ -477,6 +479,12 @@ export class CarbonChainClient implements ChainClient {
    * not Carbon's own claims and carry a DistributeCreatorFeesEvent for this mint, and
    * records each as a confirmed 'foreign' claim, so it gets fee.claimed and a split
    * receipt like any other. Returns the claims it found.
+   *
+   * The scan is resumable (AG-033): one call reads at most FOREIGN_SCAN_PAGES pages. If
+   * the previous cursor was not reached, the call records where it stopped (`before`)
+   * and the newest signature of the scan (`head`); the next call continues below that
+   * point. `foreign_scan_until` only moves to `head` once every signature between it and
+   * `head` has been read, so no unread signature is ever skipped.
    */
   async scanForeignDistributions(launchId: string): Promise<ClaimRecord[]> {
     await this.verifyCluster();
@@ -489,18 +497,23 @@ export class CarbonChainClient implements ChainClient {
         (await this.db.query<{ tx_sig: string }>('SELECT tx_sig FROM sol_claims WHERE launch_id=$1 AND tx_sig IS NOT NULL', [launchId])).rows.map((r) => r.tx_sig),
       );
       const fresh: { signature: string; err: unknown }[] = [];
-      let before: string | undefined;
+      let head = row.foreign_scan_head;
+      let before: string | undefined = row.foreign_scan_before ?? undefined;
+      let complete = false;
       for (let page = 0; page < FOREIGN_SCAN_PAGES; page++) {
         const sigs = await rpcCall('getSignaturesForAddress', () => this.rpc.getSignaturesForAddress(sharing, { limit: FOREIGN_SCAN_PAGE, ...(before ? { before } : {}) }, 'confirmed'));
-        let reached = false;
+        if (head === null && sigs[0]) head = sigs[0].signature; // a new scan starts at the newest signature
         for (const sg of sigs) {
           if (sg.signature === row.foreign_scan_until) {
-            reached = true;
+            complete = true;
             break;
           }
           fresh.push(sg);
         }
-        if (reached || sigs.length < FOREIGN_SCAN_PAGE) break;
+        if (complete || sigs.length < FOREIGN_SCAN_PAGE) {
+          complete = true;
+          break;
+        }
         before = sigs[sigs.length - 1]!.signature;
       }
       const found: ClaimRecord[] = [];
@@ -519,7 +532,12 @@ export class CarbonChainClient implements ChainClient {
         );
         found.push({ claimId, lamports, txSig: sg.signature, origin: 'foreign' });
       }
-      if (fresh[0]) await this.db.query('UPDATE sol_launches SET foreign_scan_until=$2 WHERE launch_id=$1', [launchId, fresh[0].signature]);
+      // Every signature read above has been processed (a failure threw before this point).
+      if (complete) {
+        await this.db.query('UPDATE sol_launches SET foreign_scan_until=COALESCE($2, foreign_scan_until), foreign_scan_head=NULL, foreign_scan_before=NULL WHERE launch_id=$1', [launchId, head]);
+      } else {
+        await this.db.query('UPDATE sol_launches SET foreign_scan_head=$2, foreign_scan_before=$3 WHERE launch_id=$1', [launchId, head, before ?? null]);
+      }
       return found;
     });
   }

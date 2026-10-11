@@ -151,6 +151,10 @@ CREATE TABLE IF NOT EXISTS sol_decay (
 -- Additive columns (idempotent on existing databases).
 ALTER TABLE sol_claims ADD COLUMN IF NOT EXISTS origin text NOT NULL DEFAULT 'carbon';
 ALTER TABLE sol_launches ADD COLUMN IF NOT EXISTS foreign_scan_until text;
+-- A foreign-distribution scan in progress (AG-033): the newest signature it started from,
+-- and the oldest signature it has fully processed so far (resume with before=this).
+ALTER TABLE sol_launches ADD COLUMN IF NOT EXISTS foreign_scan_head text;
+ALTER TABLE sol_launches ADD COLUMN IF NOT EXISTS foreign_scan_before text;
 
 CREATE TABLE IF NOT EXISTS sol_airdrops (
   daughter_mint text NOT NULL,

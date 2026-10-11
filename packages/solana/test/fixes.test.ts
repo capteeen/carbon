@@ -293,6 +293,45 @@ describe('AG-007 and foreign distributions: every claim is in the durable ledger
     expect((await s.client.scanForeignDistributions(s.launchId)).map((c) => c.txSig)).toEqual([sig2]);
   });
 
+  // AG-033: more than one tick's worth of signatures (10 × 100) since the last scan.
+  it('[AG-033] a distribution buried under more than 1000 newer signatures is still found; the cursor never skips unread signatures', async () => {
+    const s = await nativeLaunch();
+    const sharing = feeSharingConfigPda(s.mint).toBase58();
+    const old = foreignDistribution(s, 5_000n); // the oldest entry
+    const filler = (n: number, tag: string) =>
+      Array.from({ length: n }, (_, i) => ({ signature: `${tag}${i}`, blockTime: 1, err: { InstructionError: [0, 'x'] } as unknown as null, slot: 1 }));
+    // 2500 failed transactions land on top of it before the next scan
+    s.chain.signatures.set(sharing, [...filler(2500, 'fillA'), ...s.chain.signatures.get(sharing)!]);
+    const first = await s.client.scanForeignDistributions(s.launchId);
+    expect(first).toEqual([]); // read 1000, not yet down to it
+    const cur1 = (await db.query(`SELECT foreign_scan_until, foreign_scan_head, foreign_scan_before FROM sol_launches WHERE launch_id=$1`, [s.launchId])).rows[0]!;
+    expect(cur1.foreign_scan_until).toBeNull(); // the cursor did not jump past the unread 1500
+    expect(cur1.foreign_scan_head).toBe('fillA0');
+    // meanwhile a newer one arrives on top
+    const newer = foreignDistribution(s, 7_000n);
+    const found: string[] = [];
+    for (let i = 0; i < 5; i++) found.push(...(await s.client.scanForeignDistributions(s.launchId)).map((c) => c.txSig));
+    expect(found.sort()).toEqual([old, newer].sort());
+    expect(new Set((await s.client.confirmedClaims(s.launchId)).map((c) => c.txSig))).toEqual(new Set([old, newer]));
+    const cur2 = (await db.query(`SELECT foreign_scan_until, foreign_scan_head, foreign_scan_before FROM sol_launches WHERE launch_id=$1`, [s.launchId])).rows[0]!;
+    expect(cur2).toEqual({ foreign_scan_until: newer, foreign_scan_head: null, foreign_scan_before: null });
+  });
+
+  it('[AG-033] a fetch failure mid-scan leaves the cursor where it was (the page is re-read next tick)', async () => {
+    const s = await nativeLaunch();
+    const sig = foreignDistribution(s, 9_000n);
+    const rpc = s.chain.rpc() as unknown as { getTransaction: (...a: unknown[]) => Promise<unknown> };
+    const client = makeClient({
+      env: testEnv(s.keys),
+      db,
+      rpc: new Proxy(rpc, { get: (t, k) => (k === 'getTransaction' ? () => Promise.reject(new Error('rpc down')) : Reflect.get(t, k, t)) }) as never,
+    });
+    await expect(client.scanForeignDistributions(s.launchId)).rejects.toThrow();
+    const cur = (await db.query(`SELECT foreign_scan_until, foreign_scan_head, foreign_scan_before FROM sol_launches WHERE launch_id=$1`, [s.launchId])).rows[0]!;
+    expect(cur).toEqual({ foreign_scan_until: null, foreign_scan_head: null, foreign_scan_before: null });
+    expect((await s.client.scanForeignDistributions(s.launchId)).map((c) => c.txSig)).toEqual([sig]);
+  });
+
   it("Carbon's own claims are never mistaken for foreign ones", async () => {
     const s = await nativeLaunch();
     const sig = foreignDistribution(s, 777n);
