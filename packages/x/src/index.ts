@@ -1,9 +1,11 @@
 export {
   CarbonXClient,
   createXClient,
+  launcherWalletFromEvents,
   textHash,
   AUTH_COOKIE_NAME,
   type AssertApproval,
+  type LauncherWalletOf,
   type XClientDeps,
   type StartAuthResult,
   type AuthCookie,
@@ -27,4 +29,4 @@ export {
   type XConnection,
   type DedupeReservation,
 } from './store.js';
-export { X_MIGRATION_SQL } from './migration.js';
+export { X_MIGRATION_SQL, X_MIGRATION_0002_SQL } from './migration.js';

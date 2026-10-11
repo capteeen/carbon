@@ -142,7 +142,7 @@ export async function listLaunchWallets(): Promise<WalletRow[]> {
   for (const e of evs) {
     if (e.kind === 'launch.deployed' && !rows.has(e.launchId)) {
       const p = e.payload as EventPayloads['launch.deployed'];
-      rows.set(e.launchId, { launchId: e.launchId, address: p.creatorWallet, mode: 'native', eventId: e.id, ...idx.get(e.launchId)! });
+      rows.set(e.launchId, { launchId: e.launchId, address: p.creatorWallet, mode: null, eventId: e.id, ...idx.get(e.launchId)! });
     }
   }
   return [...rows.values()].reverse();

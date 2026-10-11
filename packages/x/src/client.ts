@@ -40,10 +40,24 @@ import {
 } from './store.js';
 
 /**
- * Consumer-provided approval gate. Wire core's `Approvals.consume` here. Must
- * throw unless approvalId is granted, unconsumed, for this launch and action.
+ * Consumer-provided approval gate, called once per network post BEFORE the
+ * request. Must throw unless approvalId authorises exactly this post: right
+ * launch and action, the approved text (`textSha256` = textHash(text)), and not
+ * used for any earlier post. Implementations record the use atomically.
  */
-export type AssertApproval = (launchId: string, approvalId: string, action: Extract<ApprovalAction, 'post' | 'reply'>) => Promise<void>;
+export type AssertApproval = (
+  launchId: string,
+  approvalId: string,
+  action: Extract<ApprovalAction, 'post' | 'reply'>,
+  textSha256: string,
+) => Promise<void>;
+
+/**
+ * The wallet a launch's X connection must be bound to (the launch's launcher
+ * wallet), or null when the launch does not exist (yet). Token rows bound to any
+ * other wallet, or to none, are treated as not connected.
+ */
+export type LauncherWalletOf = (launchId: string) => Promise<string | null>;
 
 export interface XClientDeps {
   config: XConfig;
@@ -52,6 +66,8 @@ export interface XClientDeps {
   /** Seals the short-lived OAuth flow cookie (same key as token storage). */
   cipher: TokenCipher;
   assertApproval?: AssertApproval;
+  /** When set, user tokens are used only if bound to this wallet (X account fixation guard). */
+  launcherWallet?: LauncherWalletOf;
   fetch?: typeof fetch;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
@@ -123,6 +139,7 @@ export class CarbonXClient implements XClient {
   private readonly ledger: PostLedger;
   private readonly cipher: TokenCipher;
   private readonly assertApproval: AssertApproval | undefined;
+  private readonly launcherWallet: LauncherWalletOf | undefined;
   private readonly fetchImpl: typeof fetch;
   private readonly now: () => number;
   private readonly sleep: (ms: number) => Promise<void>;
@@ -140,6 +157,7 @@ export class CarbonXClient implements XClient {
     this.ledger = deps.ledger;
     this.cipher = deps.cipher;
     this.assertApproval = deps.assertApproval;
+    this.launcherWallet = deps.launcherWallet;
     this.fetchImpl = deps.fetch ?? globalThis.fetch.bind(globalThis);
     this.now = deps.now ?? Date.now;
     this.sleep = deps.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
@@ -152,9 +170,15 @@ export class CarbonXClient implements XClient {
 
   // ───────────────────────────── OAuth 2.0 + PKCE ─────────────────────────────
 
-  /** Begin connecting the launcher's own X account to `launchId`. */
-  startAuth(launchId: string): StartAuthResult {
+  /**
+   * Begin connecting the launcher's own X account to `launchId`. `wallet` is the
+   * launcher wallet that proved itself (signature checked by the caller); it is
+   * sealed into the flow cookie and stored with the tokens, so the connection
+   * only ever counts for a launch created by that same wallet.
+   */
+  startAuth(launchId: string, wallet: string): StartAuthResult {
     if (!launchId) throw new XAuthError('launchId is required');
+    if (!wallet) throw new XAuthError('wallet is required');
     const verifier = createCodeVerifier();
     const state = createState();
     const url = new URL(this.cfg.authorizeUrl);
@@ -165,7 +189,7 @@ export class CarbonXClient implements XClient {
     url.searchParams.set('state', state);
     url.searchParams.set('code_challenge', codeChallengeS256(verifier));
     url.searchParams.set('code_challenge_method', 'S256');
-    const sealed = this.cipher.seal(JSON.stringify({ s: state, v: verifier, l: launchId, t: this.now() }), FLOW_AAD);
+    const sealed = this.cipher.seal(JSON.stringify({ s: state, v: verifier, l: launchId, w: wallet, t: this.now() }), FLOW_AAD);
     return {
       url: url.toString(),
       cookie: {
@@ -195,13 +219,14 @@ export class CarbonXClient implements XClient {
     const error = get('error');
     if (error) throw new XAuthError(`X authorization was not granted (${error.slice(0, 64)})`);
     if (!cookieValue) throw new XAuthError('Missing OAuth flow cookie');
-    let flow: { s: string; v: string; l: string; t: number };
+    let flow: { s: string; v: string; l: string; w?: string; t: number };
     try {
       flow = JSON.parse(this.cipher.open(Uint8Array.from(Buffer.from(cookieValue, 'base64url')), FLOW_AAD));
     } catch {
       throw new XAuthError('OAuth flow cookie is invalid');
     }
     if (this.now() - flow.t > this.flowTtlMs) throw new XAuthError('OAuth flow expired; start again');
+    if (typeof flow.w !== 'string' || !flow.w) throw new XAuthError('OAuth flow is not bound to a wallet; start again');
     const state = get('state');
     if (!state || !constantTimeEqual(state, flow.s)) throw new XAuthError('OAuth state mismatch');
     const code = get('code');
@@ -228,6 +253,7 @@ export class CarbonXClient implements XClient {
       refreshToken: tok.refresh_token ?? null,
       accessExpiresAt: new Date(this.now() + tok.expires_in * 1000),
       scopes: tok.scope ? tok.scope.split(' ').filter(Boolean) : [...this.cfg.scopes],
+      wallet: flow.w,
     };
     await this.tokens.put(stored);
     return publicConnection(stored);
@@ -261,12 +287,40 @@ export class CarbonXClient implements XClient {
   }
 
   async connection(launchId: string): Promise<XConnection | null> {
-    const t = await this.tokens.get(launchId);
+    const t = await this.boundTokens(launchId);
     return t ? publicConnection(t) : null;
   }
 
   async isConnected(launchId: string): Promise<boolean> {
-    return (await this.tokens.get(launchId)) !== null;
+    return (await this.boundTokens(launchId)) !== null;
+  }
+
+  /**
+   * At launch creation: keep this launch's X connection only if it was started by
+   * `wallet` (the launcher). A connection bound to another wallet, or to none, is
+   * deleted locally (X account fixation guard). Returns whether one remains.
+   */
+  async claimConnection(launchId: string, wallet: string): Promise<boolean> {
+    const t = await this.tokens.get(launchId);
+    if (!t) return false;
+    if (t.wallet && t.wallet === wallet) return true;
+    await this.tokens.delete(launchId);
+    return false;
+  }
+
+  /**
+   * The launch's tokens, only when bound to the launcher wallet (if a
+   * launcherWallet hook is wired) and to some wallet at all.
+   */
+  private async boundTokens(launchId: string): Promise<StoredTokens | null> {
+    const t = await this.tokens.get(launchId);
+    if (!t) return null;
+    if (!t.wallet) return null;
+    if (this.launcherWallet) {
+      const expected = await this.launcherWallet(launchId);
+      if (expected === null || expected !== t.wallet) return null;
+    }
+    return t;
   }
 
   // ───────────────────────────── posting ─────────────────────────────
@@ -298,8 +352,8 @@ export class CarbonXClient implements XClient {
     const len = weightedLength(text);
     if (len.weightedLength > MAX_WEIGHTED_LENGTH) throw new PostTooLongError(len.weightedLength, MAX_WEIGHTED_LENGTH);
 
-    // 3. Must have a connected account (DB only).
-    const tokens = await this.tokens.get(launchId);
+    // 3. Must have a connected account bound to the launcher wallet (DB only).
+    const tokens = await this.boundTokens(launchId);
     if (!tokens) throw new XNotConnectedError(launchId);
 
     // 4. Dedupe: reserve this text for the launch before anything irreversible.
@@ -307,9 +361,9 @@ export class CarbonXClient implements XClient {
     const res = await this.ledger.reserve(launchId, hash, kind, new Date(this.now()), this.dedupeWindowMs);
     if (!res.ok) throw new DuplicatePostError(res.postId, res.postedAt);
 
-    // 5. Approval gate, BEFORE any network call. Consumes the approval.
+    // 5. Approval gate, BEFORE any network call: this approval, this text, used once.
     try {
-      await gate(launchId, approvalId, kind);
+      await gate(launchId, approvalId, kind, hash);
     } catch (e) {
       await this.ledger.release(launchId, hash);
       throw new ApprovalRequiredError(`Approval ${approvalId} was not accepted for ${kind}`, e);
@@ -355,7 +409,7 @@ export class CarbonXClient implements XClient {
   }
 
   async mentions(launchId: string, sinceId?: string): Promise<XPost[]> {
-    const t = await this.tokens.get(launchId);
+    const t = await this.boundTokens(launchId);
     if (!t) throw new XNotConnectedError(launchId);
     const qs = new URLSearchParams({ max_results: '100', 'tweet.fields': TWEET_FIELDS });
     if (sinceId) {
@@ -416,7 +470,7 @@ export class CarbonXClient implements XClient {
 
   /** Request with the launch's user token; refreshes when near expiry and once on 401. */
   private async userRequest<T>(launchId: string, endpoint: Endpoint, path: string, init: RequestInit, retry429: boolean): Promise<T> {
-    let t = await this.tokens.get(launchId);
+    let t = await this.boundTokens(launchId);
     if (!t) throw new XNotConnectedError(launchId);
     if (t.accessExpiresAt.getTime() - REFRESH_SKEW_MS <= this.now() && t.refreshToken) t = await this.refreshTokens(t);
     const principal: Principal = { kind: 'user', id: t.xUserId };
@@ -544,6 +598,8 @@ export class CarbonXClient implements XClient {
 export function createXClient(opts: {
   db: Queryable;
   assertApproval?: AssertApproval;
+  /** Defaults to the launcher wallet in the launch's launch.created event (core's `events` table). */
+  launcherWallet?: LauncherWalletOf;
   env?: Record<string, string | undefined>;
   fetch?: typeof fetch;
 }): CarbonXClient {
@@ -555,8 +611,21 @@ export function createXClient(opts: {
     ledger: new PgPostLedger(opts.db),
     cipher,
     ...(opts.assertApproval ? { assertApproval: opts.assertApproval } : {}),
+    launcherWallet: opts.launcherWallet ?? launcherWalletFromEvents(opts.db),
     ...(opts.fetch ? { fetch: opts.fetch } : {}),
   });
+}
+
+/** launch.created's launcherWallet from core's public event log, or null when the launch does not exist. */
+export function launcherWalletFromEvents(db: Queryable): LauncherWalletOf {
+  return async (launchId) => {
+    const { rows } = await db.query(
+      "SELECT payload->>'launcherWallet' AS wallet FROM events WHERE launch_id = $1 AND kind = 'launch.created' ORDER BY seq ASC LIMIT 1",
+      [launchId],
+    );
+    const w = rows[0]?.wallet;
+    return typeof w === 'string' && w ? w : null;
+  };
 }
 
 export function textHash(text: string): string {
@@ -564,7 +633,7 @@ export function textHash(text: string): string {
 }
 
 function publicConnection(t: StoredTokens): XConnection {
-  return { launchId: t.launchId, xUserId: t.xUserId, xHandle: t.xHandle, scopes: [...t.scopes] };
+  return { launchId: t.launchId, xUserId: t.xUserId, xHandle: t.xHandle, scopes: [...t.scopes], wallet: t.wallet ?? null };
 }
 
 function toXPost(t: ApiTweet): XPost {

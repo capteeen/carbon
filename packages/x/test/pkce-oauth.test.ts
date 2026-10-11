@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { codeChallengeS256, createCodeVerifier, createState } from '../src/pkce.js';
 import { XAuthError, XNotConnectedError } from '../src/errors.js';
-import { connectedTokens, json, makeClient, MemoryTokenStore, testConfig } from './helpers.js';
+import { connectedTokens, FIXTURE_WALLET, json, makeClient, MemoryTokenStore, testConfig } from './helpers.js';
 import { invalidGrant, refreshedTokenResponse, tokenResponse, usersMe } from './fixtures/fixtures.js';
 
 describe('PKCE (RFC 7636)', () => {
@@ -25,7 +25,7 @@ function startedFlow() {
   const ctx = makeClient({
     responders: [() => json(tokenResponse), () => json(usersMe)],
   });
-  const start = ctx.client.startAuth('launch-1');
+  const start = ctx.client.startAuth('launch-1', FIXTURE_WALLET);
   const url = new URL(start.url);
   return { ...ctx, start, url, state: url.searchParams.get('state')! };
 }
@@ -52,7 +52,7 @@ describe('finishAuth', () => {
   it('exchanges the code with the matching verifier, resolves the account, stores tokens', async () => {
     const { client, calls, start, url, state, tokens } = startedFlow();
     const conn = await client.finishAuth(new URLSearchParams({ code: 'fixture-code', state }), start.cookie.value);
-    expect(conn).toEqual({ launchId: 'launch-1', xUserId: usersMe.data.id, xHandle: 'fixture_project', scopes: ['tweet.read', 'tweet.write', 'users.read', 'offline.access'] });
+    expect(conn).toEqual({ launchId: 'launch-1', xUserId: usersMe.data.id, xHandle: 'fixture_project', scopes: ['tweet.read', 'tweet.write', 'users.read', 'offline.access'], wallet: FIXTURE_WALLET });
     expect(JSON.stringify(conn)).not.toContain('FIXTURE-ACCESS');
 
     const tokenCall = calls[0]!;
@@ -75,7 +75,7 @@ describe('finishAuth', () => {
   it('public client (no secret) sends client_id in the body', async () => {
     const { clientSecret: _omit, ...publicConfig } = testConfig();
     const ctx = makeClient({ responders: [() => json(tokenResponse), () => json(usersMe)], config: publicConfig });
-    const s = ctx.client.startAuth('launch-2');
+    const s = ctx.client.startAuth('launch-2', FIXTURE_WALLET);
     const st = new URL(s.url).searchParams.get('state')!;
     await ctx.client.finishAuth({ code: 'c', state: st }, s.cookie.value);
     expect(ctx.calls[0]!.headers.authorization).toBeUndefined();
@@ -103,7 +103,7 @@ describe('finishAuth', () => {
   it('rejects an expired flow and a provider error', async () => {
     let now = 1_000_000;
     const ctx = makeClient({ now: () => now });
-    const s = ctx.client.startAuth('launch-1');
+    const s = ctx.client.startAuth('launch-1', FIXTURE_WALLET);
     const st = new URL(s.url).searchParams.get('state')!;
     now += 11 * 60_000;
     await expect(ctx.client.finishAuth({ code: 'c', state: st }, s.cookie.value)).rejects.toThrow(/expired/);
@@ -165,5 +165,41 @@ describe('refresh and revoke', () => {
     expect(ctx.calls.every((c) => c.url === 'https://api.x.com/2/oauth2/revoke')).toBe(true);
     expect(new URLSearchParams(ctx.calls[0]!.body).get('token')).toBe('FIXTURE-REFRESH-TOKEN-stored');
     expect(await ctx.client.isConnected('launch-1')).toBe(false);
+  });
+});
+
+describe('wallet binding (X account fixation guard)', () => {
+  it('startAuth refuses without a wallet; the wallet is sealed into the cookie and stored with the tokens', async () => {
+    const ctx = makeClient({ responders: [() => json(tokenResponse), () => json(usersMe)] });
+    expect(() => ctx.client.startAuth('launch-1', '')).toThrow(XAuthError);
+    const s = ctx.client.startAuth('launch-1', 'WalletA');
+    expect(s.cookie.value).not.toContain('WalletA');
+    await ctx.client.finishAuth({ code: 'c', state: new URL(s.url).searchParams.get('state')! }, s.cookie.value);
+    expect((await ctx.tokens.get('launch-1'))?.wallet).toBe('WalletA');
+  });
+
+  it('tokens bound to another wallet, or to none, are not connected for the launch', async () => {
+    const tokens = new MemoryTokenStore();
+    await tokens.put(connectedTokens('launch-1', { wallet: 'Victim' }));
+    await tokens.put(connectedTokens('launch-2', { wallet: null }));
+    await tokens.put(connectedTokens('launch-3', { wallet: 'Launcher' }));
+    const launchers: Record<string, string> = { 'launch-1': 'Attacker', 'launch-2': 'Launcher', 'launch-3': 'Launcher' };
+    const ctx = makeClient({ tokens, launcherWallet: async (id) => launchers[id] ?? null, assertApproval: async () => {} });
+    expect(await ctx.client.isConnected('launch-1')).toBe(false);
+    expect(await ctx.client.isConnected('launch-2')).toBe(false);
+    expect(await ctx.client.isConnected('launch-3')).toBe(true);
+    await expect(ctx.client.post('launch-1', 'gm', 'appr')).rejects.toThrow(XNotConnectedError);
+    expect(ctx.calls).toHaveLength(0);
+  });
+
+  it('claimConnection keeps only a connection started by the launcher wallet', async () => {
+    const tokens = new MemoryTokenStore();
+    await tokens.put(connectedTokens('launch-1', { wallet: 'Victim' }));
+    await tokens.put(connectedTokens('launch-2', { wallet: 'Launcher' }));
+    const ctx = makeClient({ tokens });
+    expect(await ctx.client.claimConnection('launch-1', 'Attacker')).toBe(false);
+    expect(await tokens.get('launch-1')).toBeNull();
+    expect(await ctx.client.claimConnection('launch-2', 'Launcher')).toBe(true);
+    expect(await ctx.client.claimConnection('launch-404', 'Launcher')).toBe(false);
   });
 });

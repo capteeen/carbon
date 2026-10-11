@@ -70,7 +70,26 @@ export const messages = {
       ['issued', String(p.issuedAt)],
     ]);
   },
+  /**
+   * Starts X OAuth for a launch id that does not exist yet. The connection is bound to
+   * this wallet and only counts if the same wallet creates the launch (AG-004).
+   */
+  xConnect(p: { launchId: string; wallet: string; issuedAt: number }): string {
+    return message('X_CONNECT', [
+      ['launch', p.launchId],
+      ['wallet', p.wallet],
+      ['issued', String(p.issuedAt)],
+    ]);
+  },
 };
+
+/**
+ * Signed requests that carry an issuedAt (autopilot, kill switch, X connect) are
+ * single-use: the server records the sha256 of the exact signed text as its nonce
+ * and refuses the same text again (AG-016).
+ */
+export const SINGLE_USE_SCOPES = ['autopilot', 'killswitch', 'x_connect'] as const;
+export type SingleUseScope = (typeof SINGLE_USE_SCOPES)[number];
 
 export function encodeSignature(sig: Uint8Array): string {
   return bs58.encode(sig);

@@ -97,8 +97,8 @@ function fmtDuration(sec: number): string {
   return `${sec} S`;
 }
 
-/** HALF-LIFE readout for the chamber, from the coin's decay rule (never the real isotope's). */
-export function fmtHalfLife(id: IsotopeId): string {
+/** DECAY_RULE readout for the chamber: the coin's collapse rule from the config table. Not a half-life (real half-lives are only the story line in realWorldNote). */
+export function fmtDecayRule(id: IsotopeId): string {
   const d = ISOTOPES[id].decay;
   switch (d.kind) {
     case 'none':

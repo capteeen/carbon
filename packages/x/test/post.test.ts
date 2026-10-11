@@ -9,6 +9,7 @@ import {
 } from '../src/errors.js';
 import { connectedTokens, json, makeClient, MemoryTokenStore } from './helpers.js';
 import { createPost } from './fixtures/fixtures.js';
+import { textHash } from '../src/client.js';
 
 async function connected() {
   const tokens = new MemoryTokenStore();
@@ -33,7 +34,7 @@ describe('post / reply approval gate', () => {
     const err = await ctx.client.post('launch-1', 'gm', 'appr-1').catch((e) => e);
     expect(err).toBeInstanceOf(ApprovalRequiredError);
     expect((err as ApprovalRequiredError).cause).toBeInstanceOf(Error);
-    expect(assertApproval).toHaveBeenCalledWith('launch-1', 'appr-1', 'post');
+    expect(assertApproval).toHaveBeenCalledWith('launch-1', 'appr-1', 'post', textHash('gm'));
     expect(ctx.calls).toHaveLength(0);
     expect(ctx.ledger.rows.size).toBe(0);
   });
@@ -73,7 +74,7 @@ describe('post / reply approval gate', () => {
       }],
     });
     await ctx.client.reply('launch-1', '1800000000000000010', 'thanks!', 'appr-2');
-    expect(assertApproval).toHaveBeenCalledWith('launch-1', 'appr-2', 'reply');
+    expect(assertApproval).toHaveBeenCalledWith('launch-1', 'appr-2', 'reply', textHash('thanks!'));
   });
 
   it('validates text before consuming the approval', async () => {

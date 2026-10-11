@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "tsx src/main.ts",
+    "start": "NODE_ENV=production tsx src/main.ts",
+    "dev": "tsx src/main.ts",
     "migrate": "tsx src/migrate-cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"

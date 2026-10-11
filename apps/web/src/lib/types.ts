@@ -48,7 +48,8 @@ export interface WalletRow {
   ca: string | null;
   ticker: string | null;
   address: string;
-  mode: 'native' | 'wallet';
+  /** From wallet.created.mode; null when the log has no wallet.created for the launch. */
+  mode: 'native' | 'wallet' | null;
   network: Network | null;
   eventId: string;
 }

@@ -15,6 +15,13 @@ function Addr({ address, network }: { address: string | null; network: Network |
   );
 }
 
+/** The fee mode the log recorded for the launch (wallet.created.mode); never assumed. */
+export function feeModeLabel(mode: WalletRow['mode']): string {
+  if (mode === 'native') return 'NATIVE · sharing-config PDA';
+  if (mode === 'wallet') return "WALLET · Carbon's per-launch wallet receives the fees and splits them";
+  return `fee mode not logged ${EMPTY_READOUT}`;
+}
+
 export function WalletsView({ rows, carbon, network }: { rows: WalletRow[]; carbon: { buyback: string | null; treasury: string | null }; network: Network }) {
   return (
     <>
@@ -33,7 +40,13 @@ export function WalletsView({ rows, carbon, network }: { rows: WalletRow[]; carb
       </ul>
       <h2>Per launch</h2>
       <p className="meta">
-        // Native pump.fun fee sharing: the address is the coin&apos;s sharing-config PDA, which pays 50% to the launcher, 30% to the buyback wallet and 20% to the treasury.
+        // Every claimed creator fee is split 50% to the launcher, 30% to the buyback wallet and 20% to the treasury. How depends on the launch&apos;s fee mode, shown on each row from its wallet.created event:
+      </p>
+      <p className="meta">
+        // NATIVE: pump.fun fee sharing. The address is the coin&apos;s sharing-config PDA, which pays the three shares directly. Carbon never holds your 50%.
+      </p>
+      <p className="meta">
+        // WALLET: Carbon&apos;s per-launch wallet receives all of the launch&apos;s fees. Treasurer claims and splits them, paying your 50% to your wallet with a public receipt.
       </p>
       {rows.length === 0 ? (
         <p className="empty" data-testid="wallets-empty">
@@ -46,7 +59,7 @@ export function WalletsView({ rows, carbon, network }: { rows: WalletRow[]; carb
               <div className="row">
                 {r.ca ? <Link href={`/l/${r.ca}`}>{r.ticker ? `$${r.ticker}` : shortId(r.ca)}</Link> : <span className="meta">launch {shortId(r.launchId)}</span>}
                 <span className="meta">
-                  {r.mode === 'native' ? 'sharing-config PDA' : 'per-launch creator wallet'} · event <code>{shortId(r.eventId)}</code>
+                  <span data-testid="fee-mode">{feeModeLabel(r.mode)}</span> · event <code>{shortId(r.eventId)}</code>
                 </span>
               </div>
               <Addr address={r.address} network={r.network ?? network} />

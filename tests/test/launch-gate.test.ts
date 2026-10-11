@@ -136,7 +136,7 @@ describe('launch gate at the chain seam (worker launchAllowedCheck + CarbonChain
   // The chain-level check reads only "latest sentinel.score passed". A forge.draft
   // appended AFTER that score (a revision) leaves the old pass in place, and
   // buildLaunchTx does not compare name/symbol/metadata with what was scored.
-  it.fails('[AG-001] a draft changed after the passing score (stale score) → blocked at the chain seam', async () => {
+  it('[AG-001] a draft changed after the passing score (stale score) → blocked at the chain seam', async () => {
     const { launchId, args } = await setup();
     await env.core.bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: { name: 'Elon Frost', ticker: 'ELON', lore: 'renamed after the check', logoUri: 'u', logoHash: 'f'.repeat(16), bannerUri: 'u', siteUri: 'u', metadataUri: URI } });
     await expect(client.buildLaunchTx({ ...args, name: 'Elon Frost', symbol: 'ELON' })).rejects.toThrow();

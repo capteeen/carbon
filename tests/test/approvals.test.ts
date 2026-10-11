@@ -42,7 +42,7 @@ beforeAll(async () => {
     approve: (await import('@/app/api/approvals/[approvalId]/route')).POST,
     autopilot: (await import('@/app/api/autopilot/route')).POST,
     kill: (await import('@/app/api/killswitch/route')).POST,
-    xConnect: (await import('@/app/api/x/connect/route')).GET,
+    xConnect: (await import('@/app/api/x/connect/route')).POST,
     messages: (await import('@/lib/signing')).messages,
     getX: (await import('@/server/x')).getX,
   };
@@ -172,7 +172,7 @@ describe('autopilot and kill switch', () => {
   // AUTOPILOT/KILL_SWITCH messages carry only an issuedAt (5-minute window), no nonce and no
   // record of used signatures, so a captured "enable" request can be replayed after the
   // launcher switched autopilot off again.
-  it.fails('[AG-016] a captured "enable autopilot" signature cannot be replayed after the launcher turned it off', async () => {
+  it('[AG-016] a captured "enable autopilot" signature cannot be replayed after the launcher turned it off', async () => {
     const { launchId, w } = await launchViaWeb();
     const t0 = Date.now();
     const enable = { launchId, actionClass: 'posts', enabled: true, issuedAt: t0, signature: w.sign(web.messages.autopilot({ launchId, actionClass: 'posts', enabled: true, issuedAt: t0 })) };
@@ -204,14 +204,15 @@ describe('X posting needs a consumed approval for exactly that launch and action
       refreshToken: null,
       accessExpiresAt: new Date(Date.now() + 3600_000),
       scopes: ['tweet.read', 'tweet.write', 'users.read'],
+      wallet: w.address, // connections are bound to the launcher wallet that started OAuth (AG-004)
     });
     return { launchId, w };
   }
   /** The X client exactly as apps/worker/src/x.ts builds it, with a test-double fetch. */
   const workerX = () => createXClient({ db: webCore.bus.pool, assertApproval: consumedApprovalCheck(webCore.bus.pool), env: X_ENV, fetch: xFetch });
 
-  async function approved(launchId: string, w: ReturnType<typeof wallet>, action: 'post' | 'reply', consume = true) {
-    const { approvalId } = await webCore.approvals.open(launchId, action, { text: 'x' }, 'herald');
+  async function approved(launchId: string, w: ReturnType<typeof wallet>, action: 'post' | 'reply', consume = true, text = 'x') {
+    const { approvalId } = await webCore.approvals.open(launchId, action, { text }, 'herald');
     await webCore.approvals.decide(approvalId, true, w.address);
     if (consume) await webCore.approvals.consume(launchId, approvalId, action);
     return approvalId;
@@ -234,21 +235,33 @@ describe('X posting needs a consumed approval for exactly that launch and action
     await expect(x.post(launchId, 'd', await approved(other.launchId, other.w, 'post'))).rejects.toBeInstanceOf(ApprovalRequiredError);
     await expect(x.post(launchId, 'e', await approved(launchId, w, 'reply'))).rejects.toBeInstanceOf(ApprovalRequiredError);
     expect(sent.length).toBe(before);
-    await expect(x.post(launchId, 'approved text', await approved(launchId, w, 'post'))).resolves.toMatchObject({ id: expect.any(String) });
+    await expect(x.post(launchId, 'approved text', await approved(launchId, w, 'post', true, 'approved text'))).resolves.toMatchObject({ id: expect.any(String) });
     expect(sent.length).toBe(before + 1);
   });
 
   // The worker wires assertApproval = consumedApprovalCheck, which accepts any approval whose
   // status is 'consumed' and never marks it used by X. One approved post therefore unlocks
   // unlimited further posts (any text) from the user's account through this client.
-  it.fails('[AG-003] one consumed post approval authorises exactly one X post (no reuse with other text)', async () => {
+  it('[AG-003] one consumed post approval authorises exactly one X post (no reuse with other text)', async () => {
     const { launchId, w } = await connected();
     const x = workerX();
-    const id = await approved(launchId, w, 'post');
+    const id = await approved(launchId, w, 'post', true, 'the approved text');
     await x.post(launchId, 'the approved text', id);
     await expect(x.post(launchId, 'text the user never saw', id)).rejects.toBeInstanceOf(ApprovalRequiredError);
   });
 });
+
+/** POST /api/x/connect as the launch page sends it: JSON, same origin, signed by `w`. */
+function signedXConnect(launchId: string, w: ReturnType<typeof wallet>, issuedAt = Date.now(), headers: Record<string, string> = {}) {
+  const signature = w.sign(web.messages.xConnect({ launchId, wallet: w.address, issuedAt }));
+  return web.xConnect(
+    new Request('http://carbon.test/api/x/connect', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'http://carbon.test', 'sec-fetch-site': 'same-origin', ...headers },
+      body: JSON.stringify({ launchId, wallet: w.address, issuedAt, signature }),
+    }),
+  );
+}
 
 describe('X account binding', () => {
   // GET /api/x/connect?launch=<id> works for ANY not-yet-created launch id without a wallet
@@ -256,11 +269,13 @@ describe('X account binding', () => {
   // gets a victim to connect X under an attacker-chosen id (a link to Carbon's own
   // /api/x/connect?launch=…) can create the launch first and own the victim's X account
   // for posting (the attacker approves the posts).
-  it.fails('[AG-004] a launch created by wallet B does not inherit an X account connected by someone else for that launch id', async () => {
+  // Fix round: connect is now a signed, same-origin POST (no GET link), so the only flow a
+  // victim's browser can run is one signed by the victim's own wallet; the test drives that.
+  it('[AG-004] a launch created by wallet B does not inherit an X account connected by someone else for that launch id', async () => {
     const launchId = randomUUID(); // chosen by the attacker, sent to the victim as a link
-    const res = await web.xConnect(new Request(`http://carbon.test/api/x/connect?launch=${launchId}`));
-    expect(res.status).toBe(307);
-    const authorize = new URL(res.headers.get('location')!);
+    const res = await signedXConnect(launchId, wallet()); // the victim signs with the victim's wallet
+    expect(res.status).toBe(200);
+    const authorize = new URL(((await res.json()) as { authorizeUrl: string }).authorizeUrl);
     const cookie = /carbon_x_oauth=([^;]+)/.exec(res.headers.get('set-cookie') ?? '')?.[1] ?? (res.headers.get('set-cookie') ?? '').split(';')[0]!.split('=').slice(1).join('=');
     expect(AUTH_COOKIE_NAME).toBeTruthy();
     // The victim authorises on x.com; X redirects back with code+state. The callback route
@@ -278,6 +293,86 @@ describe('X account binding', () => {
     const { res: created } = await launchViaWeb(attacker, 'ring', launchId);
     const ev = (await webCore.bus.list(launchId, { kinds: ['launch.created'] }))[0];
     expect(created.status === 201 && (ev?.payload as { xConnected: boolean }).xConnected === true).toBe(false);
+  });
+
+  const xApiFor = (id: string, username: string) =>
+    (async (url: string | URL) => {
+      const u = String(url);
+      if (u.includes('/2/oauth2/token')) return new Response(JSON.stringify({ access_token: `${username}-access`, refresh_token: `${username}-refresh`, expires_in: 7200, token_type: 'bearer', scope: 'tweet.read tweet.write users.read offline.access' }), { status: 200, headers: { 'content-type': 'application/json' } });
+      if (u.includes('/2/users/me')) return new Response(JSON.stringify({ data: { id, username } }), { status: 200, headers: { 'content-type': 'application/json' } });
+      return new Response('{}', { status: 404 });
+    }) as typeof fetch;
+
+  async function finish(res: Response, xApi: typeof fetch) {
+    const authorize = new URL(((await res.json()) as { authorizeUrl: string }).authorizeUrl);
+    const cookie = /carbon_x_oauth=([^;]+)/.exec(res.headers.get('set-cookie') ?? '')![1]!;
+    return createXClient({ db: webCore.bus.pool, env: X_ENV, fetch: xApi }).finishAuth(new URLSearchParams({ state: authorize.searchParams.get('state')!, code: 'c' }), decodeURIComponent(cookie));
+  }
+
+  it('[AG-004] connect needs a fresh wallet signature, JSON, same origin, and is single-use', async () => {
+    const w = wallet();
+    const launchId = randomUUID();
+    expect((await web.xConnect(new Request(`http://carbon.test/api/x/connect?launch=${launchId}`))).status).not.toBe(200);
+    expect((await signedXConnect(launchId, w, Date.now(), { 'content-type': 'text/plain' })).status).toBe(415);
+    expect((await signedXConnect(launchId, w, Date.now(), { origin: 'https://evil.example', 'sec-fetch-site': 'cross-site' })).status).toBe(403);
+    expect((await signedXConnect(launchId, w, Date.now() - 10 * 60_000)).status).toBe(401);
+    const other = wallet();
+    const forged = other.sign(web.messages.xConnect({ launchId, wallet: w.address, issuedAt: Date.now() }));
+    const r = await web.xConnect(
+      new Request('http://carbon.test/api/x/connect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ launchId, wallet: w.address, issuedAt: Date.now(), signature: forged }) }),
+    );
+    expect(r.status).toBe(401);
+    const t = Date.now();
+    expect((await signedXConnect(launchId, w, t)).status).toBe(200);
+    expect((await signedXConnect(launchId, w, t)).status).toBe(409); // replay of the same signed request
+    const { launchId: existing, w: lw } = await launchViaWeb();
+    expect((await signedXConnect(existing, lw)).status).toBe(409); // never for a launch that exists
+  });
+
+  it('[AG-004] the launcher who signed connect keeps the X account; the worker uses it only for that launcher', async () => {
+    const w = wallet();
+    const launchId = randomUUID();
+    const conn = await finish(await signedXConnect(launchId, w), xApiFor('888', 'launcher_project'));
+    expect(conn.wallet).toBe(w.address);
+    const { res } = await launchViaWeb(w, 'ring', launchId);
+    expect(res.status).toBe(201);
+    const ev = (await webCore.bus.list(launchId, { kinds: ['launch.created'] }))[0]!;
+    expect((ev.payload as { xConnected: boolean }).xConnected).toBe(true);
+    const workerX = createXClient({ db: webCore.bus.pool, assertApproval: consumedApprovalCheck(webCore.bus.pool), env: X_ENV });
+    expect(await workerX.isConnected(launchId)).toBe(true);
+  });
+
+  it('[AG-004] a victim connection that lands AFTER the attacker created the launch is never used', async () => {
+    const victim = wallet();
+    const launchId = randomUUID();
+    const started = await signedXConnect(launchId, victim);
+    const { res } = await launchViaWeb(wallet(), 'ring', launchId); // attacker wins the race
+    expect(res.status).toBe(201);
+    await finish(started, xApiFor('999', 'victim_late'));
+    const workerX = createXClient({ db: webCore.bus.pool, assertApproval: consumedApprovalCheck(webCore.bus.pool), env: X_ENV });
+    expect(await workerX.isConnected(launchId)).toBe(false);
+    await expect(workerX.post(launchId, 'from the victim account', randomUUID())).rejects.toThrow();
+  });
+});
+
+describe('approval.consumed and launch id uniqueness', () => {
+  it('[AG-023] consuming an approval appends approval.consumed to the public log', async () => {
+    const { launchId, w } = await launchViaWeb();
+    const { approvalId } = await webCore.approvals.open(launchId, 'post', { text: 'gm' }, 'herald');
+    await webCore.approvals.decide(approvalId, true, w.address);
+    expect(await webCore.bus.list(launchId, { kinds: ['approval.consumed'] })).toEqual([]);
+    await webCore.approvals.consume(launchId, approvalId, 'post');
+    await expect(webCore.approvals.consume(launchId, approvalId, 'post')).rejects.toThrow(/already used/);
+    const evs = await webCore.bus.list(launchId, { kinds: ['approval.consumed'] });
+    expect(evs.map((e) => e.payload)).toEqual([{ approvalId, action: 'post' }]);
+  });
+
+  it('[AG-024] concurrent POST /api/launch with the same id: exactly one is created', async () => {
+    const launchId = randomUUID();
+    const rs = await Promise.all(Array.from({ length: 6 }, () => launchViaWeb(wallet(), 'ring', launchId)));
+    expect(rs.filter((r) => r.res.status === 201)).toHaveLength(1);
+    expect(rs.every((r) => r.res.status === 201 || r.res.status === 409)).toBe(true);
+    expect(await webCore.bus.list(launchId, { kinds: ['launch.created'] })).toHaveLength(1);
   });
 });
 

@@ -7,7 +7,7 @@ import { randomBytes } from 'node:crypto';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TokenCipher, parseTokenKey } from '../src/crypto.js';
-import { X_MIGRATION_SQL } from '../src/migration.js';
+import { X_MIGRATION_0002_SQL, X_MIGRATION_SQL } from '../src/migration.js';
 import { migrate, PgPostLedger, PgTokenStore } from '../src/store.js';
 import { connectedTokens } from './helpers.js';
 
@@ -30,6 +30,9 @@ describe('migration', () => {
   it('migrations/0001_x_tokens.sql matches the shipped constant', () => {
     expect(readFileSync(new URL('../migrations/0001_x_tokens.sql', import.meta.url), 'utf8')).toBe(X_MIGRATION_SQL);
   });
+  it('migrations/0002_x_tokens_wallet.sql matches the shipped constant', () => {
+    expect(readFileSync(new URL('../migrations/0002_x_tokens_wallet.sql', import.meta.url), 'utf8')).toBe(X_MIGRATION_0002_SQL);
+  });
 });
 
 describe('PgTokenStore', () => {
@@ -39,6 +42,14 @@ describe('PgTokenStore', () => {
     await store.put(t);
     expect(await store.get('launch-rt')).toEqual(t);
     expect(await store.get('missing')).toBeNull();
+  });
+
+  it('stores the bound launcher wallet (null when unbound)', async () => {
+    const store = new PgTokenStore(pool, cipher);
+    await store.put(connectedTokens('launch-w', { wallet: 'WalletW' }));
+    expect((await store.get('launch-w'))?.wallet).toBe('WalletW');
+    await store.put(connectedTokens('launch-w', { wallet: null }));
+    expect((await store.get('launch-w'))?.wallet).toBeNull();
   });
 
   it('stores no plaintext token in any column', async () => {

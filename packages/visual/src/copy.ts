@@ -56,7 +56,7 @@ export const COPY = {
   },
   chamber: {
     head: '////// 06 Isotope chamber',
-    readouts: ['NEUTRONS', 'STABILITY', 'HALF-LIFE', 'BEHAVIOUR'] as const,
+    readouts: ['NEUTRONS', 'STABILITY', 'DECAY_RULE', 'BEHAVIOUR'] as const,
     heavyHint: '// Drag the extra neutron onto a proton',
     heavyPick: '// Or pick the heavy agent',
   },

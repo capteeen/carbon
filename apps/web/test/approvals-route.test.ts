@@ -20,6 +20,18 @@ vi.mock('@/server/readmodel', () => ({
       : null,
 }));
 
+// Single-use nonces (Postgres in production; tests/test/approvals.test.ts covers the real table).
+const usedNonces = new Set<string>();
+vi.mock('@/server/nonces', async () => {
+  const { HttpError } = await import('@/server/http');
+  return {
+    consumeSignedNonce: async (_scope: string, _launchId: string, _wallet: string, text: string) => {
+      if (usedNonces.has(text)) throw new HttpError(409, 'this signed request was already used; sign again');
+      usedNonces.add(text);
+    },
+  };
+});
+
 const { POST: approve } = await import('@/app/api/approvals/[approvalId]/route');
 const { POST: autopilot } = await import('@/app/api/autopilot/route');
 
@@ -102,8 +114,13 @@ describe('autopilot', () => {
   it('a fresh launcher signature switches it', async () => {
     const issuedAt = Date.now();
     const signature = launcher.sign(messages.autopilot({ launchId: LAUNCH, actionClass: 'posts', enabled: true, issuedAt }));
-    const res = await autopilot(new Request('http://t/api/autopilot', { method: 'POST', body: JSON.stringify({ launchId: LAUNCH, actionClass: 'posts', enabled: true, issuedAt, signature }) }));
+    const req = () => new Request('http://t/api/autopilot', { method: 'POST', body: JSON.stringify({ launchId: LAUNCH, actionClass: 'posts', enabled: true, issuedAt, signature }) });
+    const res = await autopilot(req());
     expect(res.status).toBe(200);
     expect(setAutopilot).toHaveBeenCalledWith(LAUNCH, 'posts', true, launcher.address);
+    // The same signed request again (a replay) is refused and changes nothing (AG-016).
+    setAutopilot.mockClear();
+    expect((await autopilot(req())).status).toBe(409);
+    expect(setAutopilot).not.toHaveBeenCalled();
   });
 });

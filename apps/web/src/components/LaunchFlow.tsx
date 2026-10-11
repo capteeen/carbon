@@ -61,6 +61,7 @@ export function LaunchFlow() {
     // The X account was connected for this launch id: keep using it.
     if (x === 'connected' && back && back !== d.launchId && !d.created) d = { ...d, launchId: back };
     if (x === 'connected') setXNote(`X connected: @${q.get('handle') ?? EMPTY_READOUT}`);
+    else if (x === 'failed' && q.get('reason') === 'WalletMismatch') setXNote('That X connection was started by a different wallet than the launch, so it was discarded.');
     else if (x === 'failed') setXNote('X connection failed. You can launch without X or try again.');
     else if (x === 'unavailable') setXNote('X is not configured on this deployment.');
     else if (x === 'too-late') setXNote('X can only be connected before the launch is created.');
@@ -150,6 +151,16 @@ export function LaunchFlow() {
       set({ created: true });
     });
 
+  // X OAuth is bound to the signing wallet (POST, signed, single-use); then the browser goes to x.com.
+  const connectX = () =>
+    run(async () => {
+      if (!address) throw new Error('Connect your wallet first');
+      const issuedAt = Date.now();
+      const signature = await signText(messages.xConnect({ launchId: draft.launchId, wallet: address, issuedAt }));
+      const { authorizeUrl } = await postJson<{ authorizeUrl: string }>('/api/x/connect', { launchId: draft.launchId, wallet: address, issuedAt, signature });
+      window.location.assign(authorizeUrl);
+    });
+
   // ── before creation: the form ──
   if (!draft.created) {
     return (
@@ -161,9 +172,10 @@ export function LaunchFlow() {
           ////// 02 X (OPTIONAL)
         </p>
         <p className="meta">// Connect your project&apos;s own X account so Herald can post after you approve. Carbon never creates accounts.</p>
-        <a href={`/api/x/connect?launch=${draft.launchId}`} className="hud-label">
+        <p className="meta">// Your wallet signs the connect request; the X account only counts for a launch started by the same wallet.</p>
+        <button type="button" className="hud-label" disabled={!connected || !address || busy} onClick={() => void connectX()}>
           [ CONNECT X ]
-        </a>
+        </button>
         {xNote ? <p className="meta">// {xNote}</p> : null}
 
         <p className="hud-label" style={{ marginTop: 24 }}>

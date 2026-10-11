@@ -2,7 +2,10 @@
  * POST /api/launch: create a launch (appends launch.created; the worker picks it up).
  * The launcher wallet signs messages.createLaunch(...) so nobody can launch in
  * someone else's name. The launchId is chosen by the browser before X connect
- * (X tokens are stored per launchId), and must be unused.
+ * (X tokens are stored per launchId), and must be unused: Postgres allows one
+ * launch.created per launch id (unique index, AG-024), so a concurrent duplicate
+ * gets 409. An X connection counts only if it was started by this same wallet
+ * (AG-004); one bound to another wallet is discarded.
  */
 import { AGENT_IDS, ISOTOPES, ISOTOPE_IDS, SHAPE_IDS, launchConfig, type AgentId, type IsotopeId, type ShapeId } from '@carbon/core/contracts';
 import { isFresh, isWalletAddress, messages, verifyWalletSignature } from '@/lib/signing';
@@ -43,14 +46,21 @@ export function POST(req: Request): Promise<Response> {
     if (!verifyWalletSignature(wallet, text, signature)) throw new HttpError(401, 'signature does not verify against the wallet');
 
     if (await launchCreated(launchId)) throw new HttpError(409, 'launch already exists');
-    const xConnected = await xConnectedFor(launchId);
+    const xConnected = await xConnectedFor(launchId, wallet);
     const { bus } = await getCore();
-    const e = await bus.append({
-      launchId,
-      kind: 'launch.created',
-      actor: 'user',
-      payload: { line, isotope, shape, heavyAgent, launcherWallet: wallet, xConnected },
-    });
+    let e;
+    try {
+      e = await bus.append({
+        launchId,
+        kind: 'launch.created',
+        actor: 'user',
+        payload: { line, isotope, shape, heavyAgent, launcherWallet: wallet, xConnected },
+      });
+    } catch (err) {
+      // events_one_launch_created (unique): another request created this launch first.
+      if ((err as { code?: string }).code === '23505') throw new HttpError(409, 'launch already exists');
+      throw err;
+    }
     return json({ launchId, eventId: e.id, seq: e.seq }, 201);
   });
 }

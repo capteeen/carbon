@@ -64,8 +64,26 @@ C-14 coin decays after 7 days and does not last anywhere near that long.
 When a C-11 or C-14 coin collapses, Carbon snapshots the mother coin's holders,
 launches a daughter coin and airdrops it to the mother's holders in proportion
 to their snapshot balances. The snapshot, the collapse, the daughter and every
-airdrop are public events. The decay mechanics come from `@qsd/protocol`; Carbon
-does not reimplement them.
+airdrop are public events.
+
+When a coin collapses is Carbon's own rule, taken from the config table. It is
+not a half-life and no random draw decides it. A C-11 coin collapses 20 minutes
+after its last trade. A C-14 coin collapses 7 days after launch, whatever
+happens to trades.
+
+Carbon imports these functions from `@qsd/protocol` (the qsd-market repo) and
+does not reimplement them:
+
+- `daughterName`: the daughter coin's name.
+- `computeAllocation`: the airdrop table and its merkle root over the holder
+  snapshot.
+- `allocationProof` and `verifyAllocationProof`: a proof for each wallet's
+  share of the table.
+- `decayProgressFor`: only the illustrative C-11 curve, drawn with real
+  carbon-11's 20.4-minute half-life. It never decides the collapse.
+
+Carbon does not use qsd's own decay state machine, which resolves collapse by a
+quantum measurement.
 
 ## Shapes
 
@@ -171,6 +189,12 @@ Denylist (whole-word, case-insensitive): **real_person**: elon, musk, trump, bid
   with the exact values that will be used, so approval is one tap.
 - Every approval is signed by your wallet (a message signature, not a
   transaction) and checked against the wallet that created the launch.
+- One approved post is one post, with exactly the text you approved. The same
+  approval cannot post again or post different text.
+- Your wallet also signs the request to connect X. The X account is used only
+  for a launch created by that same wallet.
+- Autopilot and kill-switch signatures work once: a copied signature cannot be
+  sent again.
 - Autopilot is off by default. You can turn it on per launch and per action
   class: posts, replies, buybacks. Autopilot is never available for launches,
   and never on DIAMOND.
@@ -179,11 +203,21 @@ Denylist (whole-word, case-insensitive): **real_person**: elon, musk, trump, bid
 
 ## Money
 
-Carbon uses pump.fun's native creator-fee sharing. The launch transaction sets
-the coin's fee shares once, on chain: the coin's fee address is its
-sharing-config account, and every distribution pays the shares below directly.
-Carbon never holds your 50% and never holds your keys. Your wallet signs and
-pays the launch; Carbon never stores your wallet's keys.
+Each launch records its fee mode in its `wallet.created` event, and /wallets
+shows the mode of every launch.
+
+- **Native mode** (the default): Carbon uses pump.fun's native creator-fee
+  sharing. The launch transaction sets the coin's fee shares once, on chain.
+  The coin's fee address is its sharing-config account, and every distribution
+  pays the shares below directly. In native mode Carbon never holds your 50%.
+- **Wallet mode** (a fallback the owner can switch on with
+  `CARBON_FEE_MODE=wallet`): Carbon's per-launch wallet receives all of the
+  launch's creator fees. Treasurer claims them and splits them, paying your 50%
+  to your wallet with a public receipt. Until a split runs, Carbon's per-launch
+  wallet holds your share.
+
+In both modes Carbon never holds your keys. Your wallet signs and pays the
+launch; Carbon never stores your wallet's keys.
 
 <!-- generated:fee-split:start -->
 ## Fee split

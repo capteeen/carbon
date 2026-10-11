@@ -26,7 +26,7 @@ import {
   fmtBonds,
   fmtClock,
   fmtDate,
-  fmtHalfLife,
+  fmtDecayRule,
   fmtLamports,
   fmtLoad,
   fmtStability,
@@ -113,11 +113,11 @@ export function ChamberHud({
       <HudLabel leaderRef={leaderRef('pedestal')}>{iso.label}</HudLabel>
       <HudReadout label="NEUTRONS" value={String(iso.neutrons)} testId="chamber-neutrons" />
       <HudReadout label="STABILITY" value={fmtStability(value)} testId="chamber-stability" />
-      <HudReadout label="HALF-LIFE" value={fmtHalfLife(value)} testId="chamber-halflife" />
+      <HudReadout label="DECAY_RULE" value={fmtDecayRule(value)} testId="chamber-decay-rule" />
       <div className="carbon-hud__readout" style={{ whiteSpace: 'normal' }} data-testid="chamber-behaviour">
         BEHAVIOUR {iso.name} · {iso.behaviour}
       </div>
-      {!iso.stable ? <HudMeta>{`decay · ${fmtHalfLife(value).toLowerCase()}`}</HudMeta> : null}
+      {!iso.stable ? <HudMeta>{`decay · ${fmtDecayRule(value).toLowerCase()}`}</HudMeta> : null}
       <HudMeta>{iso.realWorldNote}</HudMeta>
       {iso.heavyAgent ? (
         <div style={{ marginTop: 6 }} data-testid="heavy-picker">

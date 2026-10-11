@@ -6,7 +6,8 @@
  * - gateEveryAction shapes (diamond) disable autopilot entirely.
  * - The kill switch turns autopilot off for the launch for good, and autopilot grants
  *   that are not yet consumed can no longer be consumed.
- * - consume() is atomic and single-use, and checks launch + action.
+ * - consume() is atomic and single-use, and checks launch + action; each use is an
+ *   approval.consumed event.
  */
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
@@ -182,7 +183,11 @@ export class PgApprovals implements Approvals {
           AND (NOT via_autopilot OR NOT EXISTS (SELECT 1 FROM killswitches k WHERE k.launch_id = $2))`,
       [approvalId, launchId, action, this.now()],
     );
-    if (res.rowCount === 1) return;
+    if (res.rowCount === 1) {
+      // Consumption is public: the log shows when an approval was used (AG-023).
+      await this.bus.append({ launchId, kind: 'approval.consumed', actor: 'system', payload: { approvalId, action } });
+      return;
+    }
     const r = await this.row(approvalId);
     if (!r) throw new ApprovalError(`unknown approval ${approvalId}`);
     if (r.launch_id !== launchId) throw new ApprovalError('approval belongs to a different launch');

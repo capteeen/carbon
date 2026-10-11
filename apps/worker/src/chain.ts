@@ -1,12 +1,14 @@
 /**
  * THE one seam that constructs the ChainClient: @carbon/solana's createChainClient.
  *
- * - assertLaunchAllowed only CHECKS (a consumed 'launch' approval for the launch
- *   and a passing latest Sentinel score). It never consumes: Treasurer already did.
+ * - assertLaunchAllowed only CHECKS (a consumed 'launch' approval for the launch,
+ *   a passing latest Sentinel score, and @carbon/agents' assertLaunchCleared: the
+ *   score is for the current forge.draft). It never consumes: Treasurer already did.
  * - The chain client never writes events; agents (and the decay loop here) append them.
  * - If the chain config is missing (env not set), the worker still boots, and every
  *   chain call refuses with ChainUnavailableError naming the reason. Nothing is faked.
  */
+import { assertLaunchCleared, type AgentContext } from '@carbon/agents';
 import { getLaunchConfig, type ChainClient, type EventBus, type PumpCoinInfo, type SplitReceipt } from '@carbon/core';
 import { ChainUnavailableError, createChainClient as createSolana, ensureSchema, loadSolanaConfig, type CarbonChainClient } from '@carbon/solana';
 import { Connection } from '@solana/web3.js';
@@ -20,7 +22,12 @@ export interface ChainDeps {
   env?: NodeJS.ProcessEnv;
 }
 
-/** Check, never consume: approval consumed for this launch + action 'launch', and Sentinel's latest score passed. */
+/**
+ * Check, never consume: approval consumed for this launch + action 'launch', Sentinel's
+ * latest score passed, and the agents' own gate (assertLaunchCleared) agrees: the score
+ * was computed against this launch's threshold and every forge.draft since the score
+ * carries exactly the scored content. A draft revised after a pass is refused (AG-001).
+ */
 export function launchAllowedCheck(pool: pg.Pool, bus: EventBus) {
   return async (launchId: string, approvalId: string): Promise<void> => {
     const r = await pool.query<{ status: string }>("SELECT status FROM approvals WHERE id = $1 AND launch_id = $2 AND action = 'launch'", [approvalId, launchId]);
@@ -28,7 +35,11 @@ export function launchAllowedCheck(pool: pg.Pool, bus: EventBus) {
     const scores = await bus.list(launchId, { kinds: ['sentinel.score'] });
     const last = scores[scores.length - 1];
     const p = last?.payload as { passed?: boolean; hardFail?: boolean } | undefined;
+    if (!last) throw new Error('no Sentinel score yet; launch locked');
     if (!p || p.passed !== true || p.hardFail === true) throw new Error('latest Sentinel score did not pass');
+    // assertLaunchCleared reads only bus, launchId and config from its context.
+    const gateCtx: Pick<AgentContext, 'bus' | 'launchId' | 'config'> = { bus, launchId, config: await getLaunchConfig(bus, launchId) };
+    await assertLaunchCleared(gateCtx as AgentContext);
   };
 }
 

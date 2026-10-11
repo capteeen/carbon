@@ -5,9 +5,10 @@
  */
 import { createServer } from 'node:http';
 import { hostname } from 'node:os';
-import { createCore, createLlm } from '@carbon/core';
+import { createCore } from '@carbon/core';
 import { PgAssetStore } from './assets.js';
 import { createChainClient } from './chain.js';
+import { chooseWorkerLlm } from './llm.js';
 import { migrateAll } from './migrate.js';
 import { Supervisor } from './supervisor.js';
 import { createWorkerX } from './x.js';
@@ -21,8 +22,9 @@ async function main(): Promise<void> {
   const applied = await migrateAll(core.bus.pool);
   log(applied.length ? `migrations applied: ${applied.join(', ')}` : 'migrations up to date');
 
-  const llm = await createLlm();
-  log(`llm: ${llm.id} ${llm.model}`);
+  log(`NODE_ENV=${process.env.NODE_ENV ?? '(unset)'}`);
+  const { provider: llm, line } = await chooseWorkerLlm();
+  log(line);
   const x = createWorkerX(core.bus.pool);
   const chain = createChainClient({ pool: core.bus.pool, bus: core.bus });
   log(chain.kind === 'solana' ? `chain: ${chain.client.network}` : `chain: unavailable (${chain.reason})`);

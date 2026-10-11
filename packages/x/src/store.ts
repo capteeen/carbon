@@ -4,7 +4,7 @@
  * the app can pass its own Pool.
  */
 import { TokenCipher } from './crypto.js';
-import { X_MIGRATION_SQL } from './migration.js';
+import { X_MIGRATION_0002_SQL, X_MIGRATION_SQL } from './migration.js';
 
 export interface Queryable {
   query(text: string, values?: unknown[]): Promise<{ rows: any[] }>;
@@ -18,6 +18,12 @@ export interface StoredTokens {
   refreshToken: string | null;
   accessExpiresAt: Date;
   scopes: string[];
+  /**
+   * The launcher wallet that started the OAuth flow (signed, sealed in the flow
+   * cookie). A connection counts only for a launch created by this wallet.
+   * null/absent = unbound, which is never treated as connected.
+   */
+  wallet?: string | null;
 }
 
 /** What callers may see about a connection: never tokens. */
@@ -26,6 +32,8 @@ export interface XConnection {
   xUserId: string;
   xHandle: string;
   scopes: string[];
+  /** The launcher wallet this connection is bound to. */
+  wallet: string | null;
 }
 
 export interface TokenStore {
@@ -46,6 +54,7 @@ export interface PostLedger {
 
 export async function migrate(db: Queryable): Promise<void> {
   await db.query(X_MIGRATION_SQL);
+  await db.query(X_MIGRATION_0002_SQL);
 }
 
 function aadFor(launchId: string, xUserId: string): string {
@@ -60,7 +69,7 @@ export class PgTokenStore implements TokenStore {
 
   async get(launchId: string): Promise<StoredTokens | null> {
     const { rows } = await this.db.query(
-      'SELECT launch_id, x_user_id, x_handle, token_ciphertext, scopes, access_expires_at FROM x_tokens WHERE launch_id = $1',
+      'SELECT launch_id, x_user_id, x_handle, token_ciphertext, scopes, access_expires_at, wallet FROM x_tokens WHERE launch_id = $1',
       [launchId],
     );
     const r = rows[0];
@@ -78,6 +87,7 @@ export class PgTokenStore implements TokenStore {
       refreshToken: secret.refreshToken,
       accessExpiresAt: new Date(r.access_expires_at),
       scopes: r.scopes,
+      wallet: r.wallet ?? null,
     };
   }
 
@@ -87,13 +97,13 @@ export class PgTokenStore implements TokenStore {
       aadFor(t.launchId, t.xUserId),
     );
     await this.db.query(
-      `INSERT INTO x_tokens (launch_id, x_user_id, x_handle, token_ciphertext, scopes, access_expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO x_tokens (launch_id, x_user_id, x_handle, token_ciphertext, scopes, access_expires_at, wallet)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (launch_id) DO UPDATE SET
          x_user_id = EXCLUDED.x_user_id, x_handle = EXCLUDED.x_handle,
          token_ciphertext = EXCLUDED.token_ciphertext, scopes = EXCLUDED.scopes,
-         access_expires_at = EXCLUDED.access_expires_at, updated_at = now()`,
-      [t.launchId, t.xUserId, t.xHandle, Buffer.from(sealed), t.scopes, t.accessExpiresAt],
+         access_expires_at = EXCLUDED.access_expires_at, wallet = EXCLUDED.wallet, updated_at = now()`,
+      [t.launchId, t.xUserId, t.xHandle, Buffer.from(sealed), t.scopes, t.accessExpiresAt, t.wallet ?? null],
     );
   }
 

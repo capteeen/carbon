@@ -21,8 +21,12 @@ export function getX(): Promise<CarbonXClient> {
   return g.__carbonX;
 }
 
-/** Whether the launch's X account is connected. false when X is not configured at all. */
-export async function xConnectedFor(launchId: string): Promise<boolean> {
+/**
+ * At launch creation: whether this launch id has an X connection started by `launcherWallet`.
+ * A connection bound to any other wallet (or none) is deleted (AG-004, X account fixation).
+ * false when X is not configured at all.
+ */
+export async function xConnectedFor(launchId: string, launcherWallet: string): Promise<boolean> {
   if (!xConfigured()) return false;
-  return (await getX()).isConnected(launchId);
+  return (await getX()).claimConnection(launchId, launcherWallet);
 }

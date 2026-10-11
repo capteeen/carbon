@@ -5,7 +5,7 @@
     "buildCommand": "git submodule update --init && pnpm install --frozen-lockfile"
   },
   "deploy": {
-    "startCommand": "pnpm --filter @carbon/worker start",
+    "startCommand": "NODE_ENV=production pnpm --filter @carbon/worker start",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",

@@ -6,7 +6,8 @@ import { PgAssetStore } from '../src/assets.js';
 import { createChainClient, launchAllowedCheck } from '../src/chain.js';
 import { WebLaunchUser } from '../src/launch-user.js';
 import { Supervisor } from '../src/supervisor.js';
-import { consumedApprovalCheck, createWorkerX } from '../src/x.js';
+import { ApprovalAlreadyUsedError, ApprovalNotConsumedError, ApprovedTextMismatchError, consumedApprovalCheck, createWorkerX } from '../src/x.js';
+import { textHash } from '@carbon/x';
 import { WALLET, testEnv, type Env } from './helpers.js';
 
 let env: Env;
@@ -28,6 +29,7 @@ const created = (launchId: string, extra: Partial<CarbonEvent<'launch.created'>[
 describe('migrations', () => {
   it('core, x, worker and solana schemas are applied, idempotently', async () => {
     expect(env.applied).toContain('worker/001_worker.sql');
+    expect(env.applied).toContain('worker/002_single_use.sql');
     expect(env.applied).toContain('solana/schema');
     const t = await env.core.bus.pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema = $1", [env.schema]);
     const names = t.rows.map((r: { table_name: string }) => r.table_name);
@@ -52,21 +54,37 @@ describe('AssetStore', () => {
   });
 });
 
-describe('approval hooks only CHECK, never consume', () => {
-  it('x hook: passes only for a consumed approval of that launch + action', async () => {
+describe('approval hooks never consume (the X hook records the one post an approval allows)', () => {
+  it('x hook: one post per consumed approval of that launch + action, with the approved text only', async () => {
     const launchId = randomUUID();
     await created(launchId);
     const { approvals, bus } = env.core;
-    const { approvalId } = await approvals.open(launchId, 'post', { title: 't' }, 'herald');
+    const { approvalId } = await approvals.open(launchId, 'post', { title: 't', text: 'gm carbon' }, 'herald');
     const check = consumedApprovalCheck(bus.pool);
-    await expect(check(launchId, approvalId, 'post')).rejects.toThrow();
+    const h = textHash('gm carbon');
+    await expect(check(launchId, approvalId, 'post', h)).rejects.toThrow(ApprovalNotConsumedError);
     await approvals.decide(approvalId, true, WALLET);
-    await expect(check(launchId, approvalId, 'post')).rejects.toThrow(); // granted but not consumed
+    await expect(check(launchId, approvalId, 'post', h)).rejects.toThrow(ApprovalNotConsumedError); // granted but not consumed
     await approvals.consume(launchId, approvalId, 'post');
-    await check(launchId, approvalId, 'post');
-    await check(launchId, approvalId, 'post'); // checking twice does not consume anything
-    await expect(check(launchId, approvalId, 'reply')).rejects.toThrow();
-    await expect(check(randomUUID(), approvalId, 'post')).rejects.toThrow();
+    await expect(check(launchId, approvalId, 'reply', h)).rejects.toThrow();
+    await expect(check(randomUUID(), approvalId, 'post', h)).rejects.toThrow();
+    await expect(check(launchId, approvalId, 'post', textHash('text nobody approved'))).rejects.toThrow(ApprovedTextMismatchError);
+    await check(launchId, approvalId, 'post', h);
+    await expect(check(launchId, approvalId, 'post', h)).rejects.toThrow(ApprovalAlreadyUsedError); // one approval, one post
+    const uses = await bus.pool.query('SELECT text_sha256 FROM carbon_x_approval_uses WHERE approval_id = $1', [approvalId]);
+    expect(uses.rows).toEqual([{ text_sha256: h }]);
+  });
+
+  it('x hook: concurrent posts under one approval → exactly one passes', async () => {
+    const launchId = randomUUID();
+    await created(launchId);
+    const { approvals, bus } = env.core;
+    const { approvalId } = await approvals.open(launchId, 'reply', { title: 't', text: 'thanks' }, 'keeper');
+    await approvals.decide(approvalId, true, WALLET);
+    await approvals.consume(launchId, approvalId, 'reply');
+    const check = consumedApprovalCheck(bus.pool);
+    const results = await Promise.allSettled(Array.from({ length: 6 }, () => check(launchId, approvalId, 'reply', textHash('thanks'))));
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
   });
 
   it('chain hook: needs a consumed launch approval AND a passing latest Sentinel score', async () => {
@@ -78,10 +96,29 @@ describe('approval hooks only CHECK, never consume', () => {
     await approvals.consume(launchId, approvalId, 'launch');
     const check = launchAllowedCheck(bus.pool, bus);
     await expect(check(launchId, approvalId)).rejects.toThrow(/Sentinel/);
+    const draft = { name: 'Frost', ticker: 'FRST', lore: 'cold', logoUri: 'u', logoHash: '0'.repeat(16), bannerUri: 'u', siteUri: 'u', metadataUri: 'u' };
+    await bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: draft });
     await bus.append({ launchId, kind: 'sentinel.score', actor: 'sentinel', payload: { score: 90, threshold: 60, inputs: [], hardFail: false, passed: true, run: 1 } });
     await check(launchId, approvalId);
+    // Re-appending the SAME content after the score is fine; a revised draft is not (AG-001).
+    await bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: draft });
+    await check(launchId, approvalId);
+    await bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: { ...draft, name: 'Renamed', ticker: 'RNMD' } });
+    await expect(check(launchId, approvalId)).rejects.toThrow(/Draft changed/);
     await bus.append({ launchId, kind: 'sentinel.score', actor: 'sentinel', payload: { score: 10, threshold: 60, inputs: [], hardFail: false, passed: false, run: 2 } });
     await expect(check(launchId, approvalId)).rejects.toThrow(/Sentinel/);
+  });
+
+  it('chain hook: a score computed against a lower threshold than the config row → refused', async () => {
+    const launchId = randomUUID();
+    await created(launchId, { shape: 'diamond' });
+    const { approvals, bus } = env.core;
+    const { approvalId } = await approvals.open(launchId, 'launch', { title: 'launch' }, 'treasurer');
+    await approvals.decide(approvalId, true, WALLET);
+    await approvals.consume(launchId, approvalId, 'launch');
+    await bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: { name: 'F', ticker: 'F', lore: 'l', logoUri: 'u', logoHash: '0'.repeat(16), bannerUri: 'u', siteUri: 'u', metadataUri: 'u' } });
+    await bus.append({ launchId, kind: 'sentinel.score', actor: 'sentinel', payload: { score: 70, threshold: 60, inputs: [], hardFail: false, passed: true, run: 1 } });
+    await expect(launchAllowedCheck(bus.pool, bus)(launchId, approvalId)).rejects.toThrow(/lower threshold/);
   });
 
   it('without chain/X config the clients refuse honestly (no data)', async () => {

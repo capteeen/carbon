@@ -19,19 +19,29 @@ of any kind (`test/static-guards.test.ts` checks this).
 
 ```ts
 import { createXClient, migrate, AUTH_COOKIE_NAME } from '@carbon/x';
-await migrate(pool);                       // or run migrations/0001_x_tokens.sql
-const x = createXClient({ db: pool, assertApproval: (l, a, act) => approvals.consume(l, a, act) });
+await migrate(pool);                       // or run migrations/0001_*.sql and 0002_*.sql
+// The worker's hook: consumed approval + approved text hash + one use (apps/worker/src/x.ts).
+const x = createXClient({ db: pool, assertApproval: (l, a, act, textSha256) => checkOnePost(l, a, act, textSha256) });
 
-// GET /api/x/connect?launch=…
-const { url, cookie } = x.startAuth(launchId);   // set `cookie`, then 302 to `url`
+// POST /api/x/connect (signed by the launcher wallet, same origin, JSON)
+const { url, cookie } = x.startAuth(launchId, wallet);   // set `cookie`, return `url`
 // GET /api/x/callback
 const conn = await x.finishAuth(new URL(req.url).searchParams, cookies.get(AUTH_COOKIE_NAME));
-// conn = { launchId, xUserId, xHandle, scopes }. It never contains tokens. Clear the cookie afterwards.
+// conn = { launchId, xUserId, xHandle, scopes, wallet }. It never contains tokens. Clear the cookie afterwards.
+// POST /api/launch: keep the connection only if the launcher wallet started it.
+const xConnected = await x.claimConnection(launchId, launcherWallet);
 ```
 
 The cookie is httpOnly, SameSite=Lax and lasts 10 minutes. Its value is the state,
-the PKCE verifier, the launchId and the issue time, sealed with AES-GCM so the
-browser never sees the verifier. `finishAuth` checks the state in constant time and
+the PKCE verifier, the launchId, the wallet that started the flow and the issue
+time, sealed with AES-GCM so the browser never sees the verifier.
+
+**Wallet binding.** Every connection is stored with the wallet that started it
+(`x_tokens.wallet`). User tokens are used (posting, mentions, `isConnected`) only
+when that wallet equals the launch's launcher wallet. By default
+`createXClient` reads it from the `launch.created` event; pass `launcherWallet` to
+override. A connection bound to another wallet, or to none, counts as not
+connected, so nobody can attach someone else's X account to their launch. `finishAuth` checks the state in constant time and
 rejects a mismatched state, a missing or tampered cookie, an expired flow, or an
 `error=` callback. All of these checks run before any network call.
 
@@ -40,10 +50,11 @@ rejects a mismatched state, a missing or tampered cookie, an expired flow, or an
 `post` and `reply` run these steps in this order:
 1. If no `assertApproval` hook was injected, they refuse with `ApprovalRequiredError`.
 2. Weighted length must be ≤ 280 and the text must not be empty. Nothing is consumed at this step.
-3. The launch must have a connected account. This is a database read only.
+3. The launch must have a connected account bound to the launcher wallet. This is a database read only.
 4. Dedupe. Identical NFC-trimmed text for the same launch within 24h is refused with
    `DuplicatePostError`. The text is reserved atomically in `x_post_dedupe`.
-5. `assertApproval(launchId, approvalId, 'post' | 'reply')`, which should be core's `Approvals.consume`.
+5. `assertApproval(launchId, approvalId, 'post' | 'reply', textSha256)`. It must admit exactly one
+   post per approval, with the approved text, and record the use atomically.
    If it throws, the reservation is released and the call fails with `ApprovalRequiredError`.
 6. `POST /2/tweets`. On a definite 4xx or 429 the reservation is released. On a timeout or 5xx it is
    kept, so a retry cannot post twice.

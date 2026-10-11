@@ -74,11 +74,29 @@ describe('chemistry and half-lives', () => {
   // how.md: "The decay mechanics come from @qsd/protocol; Carbon does not reimplement them."
   // packages/solana/src/decay.ts: qsd's decay state machine is NOT used; collapse timing is
   // Carbon's own deterministic rule. Only naming and airdrop allocation come from qsd.
-  it.fails('[AG-014] how.md does not claim decay mechanics come from @qsd/protocol when the code says they do not', () => {
+  it('[AG-014] how.md does not claim decay mechanics come from @qsd/protocol when the code says they do not', () => {
     const decay = read('packages/solana/src/decay.ts');
     const qsdStateMachineUnused = /state machine[\s\S]{0,120}is NOT[\s*]+used/.test(decay);
     expect(qsdStateMachineUnused).toBe(true);
     expect(how).not.toMatch(/decay mechanics come from `@qsd\/protocol`; Carbon\s+does not reimplement them/);
+  });
+
+  it('[AG-014] how.md names exactly the @qsd/protocol functions decay.ts imports', () => {
+    const decay = read('packages/solana/src/decay.ts');
+    const imported = /import \{([^}]*)\} from '@qsd\/protocol'/.exec(decay)![1]!
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s && !s.startsWith('type '));
+    const section = how.slice(how.indexOf('### Decay'), how.indexOf('## Shapes'));
+    const named = [...section.matchAll(/`([A-Za-z]+)`/g)].map((m) => m[1]).filter((n) => n !== 'qsd');
+    expect(new Set(named)).toEqual(new Set(imported));
+    expect(section).toMatch(/not a half-life/);
+  });
+
+  it('[AG-026] the isotope chamber labels the collapse rule DECAY_RULE, not HALF-LIFE', () => {
+    expect(read('packages/visual/src/hud/panels.tsx')).not.toMatch(/label="HALF-LIFE"/);
+    expect(read('packages/visual/src/copy.ts')).not.toMatch(/'HALF-LIFE'/);
+    expect(read('packages/visual/src/hud/panels.tsx')).toMatch(/label="DECAY_RULE"/);
   });
 });
 
@@ -101,7 +119,7 @@ describe('Gemini and quantum', () => {
   // startCommand "pnpm --filter @carbon/worker start" → "tsx src/main.ts") does not set it, and
   // createLlm() drops fallbackReason, so a Gemini outage with ANTHROPIC_API_KEY present would
   // silently switch the agents to Claude while every page says "powered by Google Gemini".
-  it.fails('[AG-013] the worker deploy pins NODE_ENV=production (or the fallback is impossible / visible)', () => {
+  it('[AG-013] the worker deploy pins NODE_ENV=production (or the fallback is impossible / visible)', () => {
     const rail = JSON.parse(read('apps/worker/railway.json')) as { deploy: { startCommand: string } };
     const start = (JSON.parse(read('apps/worker/package.json')) as { scripts: Record<string, string> }).scripts.start!;
     expect(`${rail.deploy.startCommand} ${start}`).toMatch(/NODE_ENV=production/);
@@ -143,7 +161,7 @@ describe('fee split: native pump.fun fee sharing, 50/30/20', () => {
   // how.md: "Carbon never holds your 50%". True in native mode only. With CARBON_FEE_MODE=wallet
   // (a supported fallback, apps/worker/src/main.ts) Carbon's per-launch wallet receives ALL fees
   // and pays the 50% out; /wallets still says "Native pump.fun fee sharing" for every launch.
-  it.fails('[AG-019] the "never holds your 50%" copy is conditional on, or the wallet fallback is absent', () => {
+  it('[AG-019] the "never holds your 50%" copy is conditional on, or the wallet fallback is absent', () => {
     const walletModeExists = /CARBON_FEE_MODE === 'wallet'/.test(read('apps/worker/src/main.ts'));
     const copyUnconditional = /Carbon never holds your 50%/.test(how) && !/CARBON_FEE_MODE|wallet mode|fallback/i.test(how.slice(how.indexOf('## Money')));
     const walletsPageStatic = /Native pump\.fun fee sharing: the address is the coin/.test(read('apps/web/src/components/WalletsView.tsx'));

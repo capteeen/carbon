@@ -80,6 +80,9 @@ export const testConfig = (over: Partial<XConfig> = {}): XConfig => ({
 
 export const testCipher = () => new TokenCipher(Uint8Array.from(randomBytes(32)));
 
+/** The launcher wallet test connections are bound to. */
+export const FIXTURE_WALLET = 'FixtureLauncherWallet1111111111111111111111';
+
 export function connectedTokens(launchId = 'launch-1', over: Partial<StoredTokens> = {}): StoredTokens {
   return {
     launchId,
@@ -89,6 +92,7 @@ export function connectedTokens(launchId = 'launch-1', over: Partial<StoredToken
     refreshToken: 'FIXTURE-REFRESH-TOKEN-stored',
     accessExpiresAt: new Date(Date.now() + 3_600_000),
     scopes: [...X_SCOPES],
+    wallet: FIXTURE_WALLET,
     ...over,
   };
 }
