@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { CARBON_X } from '@/lib/social';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { LaunchLive } from '@/components/LaunchLive';
@@ -28,6 +29,8 @@ export async function generateMetadata({ params }: { params: Promise<{ ca: strin
     openGraph: { title: `${title} // CARBON`, description, url: `${site}/l/${ca}`, images: [image], type: 'website' },
     twitter: {
       card: 'player',
+      site: CARBON_X.handle,
+      creator: CARBON_X.handle,
       title: `${title} // CARBON`,
       description,
       images: [image.url],

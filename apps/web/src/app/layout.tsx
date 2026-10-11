@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Footer } from '@/components/Footer';
 import { logConfigured } from '@/server/log-config';
 import { Providers } from '@/components/Providers';
+import { CARBON_X } from '@/lib/social';
 import { SoundToggle } from '@/visual';
 import '@carbon/visual/styles.css';
 import './globals.css';
@@ -16,6 +17,8 @@ const display = Nunito({ subsets: ['latin'], weight: ['900'], variable: '--font-
 export const metadata: Metadata = {
   title: { default: 'CARBON // Agents that bond.', template: '%s // CARBON' },
   description: 'A pump.fun launchpad run by a molecule of six AI agents. You approve every launch; posts need your approval unless you turn on posts autopilot.',
+  openGraph: { siteName: 'CARBON', type: 'website' },
+  twitter: { card: 'summary', site: CARBON_X.handle, creator: CARBON_X.handle },
 };
 
 export const viewport: Viewport = {
