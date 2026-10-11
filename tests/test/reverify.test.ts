@@ -211,7 +211,7 @@ describe('[AG-027] approval consumption is public even when the event append fai
   // approval.consumed, outside that transaction. If the append fails (Postgres/Redis hiccup,
   // process killed between the two), the approval is spent but the public log never says so,
   // and the caller sees an error for an approval it can no longer use ("already used").
-  it.fails('[AG-027] if approval.consumed cannot be appended, the approval is not consumed either (or the event is guaranteed)', async () => {
+  it('[AG-027] if approval.consumed cannot be appended, the approval is not consumed either (or the event is guaranteed)', async () => {
     const w = wallet();
     const launchId = await createLaunch(env.core, 'ring', 'C-12', null, w.address);
     const { approvalId } = await env.core.approvals.open(launchId, 'post', { text: 'gm' }, 'herald');
@@ -225,5 +225,19 @@ describe('[AG-027] approval consumption is public even when the event append fai
     const events = await env.core.bus.list(launchId, { kinds: ['approval.consumed'] });
     // the invariant: consumed in the table  <=>  approval.consumed in the public log
     expect(rows[0]!.status === 'consumed').toBe(events.length === 1);
+  });
+
+  it('[AG-027] a crash after the append but before the commit is repaired: table follows the log, no second use', async () => {
+    const w = wallet();
+    const launchId = await createLaunch(env.core, 'ring', 'C-12', null, w.address);
+    const { approvalId } = await env.core.approvals.open(launchId, 'post', { text: 'gm' }, 'herald');
+    await env.core.approvals.decide(approvalId, true, w.address);
+    // the state a crash leaves: the event is in the log, the row still says granted
+    await env.core.bus.append({ launchId, kind: 'approval.consumed', actor: 'system', payload: { approvalId, action: 'post' } });
+    await expect(env.core.approvals.consume(launchId, approvalId, 'post')).rejects.toThrow(/already used/);
+    const { rows } = await env.core.bus.pool.query<{ status: string }>('SELECT status FROM approvals WHERE id = $1', [approvalId]);
+    expect(rows[0]!.status).toBe('consumed');
+    const events = await env.core.bus.list(launchId, { kinds: ['approval.consumed'] });
+    expect(events).toHaveLength(1);
   });
 });

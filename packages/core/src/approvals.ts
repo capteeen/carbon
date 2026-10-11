@@ -175,27 +175,59 @@ export class PgApprovals implements Approvals {
     await this.pool.query('UPDATE approvals SET decision_event_id = $2 WHERE id = $1', [approvalId, ev.id]);
   }
 
+  /**
+   * Single-use consumption, kept consistent with the public log (AG-027):
+   * the row is locked, approval.consumed is appended while the lock is held, and only
+   * then is status='consumed' committed. If the append fails the transaction rolls back
+   * and the approval stays usable. If the process dies after the append but before the
+   * commit, the next consume() finds the event in the log, finishes the bookkeeping
+   * and refuses a second use, so table and log agree.
+   */
   async consume(launchId: string, approvalId: string, action: ApprovalAction): Promise<void> {
-    const res = await this.pool.query(
-      `UPDATE approvals SET status = 'consumed', consumed_at = $4
-        WHERE id = $1 AND launch_id = $2 AND action = $3 AND status = 'granted'
-          AND NOT (action = 'launch' AND via_autopilot)
-          AND (NOT via_autopilot OR NOT EXISTS (SELECT 1 FROM killswitches k WHERE k.launch_id = $2))`,
-      [approvalId, launchId, action, this.now()],
-    );
-    if (res.rowCount === 1) {
-      // Consumption is public: the log shows when an approval was used (AG-023).
-      await this.bus.append({ launchId, kind: 'approval.consumed', actor: 'system', payload: { approvalId, action } });
-      return;
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      try {
+        // NOWAIT: a second consumer does not queue (holding a pooled connection) behind the
+        // first; it fails at once, exactly as it would after the first one committed.
+        const sel = await client
+          .query<ApprovalRow & { usable: boolean }>(
+          `SELECT id, launch_id, action, status, via_autopilot, decided_by,
+                  (status = 'granted'
+                    AND NOT (action = 'launch' AND via_autopilot)
+                    AND (NOT via_autopilot OR NOT EXISTS (SELECT 1 FROM killswitches k WHERE k.launch_id = approvals.launch_id))) AS usable
+             FROM approvals WHERE id = $1 FOR UPDATE NOWAIT`,
+            [approvalId],
+          )
+          .catch((err: unknown) => {
+            if ((err as { code?: string }).code === '55P03') throw new ApprovalError('approval was already used (in use by another request)');
+            throw err;
+          });
+        const r = sel.rows[0];
+        if (!r) throw new ApprovalError(`unknown approval ${approvalId}`);
+        if (r.launch_id !== launchId) throw new ApprovalError('approval belongs to a different launch');
+        if (r.action !== action) throw new ApprovalError(`approval is for '${r.action}', not '${action}'`);
+        if (r.status === 'consumed') throw new ApprovalError('approval was already used');
+        if (r.status === 'pending') throw new ApprovalError('approval is still pending');
+        if (r.status === 'rejected') throw new ApprovalError('approval was rejected');
+        if (!r.usable) throw new ApprovalError('autopilot grant revoked by kill switch');
+        // A previous consume may have appended the event and died before its commit.
+        const prior = await this.bus.list(launchId, { kinds: ['approval.consumed'] });
+        const already = prior.some((e) => (e.payload as { approvalId?: string }).approvalId === approvalId);
+        if (!already) {
+          // Consumption is public: the log shows when an approval was used (AG-023).
+          await this.bus.append({ launchId, kind: 'approval.consumed', actor: 'system', payload: { approvalId, action } });
+        }
+        await client.query(`UPDATE approvals SET status = 'consumed', consumed_at = $2 WHERE id = $1`, [approvalId, this.now()]);
+        await client.query('COMMIT');
+        if (already) throw new ApprovalError('approval was already used');
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw err;
+      }
+    } finally {
+      client.release();
     }
-    const r = await this.row(approvalId);
-    if (!r) throw new ApprovalError(`unknown approval ${approvalId}`);
-    if (r.launch_id !== launchId) throw new ApprovalError('approval belongs to a different launch');
-    if (r.action !== action) throw new ApprovalError(`approval is for '${r.action}', not '${action}'`);
-    if (r.status === 'consumed') throw new ApprovalError('approval was already used');
-    if (r.status === 'pending') throw new ApprovalError('approval is still pending');
-    if (r.status === 'rejected') throw new ApprovalError('approval was rejected');
-    throw new ApprovalError('autopilot grant revoked by kill switch');
   }
 
   async setAutopilot(launchId: string, cls: AutopilotClass, enabled: boolean, by: string): Promise<void> {
