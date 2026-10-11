@@ -7,8 +7,8 @@
  */
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { EffectComposer } from '@react-three/postprocessing';
-import { createContext, memo, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Color, HalfFloatType, LinearSRGBColorSpace, UnsignedByteType } from 'three';
+import { Component, createContext, memo, useContext, useEffect, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from 'react';
+import { Color, HalfFloatType, LinearSRGBColorSpace, UnsignedByteType, type Camera, type Object3D, type Scene, type WebGLRenderer } from 'three';
 import { PALETTE, hexToRgb01 } from '../tokens.js';
 import type { LeaderRegistry } from '../hud/leaders.js';
 import { settingsFor, useQualityLevel, type QualityStore } from '../quality/store.js';
@@ -49,6 +49,51 @@ export interface StageProps {
   maxDpr?: number;
 }
 
+/**
+ * null until probed on the client (SSR and the first client render draw no canvas),
+ * then whether a WebGL context can be created at all.
+ */
+function useWebGL(): boolean | null {
+  const [ok, setOk] = useState<boolean | null>(null);
+  useEffect(() => {
+    let gl: boolean;
+    try {
+      const c = document.createElement('canvas');
+      gl = typeof c.getContext === 'function' && !!(c.getContext('webgl2') ?? c.getContext('webgl'));
+    } catch {
+      gl = false;
+    }
+    setOk(gl);
+  }, []);
+  return ok;
+}
+
+/**
+ * No-WebGL path: the HUD (which carries every real value) stays; the 3D layer
+ * is replaced by a plain fog panel with one honest line.
+ */
+function NoWebGL({ className, ariaLabel }: { className?: string; ariaLabel?: string }) {
+  return (
+    <div className={`${className ?? 'carbon-canvas'} carbon-canvas--nogl`} role="img" aria-label={ariaLabel} data-testid="no-webgl">
+      <span className="carbon-hud__meta carbon-nogl__note">{'// 3D view unavailable on this device. Readouts are unaffected.'}</span>
+    </div>
+  );
+}
+
+class CanvasBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  override state = { failed: false };
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
+  }
+  override componentDidCatch(error: unknown, _info: ErrorInfo): void {
+    // WebGL context creation can still fail after the probe (GPU blocklist, lost context).
+    if (typeof console !== 'undefined') console.warn('[carbon/visual] 3D disabled:', error instanceof Error ? error.message : error);
+  }
+  override render(): ReactNode {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
 function useDeviceDpr(cap: number): number {
   const [dpr, setDpr] = useState(1);
   useEffect(() => {
@@ -82,7 +127,12 @@ export function Stage({
   postParams.still = reducedMotion;
   shared.uMotion.value = reducedMotion ? 0 : 1;
 
+  const webgl = useWebGL();
+  if (webgl === null) return <div className={className ?? 'carbon-canvas'} role="img" aria-label={ariaLabel} />;
+  if (!webgl) return <NoWebGL className={className} ariaLabel={ariaLabel} />;
+
   return (
+    <CanvasBoundary fallback={<NoWebGL className={className} ariaLabel={ariaLabel} />}>
     <div className={className ?? 'carbon-canvas'} role="img" aria-label={ariaLabel}>
       <Canvas
         dpr={dpr}
@@ -98,11 +148,53 @@ export function Stage({
           <FrameDriver kit={kit} onFirstFrame={onFirstFrame} onFrame={onFrame} />
           {children}
           <Post kit={kit} />
+          <Precompiler />
           {leaders ? <LeaderProjector leaders={leaders} /> : null}
         </KitContext.Provider>
       </Canvas>
     </div>
+    </CanvasBoundary>
   );
+}
+
+/**
+ * Shader precompile: after the first frame, during idle time, compile every
+ * material in the scene, including the ones of chapters not yet visible
+ * (three's compile() only walks visible objects, so hidden ones are shown for
+ * the duration of the synchronous call and restored before the next frame).
+ * Avoids first-visit hitches when a later chapter's materials first draw.
+ */
+function precompile(gl: WebGLRenderer, scene: Scene, camera: Camera): void {
+  const hidden: Object3D[] = [];
+  scene.traverse((o) => {
+    if (!o.visible) {
+      hidden.push(o);
+      o.visible = true;
+    }
+  });
+  try {
+    const anyGl = gl as WebGLRenderer & { compileAsync?: (s: Object3D, c: Camera) => Promise<unknown> };
+    if (typeof anyGl.compileAsync === 'function') void anyGl.compileAsync(scene, camera).catch(() => undefined);
+    else gl.compile(scene, camera);
+  } finally {
+    for (const o of hidden) o.visible = false;
+  }
+}
+
+function Precompiler() {
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera);
+  const done = useRef(false);
+  useFrame(() => {
+    if (done.current) return;
+    done.current = true;
+    const run = () => precompile(gl, scene, camera);
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(run, { timeout: 1500 });
+    else setTimeout(run, 300);
+  }, 20);
+  return null;
 }
 
 function FrameDriver({ kit, onFirstFrame, onFrame }: { kit: Kit; onFirstFrame?: () => void; onFrame?: (dt: number) => void }) {

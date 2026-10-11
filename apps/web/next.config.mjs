@@ -11,7 +11,7 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   // Workspace packages ship TypeScript sources.
-  transpilePackages: ['@carbon/core', '@carbon/agents', '@carbon/x'],
+  transpilePackages: ['@carbon/core', '@carbon/agents', '@carbon/x', '@carbon/visual'],
   // Node-only deps stay external on the server.
   serverExternalPackages: ['pg', 'ioredis', '@google/genai', '@anthropic-ai/sdk', 'pngjs', 'jpeg-js'],
   webpack(config) {

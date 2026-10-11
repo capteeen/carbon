@@ -2,10 +2,11 @@
 import { EMPTY_READOUT, protonLabel, type AgentId, type CarbonEvent } from '@carbon/core/contracts';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { shortId } from '@/lib/launch-view';
 import type { LaunchSummary, ReplayData } from '@/lib/types';
-import { useEventStream } from '@/lib/use-events';
+import { useEventStream, useNow } from '@/lib/use-events';
+import { feedFromEvents, liveFromEvents, receiptsFromEvents, toVisualLaunches, toVisualReplay } from '@/lib/visual-data';
 import { CarbonStory } from '@/visual';
 
 const REFRESH_KINDS = new Set(['launch.deployed', 'sentinel.score', 'holders.snapshot', 'decay.collapsed']);
@@ -16,6 +17,13 @@ export function HomeLive(props: { launches: LaunchSummary[]; replay: ReplayData 
   const [launches, setLaunches] = useState(props.launches);
   const [agent, setAgent] = useState<AgentId | null>(null);
   const last = events[events.length - 1];
+  // Visual props, all derived from the real log (empty log → empty states).
+  const now = useNow(5000);
+  const live = useMemo(() => liveFromEvents(events, now), [events, now]);
+  const replay = useMemo(() => toVisualReplay(props.replay), [props.replay]);
+  const crystals = useMemo(() => toVisualLaunches(launches), [launches]);
+  const feed = useMemo(() => feedFromEvents(events), [events]);
+  const receipts = useMemo(() => receiptsFromEvents(events), [events]);
 
   // A new deploy / score / decay event changes the graphene: re-read it from the log.
   useEffect(() => {
@@ -41,13 +49,19 @@ export function HomeLive(props: { launches: LaunchSummary[]; replay: ReplayData 
           [ LAUNCH ]
         </Link>
       </div>
-      <CarbonStory
-        live={{ events, lastSeq: last?.seq ?? props.live.lastSeq }}
-        replay={props.replay}
-        launches={launches}
-        onOpenAgent={setAgent}
-        onOpenLaunch={(ca) => router.push(`/l/${ca}`)}
-      />
+      <div className="story-bleed">
+        <CarbonStory
+          live={live}
+          replay={replay}
+          launches={crystals}
+          feed={feed}
+          receipts={receipts}
+          onOpenAgent={setAgent}
+          onOpenLaunch={(ca) => router.push(`/l/${ca}`)}
+          launchHref="/launch"
+          soundToggle={false}
+        />
+      </div>
       {agent ? (
         <div className="card" role="dialog" aria-label={`${agent} live log`}>
           <div className="row" style={{ justifyContent: 'space-between' }}>

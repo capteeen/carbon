@@ -1,3 +1,4 @@
+'use client';
 /**
  * The single progress store (0..1). Lenis writes it; r3f reads it every frame
  * (store.get()), React HUD subscribes to chapter changes only, anime.js scroll

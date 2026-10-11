@@ -32,6 +32,9 @@ importers:
       '@carbon/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@carbon/visual':
+        specifier: workspace:*
+        version: link:../../packages/visual
       '@carbon/x':
         specifier: workspace:*
         version: link:../../packages/x

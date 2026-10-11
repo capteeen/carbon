@@ -4,11 +4,13 @@ import type { ReactNode } from 'react';
 import { Footer } from '@/components/Footer';
 import { Providers } from '@/components/Providers';
 import { SoundToggle } from '@/visual';
+import '@carbon/visual/styles.css';
 import './globals.css';
 
 // Typewriter mono for everything; a heavy rounded display face (OFL) for the wordmark and section titles.
-const mono = Space_Mono({ subsets: ['latin'], weight: ['400', '700'], variable: '--font-mono', display: 'swap' });
-const display = Nunito({ subsets: ['latin'], weight: ['900'], variable: '--font-display', display: 'swap' });
+// Exposed as @carbon/visual's font variables; globals.css aliases --font-mono / --font-display to them.
+const mono = Space_Mono({ subsets: ['latin'], weight: ['400', '700'], variable: '--font-carbon-mono', display: 'swap' });
+const display = Nunito({ subsets: ['latin'], weight: ['900'], variable: '--font-carbon-display', display: 'swap' });
 
 export const metadata: Metadata = {
   title: { default: 'CARBON // Agents that bond.', template: '%s // CARBON' },
@@ -28,7 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <Providers>
           <main className="page">{children}</main>
           <div className="sound-corner">
-            <SoundToggle />
+            <SoundToggle className="sound-toggle-wrap" />
           </div>
           <Footer />
         </Providers>

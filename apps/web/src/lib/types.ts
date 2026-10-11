@@ -26,6 +26,10 @@ export interface LaunchSummary {
   /** Molecule state from foldMolecule over the launch's log. */
   state: string | null;
   logoUri: string | null;
+  /** id of the launch.deployed event, null until deployed (ties the graphene crystal to a logged event). */
+  deployEventId: string | null;
+  /** true once a decay.collapsed event exists. */
+  collapsed: boolean;
 }
 
 /** A recorded launch replayed in chapter 08 ("replaying $TICKER, <date>"). */

@@ -11,7 +11,7 @@ import { COPY } from '../copy.js';
 import { HudCorner, HudLeaders, HudSection } from '../hud/Hud.js';
 import { LeaderRegistry } from '../hud/leaders.js';
 import { ChamberHud } from '../hud/panels.js';
-import { createQualityStore, type QualityStore } from '../quality/store.js';
+import { createDeviceQualityStore, type QualityStore } from '../quality/store.js';
 import { useReducedMotion } from '../story/scroll.js';
 import { CameraRig } from '../three/CameraRig.js';
 import { ChamberObject } from '../three/Chamber.js';
@@ -30,7 +30,7 @@ export interface IsotopeChamberProps {
 
 export function IsotopeChamber({ value, onChange, heavyAgent, onHeavyAgentChange, reducedMotion, quality, className }: IsotopeChamberProps) {
   const reduced = useReducedMotion(reducedMotion);
-  const q = useMemo(() => quality ?? createQualityStore(), [quality]);
+  const q = useMemo(() => quality ?? createDeviceQualityStore(), [quality]);
   const leaders = useMemo(() => new LeaderRegistry(), []);
   const [frame, setFrame] = useState<HTMLDivElement | null>(null);
   const plain = useMemo(() => ({ value: 0.35 }), []);

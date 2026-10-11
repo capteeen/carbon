@@ -15,6 +15,7 @@
   "dependencies": {
     "@carbon/agents": "workspace:*",
     "@carbon/core": "workspace:*",
+    "@carbon/visual": "workspace:*",
     "@carbon/x": "workspace:*",
     "@noble/curves": "2.3.0",
     "@solana/wallet-adapter-base": "0.9.27",

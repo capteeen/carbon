@@ -50,6 +50,8 @@ export function summarize(events: readonly CarbonEvent[]): LaunchSummary[] {
       deployedAt: deployed?.ts ?? null,
       state,
       logoUri: draft?.payload.logoUri ?? null,
+      deployEventId: deployed?.id ?? null,
+      collapsed: evs.some((e) => e.kind === 'decay.collapsed'),
     });
   }
   return out.sort((a, b) => (b.deployedAt ?? b.createdAt) - (a.deployedAt ?? a.createdAt));

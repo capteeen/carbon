@@ -10,7 +10,7 @@ import { COPY } from '../copy.js';
 import { validLaunches } from '../data/derive.js';
 import { HudCorner, HudSection, HudTag } from '../hud/Hud.js';
 import { GrapheneHud } from '../hud/panels.js';
-import { createQualityStore, type QualityStore } from '../quality/store.js';
+import { createDeviceQualityStore, type QualityStore } from '../quality/store.js';
 import { useReducedMotion } from '../story/scroll.js';
 import { CameraRig } from '../three/CameraRig.js';
 import { GrapheneCrystals, crystalsCentre, placeCrystals } from '../three/Graphene.js';
@@ -67,7 +67,7 @@ function Sheet({ launches, onOpen, onHover, hovered }: { launches: LaunchSummary
 export function GrapheneSheet(props: GrapheneSheetProps) {
   const launches = useMemo(() => validLaunches(props.launches), [props.launches]);
   const reduced = useReducedMotion(props.reducedMotion);
-  const q = useMemo(() => props.quality ?? createQualityStore(), [props.quality]);
+  const q = useMemo(() => props.quality ?? createDeviceQualityStore(), [props.quality]);
   const [frame, setFrame] = useState<HTMLDivElement | null>(null);
   const [hovered, setHovered] = useState<LaunchSummary | null>(null);
   return (

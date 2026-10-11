@@ -10,13 +10,14 @@
 import { animate, onScroll } from 'animejs';
 import Lenis from 'lenis';
 import { useEffect, useState, useSyncExternalStore, type RefObject } from 'react';
-import { CHAPTER_COUNT, CHAPTER_RANGES, chapterFade } from './chapters.js';
+import { CHAPTER_COUNT, CHAPTER_RANGES, chapterFade, chapterLocal } from './chapters.js';
 import type { ProgressStore } from './progress.js';
 
 export function useReducedMotion(override?: boolean): boolean {
   const [rm, setRm] = useState(false);
   useEffect(() => {
     if (override !== undefined) return;
+    if (typeof window.matchMedia !== 'function') return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const on = () => setRm(mq.matches);
     on();
@@ -64,8 +65,12 @@ export function useStoryScroll(opts: {
   /** Receives each layer's opacity (leader lines follow their label's layer). */
   onFade?: (i: number, o: number) => void;
 }): void {
-  const { track, markers, layers, store, smooth, anime, onFade } = opts;
+  const { track, markers, layers, store, smooth, onFade } = opts;
   useEffect(() => {
+    // anime.js onScroll needs ResizeObserver; without it (very old engines) the same
+    // layer envelope is driven straight from the progress store.
+    const anime = opts.anime && typeof ResizeObserver !== 'undefined';
+    const storeDriven = opts.anime && !anime;
     const el = track.current;
     if (!el) return;
     let top = 0;
@@ -125,11 +130,26 @@ export function useStoryScroll(opts: {
       }
     };
     const unsubChapter = store.subscribeChapter(pinLayers);
+    const applyAll = () => {
+      const p = store.get();
+      const ls = layers.current ?? [];
+      for (let i = 0; i < CHAPTER_COUNT; i++) {
+        const layer = ls[i];
+        if (layer) applyLayer(layer, i, chapterLocal(p, i), onFade);
+      }
+    };
+    const unsubStore = storeDriven ? store.subscribe(applyAll) : () => undefined;
+    if (storeDriven) applyAll();
 
     let lenis: Lenis | null = null;
-    if (smooth) {
-      lenis = new Lenis({ autoRaf: true, lerp: 0.09, smoothWheel: true, syncTouch: false });
-      lenis.on('scroll', (l: Lenis) => write(l.scroll));
+    if (smooth && typeof window.matchMedia === 'function') {
+      // Smooth scroll is an enhancement: if Lenis cannot start, native scroll drives the same store.
+      try {
+        lenis = new Lenis({ autoRaf: true, lerp: 0.09, smoothWheel: true, syncTouch: false });
+        lenis.on('scroll', (l: Lenis) => write(l.scroll));
+      } catch {
+        lenis = null;
+      }
     }
     const onScrollNative = () => write(window.scrollY);
     const onResize = () => {
@@ -148,6 +168,7 @@ export function useStoryScroll(opts: {
       ro?.disconnect();
       cleanups.forEach((c) => c());
       unsubChapter();
+      unsubStore();
     };
-  }, [track, markers, layers, store, smooth, anime, onFade]);
+  }, [track, markers, layers, store, smooth, opts.anime, onFade]);
 }

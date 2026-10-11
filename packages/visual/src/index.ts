@@ -27,7 +27,7 @@ export { useReducedMotion } from './story/scroll.js';
 
 // quality ladder
 export { QualityLadder, QUALITY_LEVELS, DEGRADE_ORDER, MAX_LEVEL, initialLevel, type QualitySettings, type LadderOptions } from './quality/ladder.js';
-export { createQualityStore, useQualityLevel, type QualityStore } from './quality/store.js';
+export { createQualityStore, createDeviceQualityStore, useQualityLevel, type QualityStore } from './quality/store.js';
 
 // data → view models (pure; real events only)
 export {

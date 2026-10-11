@@ -50,6 +50,17 @@
 .carbon-canvas canvas {
   display: block;
 }
+.carbon-canvas--nogl {
+  background: linear-gradient(180deg, var(--carbon-frost) 0%, var(--carbon-fog-light) 70%);
+}
+.carbon-nogl__note {
+  position: absolute;
+  left: var(--carbon-gutter);
+  bottom: calc(var(--carbon-gutter) + 32px);
+  font-family: var(--carbon-font-mono);
+  font-size: var(--carbon-hud-size);
+  color: var(--carbon-slate);
+}
 
 /* ───────────── HUD primitives ───────────── */
 .carbon-hud {
@@ -162,6 +173,11 @@
   font-family: var(--carbon-font-mono);
   font-size: var(--carbon-hud-size);
   pointer-events: auto;
+}
+
+/* SPEC copy is "Sound: On" / "Sound: Off": not uppercased like other HUD buttons */
+.carbon-sound__btn {
+  text-transform: none;
 }
 
 /* standalone frames (chamber, shape picker, launch scene, graphene, embed) */

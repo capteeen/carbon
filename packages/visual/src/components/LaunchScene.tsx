@@ -30,7 +30,7 @@ import { HudCorner, HudLabel, HudLeaders, HudMeta, HudReadout, HudSection, HudTa
 import { LeaderRegistry } from '../hud/leaders.js';
 import { fmtBonds, fmtCountdown, shortCa, shortHash } from '../hud/format.js';
 import { SentinelHud } from '../hud/panels.js';
-import { createQualityStore, type QualityStore } from '../quality/store.js';
+import { createDeviceQualityStore, type QualityStore } from '../quality/store.js';
 import { SoundToggle } from '../sound/SoundToggle.js';
 import { useBondChimes } from '../sound/sound.js';
 import { useReducedMotion } from '../story/scroll.js';
@@ -57,6 +57,8 @@ export interface LaunchSceneProps {
   shape?: ShapeId;
   /** Compact chrome (embed player). */
   compact?: boolean;
+  /** Render the scene's own "Sound: On/Off" toggle (default true unless compact). */
+  soundToggle?: boolean;
   reducedMotion?: boolean;
   quality?: QualityStore;
   className?: string;
@@ -289,7 +291,7 @@ export function LaunchScene(props: LaunchSceneProps) {
   const reducedPref = useReducedMotion(props.reducedMotion);
   // an empty stream is a still view
   const still = reducedPref || !d.hasEvents;
-  const q = useMemo(() => props.quality ?? createQualityStore(), [props.quality]);
+  const q = useMemo(() => props.quality ?? createDeviceQualityStore(), [props.quality]);
   const leaders = useMemo(() => new LeaderRegistry(), []);
   const [frame, setFrame] = useState<HTMLDivElement | null>(null);
   useBondChimes(d.flashes);
@@ -354,7 +356,7 @@ export function LaunchScene(props: LaunchSceneProps) {
             <HudMeta>{shortHash(daughter.eventId)}</HudMeta>
           </HudCorner>
         ) : null}
-        {!props.compact ? <SoundToggle /> : null}
+        {!props.compact && props.soundToggle !== false ? <SoundToggle /> : null}
         {props.compact && !d.hasEvents ? (
           <HudCorner at="bc">
             <HudReadout value={EMPTY_READOUT} />

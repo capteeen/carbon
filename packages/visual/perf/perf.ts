@@ -2,6 +2,13 @@
  * Perf + sync check for the Carbon story (Playwright + CDP, Chromium).
  *
  *   npx tsx perf/perf.ts [--throttle=4] [--seconds=16] [--empty] [--out=perf/results/latest.json]
+ *   npx tsx perf/perf.ts --url=http://127.0.0.1:3124/ [--dpr=0.3]   (a running app page, e.g. the Next production build)
+ *
+ * With --url the page is measured as shipped: no harness hooks. A small init
+ * script reads frame times from rAF, progress from the scroll position, first
+ * frame from the pin's data-chapter3d (written by the r3f loop) and the quality
+ * level from data-quality; --dpr sets the device pixel ratio (the app's cap is
+ * the quality ladder's ≤1.5); reduced motion is emulated via prefers-reduced-motion.
  *
  * 1. Phone profile: 390x844 viewport, DPR 2, touch, CDP CPU throttling (default 4x).
  * 2. First frame: ms from navigation to the first rendered r3f frame.
@@ -27,7 +34,40 @@ const seconds = Number(arg('seconds', '16'));
 const empty = process.argv.includes('--empty');
 const dprCap = arg('dpr', '');
 const cycles = Number(arg('cycles', '3'));
-const outPath = arg('out', `perf/results/latest${empty ? '-empty' : ''}${throttle !== 4 ? `-x${throttle}` : ''}${dprCap ? `-dpr${dprCap}` : ''}.json`);
+const appUrl = arg('url', '');
+const outPath = arg('out', `perf/results/${appUrl ? 'app' : 'latest'}${empty ? '-empty' : ''}${throttle !== 4 ? `-x${throttle}` : ''}${dprCap ? `-dpr${dprCap}` : ''}.json`);
+
+/** Installed before any page script in --url mode (the harness defines its own window.__carbon). */
+const APP_SHIM = `(() => {
+  const c = { frames: [], recording: false, firstFrameAt: null, last: null };
+  c.store = { get() {
+    const el = document.querySelector('.carbon-story'); if (!el) return 0;
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    const dist = Math.max(1, el.offsetHeight - window.innerHeight);
+    return Math.min(1, Math.max(0, (window.scrollY - top) / dist));
+  } };
+  c.quality = { level() { const pin = document.querySelector('[data-testid=story-pin]'); return Number(pin && pin.dataset.quality !== undefined ? pin.dataset.quality : -1); } };
+  window.__carbon = c;
+  const tick = (t) => {
+    if (c.firstFrameAt === null) { const pin = document.querySelector('[data-testid=story-pin]'); if (pin && pin.dataset.chapter3d !== undefined) c.firstFrameAt = performance.now(); }
+    if (c.recording && c.last !== null) c.frames.push(t - c.last);
+    c.last = t;
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+})();`;
+
+/** Page URL for a scenario: harness query params, or the app page as is. */
+function pageUrl(base: string, o: { smooth: boolean; reduced?: boolean; dpr?: string }) {
+  if (appUrl) return appUrl;
+  return `${base}?view=story&smooth=${o.smooth ? 1 : 0}${o.reduced ? '&reduced=1' : ''}${empty ? '' : '&fixture=1'}${o.dpr ? `&dpr=${o.dpr}` : ''}`;
+}
+
+async function open(page: Page, base: string, o: { smooth: boolean; reduced?: boolean; dpr?: string }) {
+  if (appUrl) await page.emulateMedia({ reducedMotion: o.reduced ? 'reduce' : 'no-preference' });
+  await page.goto(pageUrl(base, o));
+  await page.waitForFunction(() => window.__carbon?.firstFrameAt != null, null, { timeout: 60000 });
+}
 
 type Page = Awaited<ReturnType<typeof phonePage>>['page'];
 
@@ -100,15 +140,28 @@ function shuffled<T>(xs: T[], seed = 7): T[] {
   return a;
 }
 
-const { server, url } = await startServer();
+const { server, url } = appUrl ? { server: null, url: appUrl } : await startServer();
 const browser = await launch();
-const result: Record<string, unknown> = { throttle, viewport: '390x844@2x', dprCap: dprCap || 'quality ladder (≤1.5)', renderer: 'SwiftShader (headless Chromium, CPU WebGL)', fixture: !empty, seconds, cycles };
+const deviceDpr = appUrl && dprCap ? Number(dprCap) : 2;
+const result: Record<string, unknown> = {
+  target: appUrl || 'harness',
+  throttle,
+  viewport: `390x844@${deviceDpr}x`,
+  dprCap: dprCap || 'quality ladder (≤1.5)',
+  renderer: 'SwiftShader (headless Chromium, CPU WebGL)',
+  data: appUrl ? 'whatever the app log holds' : empty ? 'none' : 'test fixture',
+  seconds,
+  cycles,
+};
+const init = async (context: { addInitScript(s: string): Promise<void> }) => {
+  if (appUrl) await context.addInitScript(APP_SHIM);
+};
 try {
   // ── perf run ──
   {
-    const { page, cdp, errors, context } = await phonePage(browser, { throttle, dpr: 2 });
-    await page.goto(`${url}?view=story&smooth=0${empty ? '' : '&fixture=1'}${dprCap ? `&dpr=${dprCap}` : ''}`);
-    await page.waitForFunction(() => window.__carbon?.firstFrameAt != null, null, { timeout: 60000 });
+    const { page, cdp, errors, context } = await phonePage(browser, { throttle, dpr: deviceDpr });
+    await init(context);
+    await open(page, url, { smooth: false, dpr: dprCap });
     const firstFrameMs = await page.evaluate(() => window.__carbon.firstFrameAt);
     await page.waitForTimeout(1500);
     await cdp.send('HeapProfiler.enable');
@@ -184,8 +237,8 @@ try {
   // ── sync run (no throttle needed; checks agreement, not speed) ──
   {
     const { page, errors, context } = await phonePage(browser, { throttle: 1, dpr: 1 });
-    await page.goto(`${url}?view=story&smooth=0${empty ? '' : '&fixture=1'}`);
-    await page.waitForFunction(() => window.__carbon?.firstFrameAt != null, null, { timeout: 60000 });
+    await init(context);
+    await open(page, url, { smooth: false });
     const pts = samplePoints();
     const orders = { forward: pts, backward: [...pts].reverse(), shuffled: shuffled(pts) };
     const sync: Record<string, { n: number; failures: unknown[] }> = {};
@@ -201,8 +254,7 @@ try {
       sync[name] = { n: list.length, failures };
     }
     // Lenis smooth scrolling on: wheel through the story, sample after it settles
-    await page.goto(`${url}?view=story&smooth=1${empty ? '' : '&fixture=1'}`);
-    await page.waitForFunction(() => window.__carbon?.firstFrameAt != null, null, { timeout: 60000 });
+    await open(page, url, { smooth: true });
     await page.mouse.move(195, 420);
     const lenisFailures: unknown[] = [];
     let lenisN = 0;
@@ -219,8 +271,7 @@ try {
     }
     sync.lenisWheel = { n: lenisN, failures: lenisFailures };
     // reduced motion: stepped fades carry the same information
-    await page.goto(`${url}?view=story&smooth=0&reduced=1${empty ? '' : '&fixture=1'}`);
-    await page.waitForFunction(() => window.__carbon?.firstFrameAt != null, null, { timeout: 60000 });
+    await open(page, url, { smooth: false, reduced: true });
     const rmFailures: unknown[] = [];
     for (const p of pts) {
       await scrollToProgress(page, p);
@@ -240,7 +291,7 @@ try {
   }
 } finally {
   await browser.close();
-  await server.close();
+  await server?.close();
 }
 
 mkdirSync(dirname(outPath), { recursive: true });

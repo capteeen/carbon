@@ -7,7 +7,7 @@ export function SoundToggle({ className }: { className?: string }) {
   const on = useSoundEnabled();
   return (
     <div className={className ?? 'carbon-sound'}>
-      <button type="button" className="carbon-hud__btn" aria-pressed={on} onClick={() => sound.toggle()} data-testid="sound-toggle">
+      <button type="button" className="carbon-hud__btn carbon-sound__btn" aria-pressed={on} onClick={() => sound.toggle()} data-testid="sound-toggle">
         {on ? COPY.sound.on : COPY.sound.off}
       </button>
     </div>

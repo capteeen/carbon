@@ -1,3 +1,4 @@
+'use client';
 /**
  * Procedural sound: wind (filtered noise with slow LFOs) and soft crystalline
  * tones (inharmonic bell partials). OFF by default; the AudioContext is only

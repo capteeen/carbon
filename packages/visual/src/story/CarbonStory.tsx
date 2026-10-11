@@ -14,8 +14,7 @@ import { isValidReplay, validFlashes, validLaunches } from '../data/derive.js';
 import { HudLeaders } from '../hud/Hud.js';
 import { LeaderRegistry } from '../hud/leaders.js';
 import { typedCa } from '../hud/format.js';
-import { createQualityStore, type QualityStore } from '../quality/store.js';
-import { initialLevel } from '../quality/ladder.js';
+import { createDeviceQualityStore, type QualityStore } from '../quality/store.js';
 import { SoundToggle } from '../sound/SoundToggle.js';
 import { useBondChimes } from '../sound/sound.js';
 import { Stage } from '../three/Stage.js';
@@ -56,6 +55,8 @@ export interface CarbonStoryProps {
   onFrame?: (dtMs: number) => void;
   /** Hard cap on device pixel ratio. */
   maxDpr?: number;
+  /** Render the story's own bottom-left "Sound: On/Off" toggle (default true). Pass false when the app layout hosts one. */
+  soundToggle?: boolean;
 }
 
 export function CarbonStory(props: CarbonStoryProps) {
@@ -69,9 +70,7 @@ export function CarbonStory(props: CarbonStoryProps) {
   const quality = useMemo(
     () =>
       props.quality ??
-      createQualityStore({
-        start: typeof navigator !== 'undefined' ? initialLevel({ hardwareConcurrency: navigator.hardwareConcurrency, width: typeof window !== 'undefined' ? window.innerWidth : undefined }) : 0,
-      }),
+      createDeviceQualityStore(),
     [props.quality],
   );
 
@@ -124,6 +123,15 @@ export function CarbonStory(props: CarbonStoryProps) {
   useEffect(() => {
     if (pin) pin.dataset.chapterHud = String(chapter);
   }, [chapter, pin]);
+  // quality level on the pin (perf tooling / debugging); written only on change
+  useEffect(() => {
+    if (!pin) return;
+    const write = () => {
+      pin.dataset.quality = String(quality.level());
+    };
+    write();
+    return quality.subscribe(write);
+  }, [pin, quality]);
   useEffect(() => leaders.invalidate(), [chapter, proton, leaders]);
 
   const layerRef = useCallback(
@@ -213,7 +221,7 @@ export function CarbonStory(props: CarbonStoryProps) {
             leaderRef={leaderRef}
           />
         </div>
-        <SoundToggle />
+        {props.soundToggle !== false ? <SoundToggle /> : null}
       </div>
     </section>
   );

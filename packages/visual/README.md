@@ -21,6 +21,14 @@ const mono = Space_Mono({ weight: ['400', '700'], subsets: ['latin'], variable: 
 Every component is a client component (`'use client'`) and server-renders a static shell, which the
 tests check. The WebGL canvas mounts on the client only.
 
+**No WebGL.** If no WebGL context can be created, or the canvas throws, the 3D layer is replaced by a
+plain fog panel with one line ("3D view unavailable on this device"). The HUD, which carries every
+real value, is unaffected. Without `ResizeObserver` or `matchMedia`, the HUD layers are driven straight
+from the progress store, and native scroll replaces Lenis.
+
+**Sound toggle.** `CarbonStory` and `LaunchScene` render their own toggle unless you pass
+`soundToggle={false}`. Pass false when the app layout hosts a global `<SoundToggle />`; apps/web does this.
+
 **Fonts.** Both fonts are SIL OFL 1.1:
 - Nunito Black 900 is the heavy rounded display face. It is used for the wordmark and titles.
 - Space Mono 400/700 is used for HUD labels, metadata and hashes.
@@ -88,6 +96,12 @@ const launches = allLaunchLogs.map(launchSummaryFromEvents).filter(Boolean);
     table. A jump guard re-pins layers after large jumps.
   - Because nothing keeps its own clock, scrolling back rewinds everything.
   - Reduced motion uses stepped chapter fades that carry the same copy and readouts.
+- **Shader precompile.** After the first frame, during idle time, every material in the scene is
+  compiled, including those of chapters not yet visible, with `compileAsync` where available. This
+  avoids hitches the first time each chapter is visited.
+- **Starting quality.** `createDeviceQualityStore()` is the default for every component. It picks
+  the start level from cores, memory and width (phone-width devices with 4 or fewer cores start at
+  level 2). Every level caps DPR at 1.5 or below.
 - **Quality ladder.** It degrades in this order: grain off, then fog density, then point clouds
   ½ and ¼, then aberration off, then DPR 1 and 0.75. It reads a median and p90 over a 45-frame
   window, with hysteresis. It never touches HUD values, labels, seam counts or hashes.
@@ -98,7 +112,8 @@ const launches = allLaunchLogs.map(launchSummaryFromEvents).filter(Boolean);
 pnpm --filter @carbon/visual harness          # vite dev on :5179  (?view=story|chamber|shapes|launch|graphene|embed&fixture=1&reduced=1)
 pnpm --filter @carbon/visual harness:build
 npx tsx perf/perf.ts --throttle=4 --seconds=12 --cycles=3 [--dpr=0.3] [--empty]
-npx tsx perf/shots.ts                        # screenshots per chapter, 390x844
+npx tsx perf/perf.ts --url=http://127.0.0.1:3124/ [--dpr=0.3]   # the shipped app page (Next production build)
+npx tsx perf/shots.ts [outDir] [--url=…]      # screenshots per chapter, 390x844
 ```
 
 `perf/perf.ts` sets up the run as follows:
@@ -119,6 +134,8 @@ Last results, all with a 4× CPU throttle, 390×844, fixture data, 3 forward/bac
 | --- | --- | --- | --- | --- |
 | DPR 1.5 (SwiftShader raster-bound) | 1.29 s | 7.5 | 367 ms | 36/36, 36/36, 36/36, 28/28, 36/36 |
 | DPR 0.3 (isolates JS/CPU cost) | 1.38 s | 59.9 | 33 ms | all agree |
+| **Next app `/`**, production build, empty log, device DPR 2 (ladder ≤1.5 → 0.75) | 1.73 s | 15.0 | 233 ms | 36/36, 36/36, 36/36, 28/28, 36/36 |
+| **Next app `/`**, device DPR 0.3 | 1.85 s | 59.9 | 50 ms | all agree |
 
 At DPR 0.3 the heap after forced GC grew 560 → 161 → 96 KB per cycle, which looks like V8 warming
 code up rather than linear growth. An earlier leak, where the EffectPass was rebuilt on every

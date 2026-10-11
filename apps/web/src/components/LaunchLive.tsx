@@ -7,6 +7,7 @@ import { postJson } from '@/lib/api';
 import { deriveLaunchView, explorerUrl, lamportsToSol, shortId } from '@/lib/launch-view';
 import { messages } from '@/lib/signing';
 import { useEventStream, useNow } from '@/lib/use-events';
+import { toVisualDaughter, toVisualDecay } from '@/lib/visual-data';
 import { LaunchScene } from '@/visual';
 import { ApprovalCards, EventLog, SentinelReportView, ThinkingFeed } from './LaunchParts';
 import { WalletConnect, useSigner } from './WalletConnect';
@@ -90,8 +91,9 @@ export function LaunchLive({ launchId, initial, lastSeq }: { launchId: string; i
         events={events}
         bonds={bonds}
         sentinel={v.latestScore?.payload ?? null}
-        decay={v.decay}
-        daughter={v.decay.daughter?.payload ?? null}
+        decay={toVisualDecay(events, v.decay)}
+        daughter={toVisualDaughter(v.decay)}
+        soundToggle={false}
       />
 
       <h2>Decay</h2>

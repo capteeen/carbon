@@ -11,7 +11,7 @@ import { COPY } from '../copy.js';
 import { HudCorner, HudLeaders, HudSection } from '../hud/Hud.js';
 import { LeaderRegistry } from '../hud/leaders.js';
 import { ShapesHud } from '../hud/panels.js';
-import { createQualityStore, type QualityStore } from '../quality/store.js';
+import { createDeviceQualityStore, type QualityStore } from '../quality/store.js';
 import { useReducedMotion } from '../story/scroll.js';
 import { CameraRig } from '../three/CameraRig.js';
 import { Molecule } from '../three/Molecule.js';
@@ -52,7 +52,7 @@ function Molecules({ leaders, value }: { leaders: LeaderRegistry; value: ShapeId
 
 export function ShapePicker({ value = null, onChange, reducedMotion, quality, className }: ShapePickerProps) {
   const reduced = useReducedMotion(reducedMotion);
-  const q = useMemo(() => quality ?? createQualityStore(), [quality]);
+  const q = useMemo(() => quality ?? createDeviceQualityStore(), [quality]);
   const leaders = useMemo(() => new LeaderRegistry(), []);
   const [frame, setFrame] = useState<HTMLDivElement | null>(null);
   return (

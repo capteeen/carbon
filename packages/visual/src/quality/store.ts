@@ -1,10 +1,11 @@
+'use client';
 /**
  * Shared quality state. The scene's frame loop feeds frame times into the
  * ladder; materials/post read `quality.settings` each frame (no React renders),
  * and the Canvas DPR subscribes to level changes.
  */
 import { useSyncExternalStore } from 'react';
-import { QualityLadder, QUALITY_LEVELS, type LadderOptions, type QualitySettings } from './ladder.js';
+import { QualityLadder, QUALITY_LEVELS, initialLevel, type LadderOptions, type QualitySettings } from './ladder.js';
 
 export interface QualityStore {
   readonly ladder: QualityLadder;
@@ -48,4 +49,18 @@ export function useQualityLevel(store: QualityStore): number {
 
 export function settingsFor(level: number): Readonly<QualitySettings> {
   return QUALITY_LEVELS[Math.max(0, Math.min(QUALITY_LEVELS.length - 1, level))]!;
+}
+
+/**
+ * Store with a starting level from coarse device hints (cores, memory, width).
+ * Every level caps DPR at ≤1.5; the ladder then adjusts from measured frame
+ * times (grain → fog → points → aberration → resolution).
+ */
+export function createDeviceQualityStore(opts: Omit<LadderOptions, 'start'> = {}): QualityStore {
+  let start = 0;
+  if (typeof navigator !== 'undefined' && typeof window !== 'undefined') {
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    start = initialLevel({ hardwareConcurrency: nav.hardwareConcurrency, deviceMemory: nav.deviceMemory, width: window.innerWidth });
+  }
+  return createQualityStore({ ...opts, start });
 }
