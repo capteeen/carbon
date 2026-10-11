@@ -33,6 +33,7 @@ const fixture = q.get('fixture') === '1';
 const reduced = q.get('reduced') === '1' ? true : undefined;
 const smooth = q.get('smooth') !== '0';
 const lockQuality = q.get('quality');
+const maxDpr = q.get('dpr') ? Number(q.get('dpr')) : undefined;
 
 declare global {
   interface Window {
@@ -113,6 +114,7 @@ function App() {
             quality={quality}
             onFirstFrame={onFirstFrame}
             onFrame={onFrame}
+            maxDpr={maxDpr}
           />
           <footer style={{ padding: 16, font: '11px monospace', background: '#2B313B', color: '#E6EBF2' }}>harness footer</footer>
         </>

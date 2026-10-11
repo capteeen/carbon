@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "harness": "vite --config harness/vite.config.ts",
     "harness:build": "vite build --config harness/vite.config.ts",
-    "perf": "vite build --config harness/vite.config.ts && node perf/perf.mjs"
+    "perf": "vite build --config harness/vite.config.ts && tsx perf/perf.ts"
   },
   "dependencies": {
     "@carbon/core": "workspace:*",

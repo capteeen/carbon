@@ -5,7 +5,7 @@
  * pin element so the sync check can compare 3D, HUD and copy.
  */
 import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useMemo, useReducer, useRef, type RefObject } from 'react';
+import { memo, useEffect, useMemo, useReducer, useRef, type RefObject } from 'react';
 import { Plane, Raycaster, Vector2, Vector3, type PerspectiveCamera } from 'three';
 import { AGENT_IDS, type AgentId, type IsotopeId, type ShapeId } from '@carbon/core/contracts';
 import { chapterFade, chapterAt, chapterCenter, chapterLocal, replayedCountAt } from './chapters.js';
@@ -42,7 +42,7 @@ export interface StorySceneProps {
 
 const num = (v = 0): MutableNumber => ({ value: v });
 
-export function StoryScene(props: StorySceneProps) {
+export const StoryScene = memo(function StoryScene(props: StorySceneProps) {
   const { store, leaders, pin } = props;
   const kit = useKit();
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
@@ -77,7 +77,7 @@ export function StoryScene(props: StorySceneProps) {
   );
   const bondAnchors = useMemo(() => [leaders.anchor('bond:1'), leaders.anchor('bond:2'), leaders.anchor('bond:3')], [leaders]);
   const chamberAnchors = useMemo(
-    () => ({ pedestal: leaders.anchor('pedestal'), extra: leaders.anchor('extra') }),
+    () => ({ pedestal: leaders.anchor('pedestal'), extra: leaders.anchor('extra'), ...Object.fromEntries(AGENT_IDS.map((a) => [a, leaders.anchor(`chamber:${a}`)])) }),
     [leaders],
   );
   const shapeAnchors = useMemo(
@@ -339,7 +339,7 @@ export function StoryScene(props: StorySceneProps) {
           heavyAgent={props.heavyAgent}
           visibility={v.chamber}
           onHeavyDrop={props.onHeavyDrop}
-          anchors={{ ...chamberAnchors, ...Object.fromEntries(AGENT_IDS.map((a) => [a, leaders.anchor(`chamber:${a}`)])) }}
+          anchors={chamberAnchors}
           anchorFade={v.fade}
         />
       </group>
@@ -365,7 +365,7 @@ export function StoryScene(props: StorySceneProps) {
       <GrapheneCrystals launches={props.launches} visibility={v.graphene} onSelect={onSelect} hovered={props.hovered} onHover={props.onHoverLaunch} />
     </>
   );
-}
+});
 
 /** A bond of the replayed launch: core's order; the seam shows the latest replayed hand-off on that pair. */
 function ReplayBond({

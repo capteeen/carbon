@@ -38,6 +38,8 @@ export async function launch() {
 
 export async function phonePage(browser: any, { throttle = 1, dpr = 2 } = {}) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: dpr, isMobile: true, hasTouch: true });
+  // tsx/esbuild keepNames wraps functions passed to page.evaluate in __name(); make it a no-op in the page
+  await context.addInitScript('window.__name = (f) => f;');
   const page = await context.newPage();
   const errors: string[] = [];
   page.on("pageerror", (e: Error) => errors.push(String(e)));

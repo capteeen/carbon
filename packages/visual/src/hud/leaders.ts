@@ -33,6 +33,8 @@ interface Entry {
 
 export class LeaderRegistry {
   private entries = new Map<string, Entry>();
+  /** Same entries as an array: iterated every frame without allocating an iterator. */
+  private list: Entry[] = [];
   private svg: SVGSVGElement | null = null;
   private container: HTMLElement | null = null;
   private frame = 0;
@@ -96,6 +98,7 @@ export class LeaderRegistry {
         lo: -1,
       };
       this.entries.set(id, e);
+      this.list.push(e);
     }
     return e;
   }
@@ -116,9 +119,12 @@ export class LeaderRegistry {
   project(camera: Camera, width: number, height: number): void {
     if (!this.svg || !this.container) return;
     this.frame++;
-    const refresh = this.frame % 6 === 0;
+    // label rects are cached; refreshed on invalidate() and twice a second for the HUD drift
+    const refresh = this.frame % 30 === 0;
     let cRect: DOMRect | null = null;
-    for (const e of this.entries.values()) {
+    const list = this.list;
+    for (let li = 0; li < list.length; li++) {
+      const e = list[li]!;
       const a = e.anchor;
       const label = e.label;
       let o = a.opacity * (e.layer >= 0 ? this.layerFade[e.layer]! : 1);

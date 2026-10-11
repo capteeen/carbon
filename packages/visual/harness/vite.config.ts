@@ -11,5 +11,5 @@ export default defineConfig({
   resolve: { dedupe: ['react', 'react-dom', 'three'] },
   server: { port: 5179, strictPort: true, host: '127.0.0.1' },
   preview: { port: 5180, strictPort: true, host: '127.0.0.1' },
-  build: { outDir: 'dist', emptyOutDir: true, sourcemap: false, chunkSizeWarningLimit: 2000 },
+  build: { outDir: 'dist', emptyOutDir: true, sourcemap: false, minify: process.env.HARNESS_MINIFY !== '0', chunkSizeWarningLimit: 4000 },
 });

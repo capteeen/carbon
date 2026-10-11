@@ -54,6 +54,8 @@ export interface CarbonStoryProps {
   quality?: QualityStore;
   onFirstFrame?: () => void;
   onFrame?: (dtMs: number) => void;
+  /** Hard cap on device pixel ratio. */
+  maxDpr?: number;
 }
 
 export function CarbonStory(props: CarbonStoryProps) {
@@ -165,6 +167,7 @@ export function CarbonStory(props: CarbonStoryProps) {
           eventSource={pin}
           onFirstFrame={props.onFirstFrame}
           onFrame={props.onFrame}
+          maxDpr={props.maxDpr}
           ariaLabel="Animated carbon atom; the chapter text describes each scene"
         >
           <StoryScene

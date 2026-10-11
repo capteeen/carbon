@@ -1,0 +1,59 @@
+{
+  "throttle": 4,
+  "viewport": "390x844@2x",
+  "dprCap": "0.3",
+  "renderer": "SwiftShader (headless Chromium, CPU WebGL)",
+  "fixture": true,
+  "seconds": 12,
+  "cycles": 3,
+  "firstFrameMs": 1378,
+  "frames": {
+    "n": 1566,
+    "median": 16.700000000000728,
+    "p95": 33.400000000001455,
+    "p99": 50,
+    "mean": 23.030076628352532,
+    "medianFps": 59.9,
+    "p95FrameMs": 33.4,
+    "meanFps": 43.4
+  },
+  "qualityLevelAfter": 7,
+  "heap": {
+    "beforeMB": 6.68,
+    "afterWarmupMB": 8.39,
+    "afterMeasuredMB": 9.21,
+    "afterEachCycleMB": [
+      8.949,
+      9.11,
+      9.207
+    ],
+    "growthAcrossMeasuredCyclesKB": 812,
+    "growthLastCycleKB": 96,
+    "idleAllocKBPerFrame": 5.042,
+    "idleFrames": 141
+  },
+  "perfErrors": [],
+  "sync": {
+    "forward": {
+      "n": 36,
+      "failures": []
+    },
+    "backward": {
+      "n": 36,
+      "failures": []
+    },
+    "shuffled": {
+      "n": 36,
+      "failures": []
+    },
+    "lenisWheel": {
+      "n": 28,
+      "failures": []
+    },
+    "reducedMotion": {
+      "n": 36,
+      "failures": []
+    }
+  },
+  "syncErrors": []
+}

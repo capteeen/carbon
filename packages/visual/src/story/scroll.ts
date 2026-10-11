@@ -112,6 +112,20 @@ export function useStoryScroll(opts: {
       }
     }
 
+    // Jump guard: markers are adjacent and non-overlapping, so every layer other than the
+    // current chapter's must sit at exactly 0 or 1. A jump (anchor link, Home key, scroll
+    // restoration) can skip an observer's update; re-pin those layers on chapter change.
+    const pinLayers = () => {
+      if (!anime) return;
+      const c = store.chapter();
+      const ls = layers.current ?? [];
+      for (let i = 0; i < CHAPTER_COUNT; i++) {
+        const layer = ls[i];
+        if (layer && i !== c) applyLayer(layer, i, i < c ? 1 : 0, onFade);
+      }
+    };
+    const unsubChapter = store.subscribeChapter(pinLayers);
+
     let lenis: Lenis | null = null;
     if (smooth) {
       lenis = new Lenis({ autoRaf: true, lerp: 0.09, smoothWheel: true, syncTouch: false });
@@ -133,6 +147,7 @@ export function useStoryScroll(opts: {
       window.removeEventListener('resize', onResize);
       ro?.disconnect();
       cleanups.forEach((c) => c());
+      unsubChapter();
     };
   }, [track, markers, layers, store, smooth, anime, onFade]);
 }

@@ -7,7 +7,7 @@
  */
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { EffectComposer } from '@react-three/postprocessing';
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, memo, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Color, HalfFloatType, LinearSRGBColorSpace, UnsignedByteType } from 'three';
 import { PALETTE, hexToRgb01 } from '../tokens.js';
 import type { LeaderRegistry } from '../hud/leaders.js';
@@ -45,12 +45,14 @@ export interface StageProps {
   /** Exposed for perf tooling: called with every frame's delta (ms). */
   onFrame?: (dtMs: number) => void;
   ariaLabel?: string;
+  /** Hard cap on device pixel ratio (the quality ladder may lower it further). */
+  maxDpr?: number;
 }
 
 function useDeviceDpr(cap: number): number {
   const [dpr, setDpr] = useState(1);
   useEffect(() => {
-    setDpr(Math.max(0.5, Math.min(window.devicePixelRatio || 1, cap)));
+    setDpr(Math.max(0.2, Math.min(window.devicePixelRatio || 1, cap)));
   }, [cap]);
   return dpr;
 }
@@ -67,9 +69,10 @@ export function Stage({
   className,
   onFrame,
   ariaLabel,
+  maxDpr,
 }: StageProps) {
   const level = useQualityLevel(quality);
-  const dpr = useDeviceDpr(settingsFor(level).dpr);
+  const dpr = useDeviceDpr(Math.min(settingsFor(level).dpr, maxDpr ?? Infinity));
   const shared = useMemo(() => createSharedUniforms(), []);
   const postParams = useMemo(() => post ?? createPostParams(), [post]);
   const kit = useMemo<Kit>(
@@ -127,7 +130,12 @@ function FrameDriver({ kit, onFirstFrame, onFrame }: { kit: Kit; onFirstFrame?: 
   return null;
 }
 
-function Post({ kit }: { kit: Kit }) {
+/**
+ * Memoised: EffectComposer rebuilds its EffectPass whenever its children change, so
+ * this must never re-render with the parent (that would recompile the post shader
+ * and leak passes on every chapter change).
+ */
+const Post = memo(function Post({ kit }: { kit: Kit }) {
   const effect = useMemo(() => new CarbonPostEffect(kit.post, () => kit.quality.settings), [kit.post, kit.quality]);
   useEffect(() => () => effect.dispose(), [effect]);
   // Half-float buffers band less in the fog gradients; fall back to bytes where unsupported.
@@ -138,7 +146,7 @@ function Post({ kit }: { kit: Kit }) {
       <primitive object={effect} />
     </EffectComposer>
   );
-}
+});
 
 function LeaderProjector({ leaders }: { leaders: LeaderRegistry }) {
   useFrame((state) => {
