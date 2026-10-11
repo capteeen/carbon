@@ -1,0 +1,36 @@
+{
+  "name": "@carbon/tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent G adversarial verification suite (SPEC \u00a77). Real local Postgres carbon_test + Redis.",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@carbon/agents": "workspace:*",
+    "@carbon/core": "workspace:*",
+    "@carbon/solana": "workspace:*",
+    "@carbon/web": "workspace:*",
+    "@carbon/worker": "workspace:*",
+    "@carbon/x": "workspace:*"
+  },
+  "devDependencies": {
+    "@noble/curves": "2.3.0",
+    "@solana/spl-token": "0.4.14",
+    "@solana/web3.js": "1.98.4",
+    "@types/bn.js": "5.2.0",
+    "@types/node": "22.18.8",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "bn.js": "5.2.2",
+    "bs58": "6.0.0",
+    "pg": "8.23.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

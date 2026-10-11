@@ -276,6 +276,73 @@ importers:
         specifier: 3.2.4
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.18.8)(jsdom@27.0.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(terser@5.51.2)(tsx@4.20.6)
 
+  tests:
+    dependencies:
+      '@carbon/agents':
+        specifier: workspace:*
+        version: link:../packages/agents
+      '@carbon/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@carbon/solana':
+        specifier: workspace:*
+        version: link:../packages/solana
+      '@carbon/web':
+        specifier: workspace:*
+        version: link:../apps/web
+      '@carbon/worker':
+        specifier: workspace:*
+        version: link:../apps/worker
+      '@carbon/x':
+        specifier: workspace:*
+        version: link:../packages/x
+    devDependencies:
+      '@noble/curves':
+        specifier: 2.3.0
+        version: 2.3.0
+      '@solana/spl-token':
+        specifier: 0.4.14
+        version: 0.4.14(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/web3.js':
+        specifier: 1.98.4
+        version: 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@types/bn.js':
+        specifier: 5.2.0
+        version: 5.2.0
+      '@types/node':
+        specifier: 22.18.8
+        version: 22.18.8
+      '@types/pg':
+        specifier: 8.23.1
+        version: 8.23.1
+      '@types/react':
+        specifier: 19.2.18
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: 19.2.7
+        version: 19.2.7(@types/react@19.2.18)
+      bn.js:
+        specifier: 5.2.2
+        version: 5.2.2
+      bs58:
+        specifier: 6.0.0
+        version: 6.0.0
+      pg:
+        specifier: 8.23.0
+        version: 8.23.0
+      react:
+        specifier: 19.2.8
+        version: 19.2.8
+      react-dom:
+        specifier: 19.2.8
+        version: 19.2.8(react@19.2.8)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 3.2.4
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.18.8)(jsdom@27.0.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(terser@5.51.2)(tsx@4.20.6)
+
   vendor/qsd-market/packages/crypto:
     dependencies:
       '@noble/hashes':
