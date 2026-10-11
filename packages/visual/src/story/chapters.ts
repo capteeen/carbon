@@ -26,8 +26,8 @@ export interface ChapterDef {
   /** Relative share of the scroll track. */
   weight: number;
   /**
-   * HONESTY: chapters 00-07 are an illustrated explainer and are labelled as
-   * such on screen. 08 replays a real recorded launch (or shows an empty state);
+   * HONESTY: chapters 00-07 are an illustrated explainer and show no live
+   * values. 08 replays a real recorded launch (or shows an empty state);
    * 09 is live only.
    */
   mode: 'illustration' | 'replay' | 'live';

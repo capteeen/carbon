@@ -14,7 +14,7 @@ export { SoundToggle } from './sound/SoundToggle.js';
 export { sound, useSoundEnabled, useBondChimes } from './sound/sound.js';
 
 // HUD primitives
-export { HudCorner, HudLabel, HudMeta, HudSection, HudReadout, HudTag, HudPanel, HudLeaders, IllustrationTag, type Corner } from './hud/Hud.js';
+export { HudCorner, HudLabel, HudMeta, HudSection, HudReadout, HudTag, HudPanel, HudLeaders, type Corner } from './hud/Hud.js';
 export { ProtonHud, ChamberHud, ShapesHud, ShapeLabel, ReplayHud, GrapheneHud, ThinkingPanel, ReceiptsPanel, SentinelHud } from './hud/panels.js';
 export { LeaderRegistry, type LeaderAnchor } from './hud/leaders.js';
 export * from './hud/format.js';

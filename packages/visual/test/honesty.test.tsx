@@ -43,10 +43,9 @@ function chapterHtml(html: string, i: number): string {
 describe('story HUD with no data', () => {
   const html = renderToStaticMarkup(<StoryHud {...base} />);
 
-  it('labels every chapter 00-07 as an illustrated explainer, and not 08-09', () => {
-    for (let i = 0; i < 8; i++) expect(chapterHtml(html, i), `chapter ${i}`).toContain('data-testid="illustration-tag"');
-    expect(chapterHtml(html, 8)).not.toContain('illustration-tag');
-    expect(chapterHtml(html, 9)).not.toContain('illustration-tag');
+  it('carries no illustration badge or note (removed at the owner\'s request, 2026-10-11)', () => {
+    expect(html).not.toContain('ILLUSTRATED EXPLAINER');
+    expect(html).not.toContain('Illustration, not live activity');
   });
 
   it('BONDS and LOAD show "--.--" without live data', () => {

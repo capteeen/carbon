@@ -4,7 +4,6 @@
  * the value is absent. Pure render: no hooks besides refs, safe on the server.
  */
 import type { CSSProperties, ReactNode, Ref } from 'react';
-import { COPY } from '../copy.js';
 import type { LeaderRegistry } from './leaders.js';
 import { EMPTY_READOUT, meta, sectionHead, snake } from './format.js';
 
@@ -56,15 +55,6 @@ export function HudTag({ children, testId }: { children: string; testId?: string
     <span className="carbon-hud__tag" data-testid={testId}>
       {children}
     </span>
-  );
-}
-
-/** HONESTY: the label every illustrated chapter carries. */
-export function IllustrationTag() {
-  return (
-    <div data-testid="illustration-tag" data-honesty="illustration" className="carbon-hud__meta">
-      {COPY.illustrationNote}
-    </div>
   );
 }
 

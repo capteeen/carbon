@@ -6,8 +6,6 @@
 import { EMPTY_GRAPHENE } from '@carbon/core/contracts';
 
 export const COPY = {
-  /** HONESTY: shown on every illustrated chapter (00-07). */
-  illustrationNote: '// Illustration, not live activity',
   liveTag: 'LIVE',
   replayTag: 'REPLAY',
 

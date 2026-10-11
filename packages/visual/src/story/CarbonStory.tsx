@@ -3,7 +3,7 @@
  * <CarbonStory>: the cinematic scroll story of the carbon atom (SPEC §5),
  * one pinned canvas, scroll progress as the only clock.
  *
- * HONESTY: chapters 00-07 are labelled as an illustrated explainer. HUD
+ * HONESTY: chapters 00-07 are an illustrated explainer (no live values). HUD
  * readouts come only from `live` ("--.--" when absent). Chapter 08 replays
  * `replay` (a real recorded launch) or shows an empty state. Chapter 09 shows
  * `launches` (real launches) or "No molecules yet. Launch the first one."

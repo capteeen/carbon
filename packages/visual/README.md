@@ -47,7 +47,7 @@ They are exposed as `--font-carbon-display` and `--font-carbon-mono`, which `sty
 | `<GrapheneSheet launches onOpenLaunch onLaunch launchHref />` | One crystal per real launch, with hover details and empty state. |
 | `<EmbedPlayer launch events bonds sentinel decay daughter href />` | A compact 16:9 player for an embed or share card. |
 | `<SoundToggle />`, `sound`, `useSoundEnabled`, `useBondChimes` | "Sound: On/Off", off by default. Plays procedural wind, plus a crystalline chime once per real hand-off event id. |
-| `HudCorner HudLabel HudMeta HudSection HudReadout HudTag HudPanel HudLeaders IllustrationTag` and panels (`ProtonHud ChamberHud ShapesHud ReplayHud GrapheneHud ThinkingPanel ReceiptsPanel SentinelHud`) | HUD primitives. Labels use UPPERCASE_SNAKE, `//` marks metadata and `//////` marks section heads. |
+| `HudCorner HudLabel HudMeta HudSection HudReadout HudTag HudPanel HudLeaders` and panels (`ProtonHud ChamberHud ShapesHud ReplayHud GrapheneHud ThinkingPanel ReceiptsPanel SentinelHud`) | HUD primitives. Labels use UPPERCASE_SNAKE, `//` marks metadata and `//////` marks section heads. |
 | `createProgressStore`, `progressStore`, `useProgress`, `useChapter` | The single 0..1 progress store, written by Lenis and read by every layer. |
 | `CHAPTERS`, `CHAPTER_RANGES`, `chapterAt`, `chapterLocal`, `chapterFade`, `evalStory`, … | The pure chapter table and timeline. |
 | `QualityLadder`, `QUALITY_LEVELS`, `createQualityStore` | Adaptive quality. |
@@ -68,8 +68,8 @@ const launches = allLaunchLogs.map(launchSummaryFromEvents).filter(Boolean);
 
 ## Honesty (enforced in code, tested in `test/honesty.test.tsx`)
 
-- **Chapters 00–07** each carry an on-screen `// Illustration, not live activity` line
-  (`data-honesty="illustration"`). Their motion is illustration and is driven only by scroll.
+- **Chapters 00–07** are an illustrated explainer. They show no live values, and their motion
+  is driven only by scroll. (The on-screen illustration badge and note were removed at the owner's request.)
 - **BONDS n/4 and LOAD** come only from the `live` prop. If it is missing they show `--.--`.
   Bond orders are core's (`Bond[]`) and are never recomputed here.
 - **Chapter 08** replays `replay` and is labelled `replaying $TICKER, YYYY-MM-DD`. If there is no

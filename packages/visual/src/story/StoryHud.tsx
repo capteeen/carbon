@@ -6,7 +6,7 @@
 import { AGENT_IDS, type AgentId, type IsotopeId, type ShapeId } from '@carbon/core/contracts';
 import type { Ref } from 'react';
 import { COPY } from '../copy.js';
-import { HudCorner, HudLabel, HudMeta, HudSection, HudTag, IllustrationTag } from '../hud/Hud.js';
+import { HudCorner, HudLabel, HudMeta, HudSection, HudTag } from '../hud/Hud.js';
 import { shortHash } from '../hud/format.js';
 import { ChamberHud, GrapheneHud, ProtonHud, ReceiptsPanel, ReplayHud, ShapesHud, ThinkingPanel } from '../hud/panels.js';
 import type { BondFlash, LaunchReplay, LaunchSummary, LiveStats, ReceiptItem, ThinkingItem } from '../types.js';
@@ -73,8 +73,6 @@ export function StoryHud(props: StoryHudProps) {
             {COPY.hero.meta.map((m) => (
               <HudMeta key={m}>{m}</HudMeta>
             ))}
-            <div style={{ height: 10 }} />
-            <IllustrationTag />
           </HudCorner>
           <HudCorner at="tr">
             <HudSection>{COPY.hero.manifestoHead}</HudSection>
@@ -99,8 +97,6 @@ export function StoryHud(props: StoryHudProps) {
           {COPY.dismantle.lines.map((m) => (
             <HudMeta key={m}>{m}</HudMeta>
           ))}
-          <div style={{ height: 8 }} />
-          <IllustrationTag />
         </HudCorner>,
       )}
       {layer(
@@ -110,8 +106,6 @@ export function StoryHud(props: StoryHudProps) {
           {COPY.glitch.lines.map((m) => (
             <HudMeta key={m}>{m}</HudMeta>
           ))}
-          <div style={{ height: 8 }} />
-          <IllustrationTag />
         </HudCorner>,
       )}
       {layer(
@@ -122,8 +116,6 @@ export function StoryHud(props: StoryHudProps) {
             <div className="carbon-hud__note" data-testid="protons-note">
               {COPY.protons.note}
             </div>
-            <div style={{ height: 8 }} />
-            <IllustrationTag />
           </HudCorner>
           <HudCorner at="br" className="carbon-hud__proton">
             <ProtonHud agent={agent} live={props.live} onOpenAgent={props.onOpenAgent} leaderRef={L} />
@@ -139,8 +131,6 @@ export function StoryHud(props: StoryHudProps) {
             <div className="carbon-title" data-testid="shells-note">
               {COPY.shells.note}
             </div>
-            <div style={{ height: 8 }} />
-            <IllustrationTag />
           </HudCorner>
           <HudCorner at="br">
             <HudLabel leaderRef={L('inner')}>SHELL_INNER</HudLabel>
@@ -157,8 +147,6 @@ export function StoryHud(props: StoryHudProps) {
           <HudCorner at="tl">
             <HudSection>{COPY.bonding.head}</HudSection>
             <HudMeta>{COPY.bonding.hashNote}</HudMeta>
-            <div style={{ height: 8 }} />
-            <IllustrationTag />
           </HudCorner>
           <HudCorner at="mr" style={{ top: '50%', maxWidth: 'min(40vw, 260px)' }}>
             {COPY.bonding.kinds.map((k, i) => (
@@ -190,8 +178,6 @@ export function StoryHud(props: StoryHudProps) {
         <>
           <HudCorner at="tl">
             <HudSection>{COPY.chamber.head}</HudSection>
-            <div style={{ height: 6 }} />
-            <IllustrationTag />
           </HudCorner>
           <HudCorner at="bc" style={{ width: 'calc(100% - 2 * var(--carbon-gutter))', maxWidth: 520, textAlign: 'left' }}>
             <div data-interactive>
@@ -205,8 +191,6 @@ export function StoryHud(props: StoryHudProps) {
         <>
           <HudCorner at="tl">
             <HudSection>{COPY.shapes.head}</HudSection>
-            <div style={{ height: 6 }} />
-            <IllustrationTag />
           </HudCorner>
           <HudCorner at="br" style={{ maxWidth: 'min(52vw, 360px)' }}>
             <ShapesHud leaderRef={L} value={props.shape} onChange={props.onShape} />
