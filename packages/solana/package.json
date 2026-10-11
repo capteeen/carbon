@@ -1,0 +1,39 @@
+{
+  "name": "@carbon/solana",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Carbon chain layer: pump.fun launches with native fee sharing (or per-launch wallets), fee cranks, the 50/30/20 split, $CARBON buybacks, holder snapshots and decay via @qsd/protocol.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "devnet-spike": "tsx scripts/devnet-spike.ts",
+    "generate-keys": "tsx scripts/generate-keys.ts"
+  },
+  "dependencies": {
+    "@carbon/core": "workspace:*",
+    "@qsd/protocol": "workspace:*",
+    "@noble/ciphers": "2.3.0",
+    "@noble/hashes": "2.3.0",
+    "@pump-fun/pump-sdk": "4.0.0",
+    "@pump-fun/pump-swap-sdk": "2.1.0",
+    "@solana/spl-token": "0.4.14",
+    "@solana/web3.js": "1.98.4",
+    "bn.js": "5.2.2",
+    "bs58": "6.0.0",
+    "pg": "8.22.0"
+  },
+  "devDependencies": {
+    "@types/bn.js": "5.2.0",
+    "@types/node": "22.18.8",
+    "@types/pg": "8.20.4",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}
