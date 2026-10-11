@@ -16,6 +16,7 @@
 import { GoogleGenAI } from '@google/genai';
 import type { LlmProvider, LlmRequest, LlmResponse } from '../ports.js';
 import { geminiImageModel, geminiModel } from './config.js';
+import type { LlmImageInput, VisionLlm } from './vision.js';
 
 /** The slice of the SDK this provider uses (lets tests inject a stub). */
 export interface GeminiInteractionsClient {
@@ -49,7 +50,7 @@ export interface GeminiProviderOptions {
   env?: NodeJS.ProcessEnv;
 }
 
-export class GeminiProvider implements LlmProvider {
+export class GeminiProvider implements LlmProvider, VisionLlm {
   readonly id = 'gemini';
   readonly model: string;
   readonly imageModel: string;
@@ -68,8 +69,12 @@ export class GeminiProvider implements LlmProvider {
   }
 
   /** Request body for a text generation (exported for tests and audits). */
-  buildRequest(req: LlmRequest): Record<string, unknown> {
-    const body: Record<string, unknown> = { model: this.model, input: req.prompt };
+  buildRequest(req: LlmRequest, images: LlmImageInput[] = []): Record<string, unknown> {
+    // With images, the input is a list of content parts: the prompt text, then each image inline.
+    const input = images.length
+      ? [{ type: 'text', text: req.prompt }, ...images.map((i) => ({ type: 'image', data: Buffer.from(i.bytes).toString('base64'), mime_type: i.mime }))]
+      : req.prompt;
+    const body: Record<string, unknown> = { model: this.model, input };
     if (req.system) body.system_instruction = req.system;
     if (req.grounding) body.tools = [{ type: 'google_search' }];
     if (req.jsonSchema) body.response_format = { type: 'text', mime_type: 'application/json', schema: req.jsonSchema };
@@ -77,7 +82,17 @@ export class GeminiProvider implements LlmProvider {
   }
 
   async generate(req: LlmRequest): Promise<LlmResponse> {
-    const res = (await this.client.interactions.create(this.buildRequest(req))) as InteractionLike;
+    return this.run(req, []);
+  }
+
+  /** Vision: the prompt plus inline images (Interactions API image content parts). */
+  async generateWithImages(req: LlmRequest, images: LlmImageInput[]): Promise<LlmResponse> {
+    if (!images.length) throw new LlmError('generateWithImages needs at least one image');
+    return this.run(req, images);
+  }
+
+  private async run(req: LlmRequest, images: LlmImageInput[]): Promise<LlmResponse> {
+    const res = (await this.client.interactions.create(this.buildRequest(req, images))) as InteractionLike;
     assertCompleted(res);
     const text = res.output_text ?? textFromSteps(res);
     let json: unknown;

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GeminiProvider } from '../src/llm/gemini.js';
 import { AnthropicProvider } from '../src/llm/anthropic.js';
+import { hasVision } from '../src/llm/vision.js';
 import { createLlm, selectLlm } from '../src/llm/create.js';
 import { DEFAULT_GEMINI_IMAGE_MODEL, DEFAULT_GEMINI_MODEL, geminiImageModel, geminiModel } from '../src/llm/config.js';
 import { ScriptedLlm } from './scripted-llm.js';
@@ -122,6 +123,31 @@ describe('GeminiProvider request shape (real SDK, stubbed fetch)', () => {
     expect((captured[1]!.body as { response_format: unknown }).response_format).toEqual({ type: 'image', aspect_ratio: '21:9' });
   });
 
+  it('[AG-035] vision: the prompt and inline images go as Interactions content parts', async () => {
+    const captured = stubFetch(() => ({ id: 'i', status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: '{"violations":[]}' }] }] }));
+    const g = new GeminiProvider({ apiKey: FAKE_KEY, env: {} });
+    expect(hasVision(g)).toBe(true);
+    const logo = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 9]);
+    const banner = new Uint8Array([0xff, 0xd8, 0xff, 7]);
+    const schema = { type: 'object' };
+    const res = await g.generateWithImages({ system: 'Classify.', prompt: 'Image 1 is the logo.', jsonSchema: schema }, [
+      { bytes: logo, mime: 'image/png' },
+      { bytes: banner, mime: 'image/jpeg' },
+    ]);
+    expect(captured[0]!.body).toEqual({
+      model: DEFAULT_GEMINI_MODEL,
+      input: [
+        { type: 'text', text: 'Image 1 is the logo.' },
+        { type: 'image', data: Buffer.from(logo).toString('base64'), mime_type: 'image/png' },
+        { type: 'image', data: Buffer.from(banner).toString('base64'), mime_type: 'image/jpeg' },
+      ],
+      system_instruction: 'Classify.',
+      response_format: { type: 'text', mime_type: 'application/json', schema },
+    });
+    expect(res.json).toEqual({ violations: [] });
+    await expect(g.generateWithImages({ system: '', prompt: 'x' }, [])).rejects.toThrow(/at least one image/);
+  });
+
   it('surfaces API errors and invalid JSON instead of inventing output', async () => {
     stubFetch(() => ({ error: { code: 403, message: 'denied', status: 'PERMISSION_DENIED' } }), 403);
     await expect(new GeminiProvider({ apiKey: FAKE_KEY, env: {} }).generate({ system: '', prompt: 'x' })).rejects.toThrow();
@@ -173,6 +199,18 @@ describe('AnthropicProvider request shape (injected client)', () => {
     });
     expect(res).toEqual({ text: '{"ok":true}', json: { ok: true }, provider: 'anthropic', model: 'claude-haiku-5-5', sources: ['https://x.example.com/'] });
     expect('generateImage' in a).toBe(false);
+  });
+
+  it('[AG-035] vision: base64 image blocks before the prompt text', async () => {
+    const calls: Record<string, unknown>[] = [];
+    const client = { messages: { create: async (p: Record<string, unknown>) => (calls.push(p), { stop_reason: 'end_turn', content: [{ type: 'text', text: '{}' }] }) } };
+    const a = new AnthropicProvider({ client, model: 'claude-haiku-5-5' });
+    expect(hasVision(a)).toBe(true);
+    const img = new Uint8Array([1, 2, 3]);
+    await a.generateWithImages({ system: 's', prompt: 'p' }, [{ bytes: img, mime: 'image/png' }]);
+    expect(calls[0]!.messages).toEqual([
+      { role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: Buffer.from(img).toString('base64') } }, { type: 'text', text: 'p' }] },
+    ]);
   });
 });
 

@@ -19,7 +19,7 @@ import {
   type SentinelReport,
 } from '@carbon/core';
 import { CarbonChainClient, loadSolanaConfig } from '@carbon/solana';
-import { Treasurer, assertLaunchCleared, type AgentContext } from '@carbon/agents';
+import { Treasurer, assertLaunchCleared, scoreBinding, type AgentContext } from '@carbon/agents';
 import { launchAllowedCheck } from '../../apps/worker/src/chain.js';
 import { FakeChain } from '../../packages/solana/test/helpers/fakeChain.js';
 import { encodeAccount } from '../../packages/solana/test/helpers/events.js';
@@ -76,8 +76,9 @@ describe('launch gate at the chain seam (worker launchAllowedCheck + CarbonChain
     const w = wallet();
     const launchId = await createLaunch(env.core, 'ring', 'C-12', null, w.address);
     await client.createLaunchWallet(launchId);
-    await env.core.bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: { name: 'Frost Lattice', ticker: 'FRST', lore: 'cold', logoUri: 'u', logoHash: '0'.repeat(16), bannerUri: 'u', siteUri: 'u', metadataUri: URI } });
-    if (opts.score !== null) await env.core.bus.append({ launchId, kind: 'sentinel.score', actor: 'sentinel', payload: opts.score ?? report(80, 70) });
+    const drafted = await env.core.bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: { name: 'Frost Lattice', ticker: 'FRST', lore: 'cold', logoUri: 'u', logoHash: '0'.repeat(16), bannerUri: 'u', siteUri: 'u', metadataUri: URI } });
+    // Scores name the draft they checked (AG-035).
+    if (opts.score !== null) await env.core.bus.append({ launchId, kind: 'sentinel.score', actor: 'sentinel', payload: { ...(opts.score ?? report(80, 70)), ...scoreBinding(drafted) } });
     let approvalId = 'no-approval';
     if ((opts.approve ?? 'consumed') !== 'none') {
       const action = opts.action ?? 'launch';
@@ -180,22 +181,22 @@ describe('launch gate in the agents and core', () => {
   }
 
   it('Treasurer.deploy refuses before any chain call: below threshold, hard fail, stale draft, threshold lower than the row', async () => {
-    const cases: [string, (l: string) => Promise<unknown>][] = [
-      ['below', (l) => env.core.bus.append({ launchId: l, kind: 'sentinel.score', actor: 'sentinel', payload: report(10, 70) })],
-      ['hardfail', (l) => env.core.bus.append({ launchId: l, kind: 'sentinel.score', actor: 'sentinel', payload: { ...report(99, 70, true), passed: false } })],
-      ['lower-threshold', (l) => env.core.bus.append({ launchId: l, kind: 'sentinel.score', actor: 'sentinel', payload: report(20, 10) })],
+    const cases: [string, (l: string, d: CarbonEvent<'forge.draft'>) => Promise<unknown>][] = [
+      ['below', (l, d) => env.core.bus.append({ launchId: l, kind: 'sentinel.score', actor: 'sentinel', payload: { ...report(10, 70), ...scoreBinding(d) } })],
+      ['hardfail', (l, d) => env.core.bus.append({ launchId: l, kind: 'sentinel.score', actor: 'sentinel', payload: { ...report(99, 70, true), passed: false, ...scoreBinding(d) } })],
+      ['lower-threshold', (l, d) => env.core.bus.append({ launchId: l, kind: 'sentinel.score', actor: 'sentinel', payload: { ...report(20, 10), ...scoreBinding(d) } })],
       [
         'stale',
-        async (l) => {
-          await env.core.bus.append({ launchId: l, kind: 'sentinel.score', actor: 'sentinel', payload: report(90, 70) });
+        async (l, d) => {
+          await env.core.bus.append({ launchId: l, kind: 'sentinel.score', actor: 'sentinel', payload: { ...report(90, 70), ...scoreBinding(d) } });
           await env.core.bus.append({ launchId: l, kind: 'forge.draft', actor: 'forge', payload: { name: 'Changed', ticker: 'CHG', lore: 'x', logoUri: 'u', logoHash: '1'.repeat(16), bannerUri: 'u', siteUri: 'u', metadataUri: URI } });
         },
       ],
     ];
     for (const [name, arrange] of cases) {
       const launchId = await createLaunch(env.core, 'ring');
-      await env.core.bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: { name: 'Frost', ticker: 'FRST', lore: 'x', logoUri: 'u', logoHash: '0'.repeat(16), bannerUri: 'u', siteUri: 'u', metadataUri: URI } });
-      await arrange(launchId);
+      const d = await env.core.bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: { name: 'Frost', ticker: 'FRST', lore: 'x', logoUri: 'u', logoHash: '0'.repeat(16), bannerUri: 'u', siteUri: 'u', metadataUri: URI } });
+      await arrange(launchId, d);
       const c = ctx(launchId);
       await expect(new Treasurer(c).deploy({ launcherWallet: 'w', sign: async () => 'never' }), name).rejects.toThrow();
       await expect(assertLaunchCleared(c), name).rejects.toThrow();

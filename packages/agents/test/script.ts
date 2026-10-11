@@ -1,7 +1,7 @@
 import type { CarbonEvent, LaunchConfig, XPost } from '@carbon/core';
 import { expect } from 'vitest';
 import type { LaunchUser } from '../src/molecule-runner.js';
-import { FORGE_SYSTEM, HERALD_SYSTEM, KEEPER_SYSTEM, SCOUT_SYSTEM, SENTINEL_CONTENT_SYSTEM } from '../src/prompts/index.js';
+import { FORGE_SYSTEM, HERALD_SYSTEM, KEEPER_SYSTEM, SCOUT_SYSTEM, SENTINEL_CONTENT_SYSTEM, SENTINEL_IMAGE_SYSTEM } from '../src/prompts/index.js';
 import { xPostUrl } from '../src/scout/index.js';
 import { AGENTS, type FakeBus, type Harness, type Script, harness, snowflake } from './fakes.js';
 
@@ -20,6 +20,9 @@ export interface ScriptOpts {
   ticker?: string;
   violations?: { rule: string; evidence: string }[];
   classifierThrows?: boolean;
+  /** What the image (vision) classifier reports for the logo and banner. */
+  imageViolations?: { rule: string; evidence: string }[];
+  imageClassifierThrows?: boolean;
 }
 
 export function standardScript(o: ScriptOpts): Script {
@@ -49,6 +52,10 @@ export function standardScript(o: ScriptOpts): Script {
     if (req.system === SENTINEL_CONTENT_SYSTEM) {
       if (o.classifierThrows) throw new Error('classifier 503');
       return { json: { violations: o.violations ?? [], reasoning: 'No rule hits.' } };
+    }
+    if (req.system === SENTINEL_IMAGE_SYSTEM) {
+      if (o.imageClassifierThrows) throw new Error('vision 503');
+      return { json: { violations: o.imageViolations ?? [], reasoning: 'Nothing in the images breaks a rule.' } };
     }
     if (req.system === HERALD_SYSTEM) {
       return { json: { text: 'Frost Cat is live. A meme on a glacier.', reasoning: 'Short, factual announcement.' } };

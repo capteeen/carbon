@@ -204,7 +204,7 @@ export function scoreFreshness(sourceTimes: number[], undated: number, now: numb
 export interface ContentFinding {
   rule: 'real_person' | 'protected_brand' | 'sexual' | 'violent';
   evidence: string;
-  by: 'denylist' | 'classifier';
+  by: 'denylist' | 'classifier' | 'image-classifier';
 }
 
 export function scoreContent(findings: ContentFinding[], classifier: { ok: true } | { ok: false; error: string }): SentinelInput {
@@ -215,7 +215,7 @@ export function scoreContent(findings: ContentFinding[], classifier: { ok: true 
   // Content rules are never assumed clean: if the classifier cannot run, the launch is blocked.
   if (!classifier.ok)
     return { ...unavailable('content', `content check could not run (classifier: ${classifier.error}); denylist clean`), hardFail: true };
-  return { key: 'content', points: WEIGHTS.content, max: WEIGHTS.content, reason: 'Denylist and classifier found no rule violations', hardFail: false };
+  return { key: 'content', points: WEIGHTS.content, max: WEIGHTS.content, reason: 'Denylist, text classifier and image classifier found no rule violations', hardFail: false };
 }
 
 // ─────────── total ───────────
@@ -250,7 +250,8 @@ export function renderFormulaMarkdown(): string {
   lines.push('', '### Narrative freshness', '');
   lines.push(`Median age of the dated sources Scout cited (X post time): ${FRESHNESS_TIERS.map((t) => `≤${t.maxHours === Infinity ? '∞' : t.maxHours}h → ${t.points}`).join(', ')}. No dated source: 0, source unavailable.`);
   lines.push('', '### Content rules', '');
-  lines.push('A deterministic denylist and an LLM classifier check name, ticker and lore for real people, protected brands, sexual and violent content. Any finding is a hard fail. Clean: 20. Classifier unreachable: 0, "source unavailable: content check could not run", and the launch is blocked (hard fail) until it runs.');
+  lines.push('A deterministic denylist and an LLM classifier check the name, ticker, lore and the text of the generated coin site for real people, protected brands, sexual and violent content. The LLM also looks at the generated logo and banner images (vision) against the same rules. Any finding is a hard fail. Clean: 20. A classifier that cannot run (text or image, including images that cannot be read or a model without vision): 0, "source unavailable: content check could not run", and the launch is blocked (hard fail) until it runs.');
+  lines.push('', 'A score is bound to the draft it checked: it records that draft\'s event id and a sha256 of its content (name, ticker, lore, logo hash, banner and site URIs, which are content-addressed). The launch is refused unless the draft being deployed has exactly that content.');
   lines.push('', `Denylist (whole-word, case-insensitive): ${Object.entries(DENYLIST).map(([k, v]) => `**${k}**: ${v.join(', ')}`).join('; ')}.`);
   return lines.join('\n');
 }

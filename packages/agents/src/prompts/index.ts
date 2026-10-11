@@ -99,6 +99,7 @@ Report only violations you can point to in the given text. ${HONESTY}`;
 export const SENTINEL_CONTENT_PROMPT = `Name: {{name}}
 Ticker: {{ticker}}
 Lore: {{lore}}
+Coin site text: {{site}}
 Return JSON: {"violations":[{"rule":"real_person"|"protected_brand"|"sexual"|"violent","evidence":string}],"reasoning":string}`;
 
 export const SENTINEL_CONTENT_SCHEMA = {
@@ -116,6 +117,17 @@ export const SENTINEL_CONTENT_SCHEMA = {
   },
   required: ['violations', 'reasoning'],
 } as const;
+
+export const SENTINEL_IMAGE_SYSTEM = `You are SENTINEL, the risk proton of Carbon. You classify the images of a proposed meme coin against content rules. You are strict and literal.
+Rules:
+- real_person: a real, identifiable living or dead person, by likeness or by name written in the image.
+- protected_brand: a logo, mascot, character, product or trademark someone else owns.
+- sexual: nudity, sexual content or innuendo.
+- violent: violence, weapons used against people, terrorism, self-harm, hate symbols.
+Report only violations you can see in the given images. ${HONESTY}`;
+
+export const SENTINEL_IMAGE_PROMPT = `Image 1 is the logo and image 2 is the banner of the coin {{name}} (\${{ticker}}).
+Return JSON: {"violations":[{"rule":"real_person"|"protected_brand"|"sexual"|"violent","evidence":string}],"reasoning":string}. Start each evidence with "logo:" or "banner:".`;
 
 // ─────────────── HERALD ───────────────
 

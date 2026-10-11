@@ -183,6 +183,12 @@ export class ScriptedLlm implements LlmProvider {
     const r = this.script(req);
     return { text: JSON.stringify(r.json), json: r.json, provider: this.id, model: this.model, sources: r.sources ?? [] };
   }
+  /** Vision (AG-035): the script sees the request plus the attached images. */
+  visionCalls: { req: LlmRequest; images: { bytes: Uint8Array; mime: string }[] }[] = [];
+  async generateWithImages(req: LlmRequest, images: { bytes: Uint8Array; mime: string }[]): Promise<LlmResponse> {
+    this.visionCalls.push({ req, images });
+    return this.generate(req);
+  }
   async generateImage(prompt: string, aspect: '1:1' | '3:1') {
     this.images.push(prompt);
     return { bytes: makePng(this.imageSeed, aspect === '1:1' ? 64 : 192, 64), mime: 'image/png', model: 'scripted-image' };

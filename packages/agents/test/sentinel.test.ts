@@ -2,7 +2,7 @@ import { SHAPES, type SentinelInput, launchConfig } from '@carbon/core';
 import { describe, expect, it } from 'vitest';
 import { Forge } from '../src/forge/index.js';
 import { Scout } from '../src/scout/index.js';
-import { Sentinel, xSnowflakeTime } from '../src/sentinel/index.js';
+import { Sentinel, assertLaunchCleared, draftContentHash, siteText, xSnowflakeTime } from '../src/sentinel/index.js';
 import { WEIGHTS, devBuySupplyPct, finalize, renderFormulaMarkdown, scoreCollision } from '../src/sentinel/formula.js';
 import { makePng, snowflake } from './fakes.js';
 import { GROUNDED, created, expectReasoningForEveryAction, makeHarness } from './script.js';
@@ -148,5 +148,87 @@ describe('Sentinel', () => {
     const r = h.bus.ofKind('reasoning').find((x) => x.payload.forEventId === p.id)!;
     expect(r.payload.text).toMatch(/^X unavailable/);
     expectReasoningForEveryAction(h.bus);
+  });
+});
+
+describe('[AG-035] the score is bound to the draft it checked, and the images and site are content-checked', () => {
+  it('sentinel.score records the scored draft event id and its content hash', async () => {
+    const { draft, score } = await setup();
+    const e = await score();
+    expect(e.payload.passed).toBe(true);
+    expect(e.payload).toMatchObject({ draftEventId: draft.id, contentHash: draftContentHash(draft.payload) });
+  });
+
+  it('the logo and banner bytes go to the vision classifier; an image finding is a hard fail', async () => {
+    const { h, draft, score } = await setup(launchConfig('C-12', 'chain'), { imageViolations: [{ rule: 'protected_brand', evidence: 'logo: a franchise mascot' }] });
+    const e = await score();
+    const content = e.payload.inputs.find((i) => i.key === 'content')!;
+    expect(content.hardFail).toBe(true);
+    expect(content.reason).toContain('image-classifier: logo: a franchise mascot');
+    const call = h.llm.visionCalls.at(-1)!;
+    expect(call.images.map((i) => i.bytes)).toEqual([h.assets.files.get(draft.payload.logoUri), h.assets.files.get(draft.payload.bannerUri)]);
+  });
+
+  it('if the image check cannot run (no vision, unreadable image, classifier error, logo not the hashed one) the launch is blocked', async () => {
+    const noVision = await setup();
+    const llm = noVision.h.ctx.llm;
+    noVision.h.ctx.llm = { id: 'text-only', model: 'x', generate: (r) => llm.generate(r) };
+    const a = (await noVision.score()).payload.inputs.find((i) => i.key === 'content')!;
+    expect([a.hardFail, a.points]).toEqual([true, 0]);
+    expect(a.reason).toContain('image check: LLM provider text-only has no image input');
+
+    const throws = await setup(launchConfig('C-12', 'chain'), { imageClassifierThrows: true });
+    expect((await throws.score()).payload.inputs.find((i) => i.key === 'content')!.reason).toContain('image check: vision 503');
+
+    const missing = await setup();
+    missing.h.assets.files.delete(missing.draft.payload.bannerUri);
+    const m = (await missing.score()).payload;
+    expect(m.hardFail).toBe(true);
+    expect(m.inputs.find((i) => i.key === 'content')!.reason).toContain('image check: 404');
+
+    const swapped = await setup();
+    swapped.h.assets.files.set(swapped.draft.payload.logoUri, makePng(99));
+    expect((await swapped.score()).payload.inputs.find((i) => i.key === 'content')!.reason).toContain('logo bytes do not match');
+  });
+
+  it('the generated site text is checked too (denylist), and an unreadable site blocks', async () => {
+    const { h, draft, score } = await setup();
+    const html = new TextDecoder().decode(h.assets.files.get(draft.payload.siteUri)!);
+    h.assets.files.set(draft.payload.siteUri, new TextEncoder().encode(html.replace(/<p class="tag">[^<]*<\/p>/, '<p class="tag">// the pikachu of glaciers</p>')));
+    const e = await score();
+    expect(e.payload.inputs.find((i) => i.key === 'content')!.reason).toContain('"pikachu" in site');
+    // the Carbon footer (which names Google Gemini and pump.fun) is not coin content
+    expect(siteText(html)).not.toMatch(/Gemini/);
+    expect(siteText(html)).toContain('Cold paws, warm hearts.');
+    h.assets.files.delete(draft.payload.siteUri);
+    expect((await score()).payload.inputs.find((i) => i.key === 'content')!.reason).toContain('site text unreadable');
+  });
+
+  it('the gate refuses a draft appended while Sentinel ran, an unbound score, and a score naming another draft', async () => {
+    const { h, draft, forge, narrative, score } = await setup();
+    const s = await score();
+    await expect(assertLaunchCleared(h.ctx)).resolves.toMatchObject({ draft: { id: draft.id } });
+
+    // A different draft lands between the scored draft and its score (a concurrent runner).
+    const other = await forge.draft(narrative, narrative.names[0]!, { revision: { name: 'Other Cat', ticker: 'OCAT' }, previous: draft });
+    await h.bus.append({ launchId: h.ctx.launchId, kind: 'sentinel.score', actor: 'sentinel', payload: { ...s.payload, run: 9 } });
+    expect(other.seq).toBeLessThan(h.bus.ofKind('sentinel.score').at(-1)!.seq);
+    await expect(assertLaunchCleared(h.ctx)).rejects.toThrow(/Draft changed/);
+
+    // A score without the binding, or naming a draft whose content it did not hash, is not accepted.
+    const { draftEventId: _d, contentHash: _c, ...unbound } = s.payload as typeof s.payload & { draftEventId: string; contentHash: string };
+    await h.bus.append({ launchId: h.ctx.launchId, kind: 'sentinel.score', actor: 'sentinel', payload: unbound });
+    await expect(assertLaunchCleared(h.ctx)).rejects.toThrow(/does not name the draft/);
+    await h.bus.append({ launchId: h.ctx.launchId, kind: 'sentinel.score', actor: 'sentinel', payload: { ...s.payload, draftEventId: other.id } as typeof s.payload });
+    await expect(assertLaunchCleared(h.ctx)).rejects.toThrow(/content hash does not match/);
+  });
+
+  it('a banner or site swapped after the score is a content change (blocked)', async () => {
+    for (const field of ['bannerUri', 'siteUri'] as const) {
+      const { h, draft, score } = await setup();
+      await score();
+      await h.bus.append({ launchId: h.ctx.launchId, kind: 'forge.draft', actor: 'forge', payload: { ...draft.payload, [field]: `${draft.payload[field]}-other` } });
+      await expect(assertLaunchCleared(h.ctx)).rejects.toThrow(/Draft changed/);
+    }
   });
 });

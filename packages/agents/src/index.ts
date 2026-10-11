@@ -3,7 +3,7 @@ export type { ApprovalCard } from './cards.js';
 export { Scout, type Narrative, buildQuery, xPostUrl, xStatusId } from './scout/index.js';
 export { Forge, type Revision } from './forge/index.js';
 export { renderSite, PALETTE } from './forge/site.js';
-export { Sentinel, SentinelBlockError, assertLaunchCleared, xSnowflakeTime } from './sentinel/index.js';
+export { Sentinel, SentinelBlockError, assertLaunchCleared, draftContentHash, scoreBinding, siteText, xSnowflakeTime, type BoundSentinelReport, type ScoreBinding } from './sentinel/index.js';
 export * as formula from './sentinel/formula.js';
 export { renderFormulaMarkdown } from './sentinel/formula.js';
 export { Herald, postingWindow, postRate } from './herald/index.js';

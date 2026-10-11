@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { AgentContext, LaunchUser, RunnerOptions } from '@carbon/agents';
+import { scoreBinding, type AgentContext, type LaunchUser, type RunnerOptions } from '@carbon/agents';
 import type { CarbonEvent, LlmProvider } from '@carbon/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PgAssetStore } from '../src/assets.js';
@@ -52,6 +52,15 @@ describe('AssetStore', () => {
     expect(Buffer.from(r.rows[0].bytes).toString()).toBe('<html>hi</html>');
     await expect(store.put('L1', 'x', new Uint8Array(), 'image/png')).rejects.toThrow();
   });
+
+  it('[AG-035] reads back the bytes behind its own URIs (for Sentinel), and nothing else', async () => {
+    const store = new PgAssetStore(env.core.bus.pool, 'https://carbon.test');
+    const png = new Uint8Array([137, 80, 78, 71, 1, 2, 3]);
+    const { uri } = await store.put('L2', 'logo-abc.png', png, 'image/png');
+    expect(await store.read(uri)).toEqual({ bytes: png, mime: 'image/png' });
+    expect(await store.read('https://elsewhere.test/api/assets/L2/x.png')).toBeNull();
+    expect(await store.read(`${uri}-missing`)).toBeNull();
+  });
 });
 
 describe('approval hooks never consume (the X hook records the one post an approval allows)', () => {
@@ -97,8 +106,9 @@ describe('approval hooks never consume (the X hook records the one post an appro
     const check = launchAllowedCheck(bus.pool, bus);
     await expect(check(launchId, approvalId)).rejects.toThrow(/Sentinel/);
     const draft = { name: 'Frost', ticker: 'FRST', lore: 'cold', logoUri: 'u', logoHash: '0'.repeat(16), bannerUri: 'u', siteUri: 'u', metadataUri: 'u' };
-    await bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: draft });
-    await bus.append({ launchId, kind: 'sentinel.score', actor: 'sentinel', payload: { score: 90, threshold: 60, inputs: [], hardFail: false, passed: true, run: 1 } });
+    const scored = await bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: draft });
+    // A score names the draft it checked (AG-035).
+    await bus.append({ launchId, kind: 'sentinel.score', actor: 'sentinel', payload: { score: 90, threshold: 60, inputs: [], hardFail: false, passed: true, run: 1, ...scoreBinding(scored) } });
     await check(launchId, approvalId);
     // Re-appending the SAME content after the score is fine; a revised draft is not (AG-001).
     await bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: draft });

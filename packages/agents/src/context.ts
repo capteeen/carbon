@@ -28,6 +28,8 @@ import type { ApprovalCard } from './cards.js';
 /** Where Forge puts generated assets (banner, logo copy, site HTML). Local port: proposed for ports.ts. */
 export interface AssetStore {
   put(launchId: string, name: string, bytes: Uint8Array, mime: string): Promise<{ uri: string }>;
+  /** Bytes of an asset this store returned a URI for (null if it is not one of its URIs). Sentinel reads drafts' images and site with it. */
+  read?(uri: string): Promise<{ bytes: Uint8Array; mime: string } | null>;
 }
 
 export type FetchBytes = (url: string) => Promise<{ bytes: Uint8Array; mime: string }>;

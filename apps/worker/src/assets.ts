@@ -32,6 +32,33 @@ export class PgAssetStore implements AssetStore {
        ON CONFLICT (launch_id, name) DO NOTHING`,
       [launchId, key, mime, Buffer.from(bytes), sha, this.now()],
     );
-    return { uri: `${this.publicUrl.replace(/\/+$/, '')}/api/assets/${encodeURIComponent(launchId)}/${encodeURIComponent(key)}` };
+    return { uri: `${this.base()}/${encodeURIComponent(launchId)}/${encodeURIComponent(key)}` };
+  }
+
+  /** Bytes behind a URI this store issued (Sentinel reads drafts' logo, banner and site with it, AG-035). */
+  async read(uri: string): Promise<{ bytes: Uint8Array; mime: string } | null> {
+    const prefix = `${this.base()}/`;
+    if (!uri.startsWith(prefix)) return null;
+    const parts = uri.slice(prefix.length).split('/');
+    if (parts.length !== 2) return null;
+    let launchId: string;
+    let name: string;
+    try {
+      launchId = decodeURIComponent(parts[0]!);
+      name = decodeURIComponent(parts[1]!);
+    } catch {
+      return null;
+    }
+    const r = await this.pool.query<{ bytes: Buffer; mime: string; sha256: string }>('SELECT bytes, mime, sha256 FROM carbon_assets WHERE launch_id = $1 AND name = $2', [launchId, name]);
+    const row = r.rows[0];
+    if (!row) return null;
+    const bytes = new Uint8Array(row.bytes);
+    // The name carries the content hash: never return bytes that do not match it.
+    if (createHash('sha256').update(bytes).digest('hex') !== row.sha256 || !name.startsWith(row.sha256.slice(0, 16))) return null;
+    return { bytes, mime: row.mime };
+  }
+
+  private base(): string {
+    return `${this.publicUrl.replace(/\/+$/, '')}/api/assets`;
   }
 }

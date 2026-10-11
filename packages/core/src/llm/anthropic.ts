@@ -1,11 +1,12 @@
 /**
  * Claude provider, for dev and tests when Gemini is unreachable. Never used in production
- * (createLlm enforces that). No image generation.
+ * (createLlm enforces that). No image generation; vision input (generateWithImages) is supported.
  */
 import Anthropic from '@anthropic-ai/sdk';
 import type { LlmProvider, LlmRequest, LlmResponse } from '../ports.js';
 import { anthropicModel } from './config.js';
 import { LlmError } from './gemini.js';
+import type { LlmImageInput, VisionLlm } from './vision.js';
 
 /** The slice of the SDK this provider uses (lets tests inject a stub). */
 export interface AnthropicMessagesClient {
@@ -24,7 +25,7 @@ export interface AnthropicProviderOptions {
   maxTokens?: number;
 }
 
-export class AnthropicProvider implements LlmProvider {
+export class AnthropicProvider implements LlmProvider, VisionLlm {
   readonly id = 'anthropic';
   readonly model: string;
   private readonly client: AnthropicMessagesClient;
@@ -41,11 +42,17 @@ export class AnthropicProvider implements LlmProvider {
     }
   }
 
-  buildRequest(req: LlmRequest): Record<string, unknown> {
+  buildRequest(req: LlmRequest, images: LlmImageInput[] = []): Record<string, unknown> {
+    const content = images.length
+      ? [
+          ...images.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.mime, data: Buffer.from(i.bytes).toString('base64') } })),
+          { type: 'text', text: req.prompt },
+        ]
+      : req.prompt;
     const body: Record<string, unknown> = {
       model: this.model,
       max_tokens: this.maxTokens,
-      messages: [{ role: 'user', content: req.prompt }],
+      messages: [{ role: 'user', content }],
     };
     if (req.system) body.system = req.system;
     if (req.temperature !== undefined) body.temperature = req.temperature;
@@ -55,7 +62,17 @@ export class AnthropicProvider implements LlmProvider {
   }
 
   async generate(req: LlmRequest): Promise<LlmResponse> {
-    const msg = (await this.client.messages.create(this.buildRequest(req))) as MessageLike;
+    return this.run(req, []);
+  }
+
+  /** Vision: images as base64 image blocks before the prompt text. */
+  async generateWithImages(req: LlmRequest, images: LlmImageInput[]): Promise<LlmResponse> {
+    if (!images.length) throw new LlmError('generateWithImages needs at least one image');
+    return this.run(req, images);
+  }
+
+  private async run(req: LlmRequest, images: LlmImageInput[]): Promise<LlmResponse> {
+    const msg = (await this.client.messages.create(this.buildRequest(req, images))) as MessageLike;
     if (msg.stop_reason === 'refusal') throw new LlmError('Claude declined the request');
     const blocks = (msg.content ?? []).filter((b) => b.type === 'text');
     const text = blocks.map((b) => b.text ?? '').join('');
