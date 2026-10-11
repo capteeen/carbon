@@ -68,7 +68,8 @@ export function HomeLive(props: HomeLiveProps) {
 
   // Visual props, all derived from the real log (empty log → empty states).
   // Display time ticks every second so bonds age out of the 60 s window.
-  const now = useNow(1000, true, props.renderedAt) ?? props.renderedAt;
+  // (only ticks while there is a molecule whose bonds can age out)
+  const now = useNow(1000, active !== null, props.renderedAt) ?? props.renderedAt;
   const live = useMemo(() => liveFromLogs(events, logs, now), [events, logs, now]);
   const replay = useMemo(() => toVisualReplay(props.replay), [props.replay]);
   const crystals = useMemo(() => toVisualLaunches(launches), [launches]);

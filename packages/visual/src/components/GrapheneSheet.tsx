@@ -46,7 +46,7 @@ function Sheet({ launches, onOpen, onHover, hovered }: { launches: LaunchSummary
   });
   return (
     <>
-      <CameraRig position={[centre.x, PLAIN_Y + spread * 0.75, centre.z + spread * 0.55]} target={[centre.x, PLAIN_Y, centre.z]} fit={0.5} focus={focus.current} />
+      <CameraRig position={[centre.x, PLAIN_Y + spread * 0.75, centre.z + spread * 0.55]} target={[centre.x, PLAIN_Y, centre.z]} fit={0.5} focus={focus.current} fogMargin={4} fogDensity={0.05} />
       <Plain visibility={one} graphene={one} />
       <GrapheneCrystals
         launches={launches}

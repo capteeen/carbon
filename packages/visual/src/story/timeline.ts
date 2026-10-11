@@ -159,9 +159,16 @@ function cameraPose(i: number, l: number, fit: number, o: Pose): void {
     case 5: // bonding: three bonds stacked
       set(o, 0, 0, 8.6 * fit, 0, 0, 0, 38);
       return;
-    case 6: // isotope chamber: slightly above the pedestal
-      set(o, 0, 2.3, 6.6 * soft, 0, 0.25, 0, 38);
+    case 6: {
+      // isotope chamber: looking down ~22° on the nucleus resting on the pedestal.
+      // Portrait: back off just enough for the base ring to fit the width and aim a
+      // little low, so nucleus + pedestal stack centre-frame above the HUD.
+      const portraitK = Math.min(1, fit - 1);
+      const d = 6.4 * (1 + (fit - 1) * 0.36);
+      const ty = lerp(0.0, -0.1, portraitK);
+      set(o, 0, ty + d * 0.375, d * 0.927, 0, ty, 0, 38);
       return;
+    }
     case 7: // shapes
       set(o, 0, 0.6, 9.5 * fit, 0, 0, 0, 38);
       return;

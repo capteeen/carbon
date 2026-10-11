@@ -40,9 +40,9 @@ export function IsotopeChamber({ value, onChange, heavyAgent, onHeavyAgentChange
   };
   return (
     <div className={`carbon-picker${className ? ' ' + className : ''}`} data-testid="isotope-chamber">
-      <div ref={setFrame} className="carbon-frame carbon-frame--picker">
+      <div ref={setFrame} className="carbon-frame carbon-frame--picker carbon-frame--chamber-picker">
         <Stage quality={q} leaders={leaders} reducedMotion={reduced} eventSource={frame} ariaLabel="Isotope chamber: nucleus point cloud on a pedestal">
-          <CameraRig position={[0, 2.4, 6.4]} target={[0, 0.2, 0]} fit={0.6} />
+          <CameraRig position={[0, 3.7, 7.05]} target={[0, 0.85, 0]} fit={0.6} />
           <Plain visibility={plain} y={-1.05} />
           <ChamberObject isotope={value} heavyAgent={heavyAgent} onHeavyDrop={(a) => onHeavyAgentChange(a)} anchors={{ pedestal: leaders.anchor('pedestal'), extra: leaders.anchor('extra') }} />
         </Stage>

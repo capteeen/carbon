@@ -62,7 +62,8 @@ describe('the web layer displays bonds with THE pure function', () => {
     for (const f of ['apps/web/src/components/LaunchLive.tsx', 'apps/web/src/components/EmbedLive.tsx', 'apps/web/src/components/HomeLive.tsx']) {
       const s = src(f);
       // ticks every second; the first render uses the server render time, not the last event
-      expect(s, f).toMatch(/useNow\(1000, true, (props\.)?renderedAt\) \?\? (props\.)?renderedAt/);
+      // (home: ticks while a molecule exists; nothing to age out otherwise)
+      expect(s, f).toMatch(/useNow\(1000, (true|active !== null), (props\.)?renderedAt\) \?\? (props\.)?renderedAt/);
       // no fallback to computeBonds(events) with the default (= last event) time
       expect(s, f).not.toMatch(/computeBonds\(events\)/);
     }

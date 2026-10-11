@@ -120,7 +120,7 @@ export function ChamberHud({
       <HudLabel leaderRef={leaderRef('pedestal')}>{iso.label}</HudLabel>
       <HudReadout label="NEUTRONS" value={String(iso.neutrons)} testId="chamber-neutrons" />
       <HudReadout label="STABILITY" value={fmtStability(value)} testId="chamber-stability" />
-      <HudReadout label="HALF-LIFE" value={fmtHalfLife(value)} testId="chamber-halflife" />
+      <HudReadout label="DECAY RULE" value={fmtHalfLife(value)} testId="chamber-decay-rule" />
       <div className="carbon-hud__readout" style={{ whiteSpace: 'normal' }} data-testid="chamber-behaviour">
         BEHAVIOUR {iso.name} · {iso.behaviour}
       </div>
@@ -254,6 +254,7 @@ export function GrapheneHud({
       ) : (
         <>
           <HudReadout label="MOLECULES" value={String(launches.length)} testId="graphene-count" />
+          <HudMeta testId="graphene-legend">one crystal per launch · form = shape · size = neutrons (isotope) · shimmer = decaying</HudMeta>
           <HudMeta>{COPY.live.fly}</HudMeta>
           {hovered ? (
             <div data-testid="graphene-hovered" style={{ marginTop: 6 }}>

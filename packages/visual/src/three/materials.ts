@@ -317,6 +317,7 @@ uniform vec3 uCenters[MAX_CLUSTERS];
 uniform float uScales[MAX_CLUSTERS];
 uniform float uAlphas[MAX_CLUSTERS];
 uniform float uShimmer[MAX_CLUSTERS];
+uniform float uTone[MAX_CLUSTERS];
 uniform float uTime;
 uniform float uPixelRatio;
 uniform float uSize;
@@ -324,8 +325,10 @@ uniform float uPoints;
 uniform float uMotion;
 varying float vAlpha;
 varying float vSeed;
+varying float vTone;
 void main() {
   int c = int(aCluster + 0.5);
+  vTone = uTone[c];
   vec3 center = uCenters[c];
   float s = uScales[c];
   float sh = uShimmer[c];
@@ -363,6 +366,25 @@ void main() {
 }
 `;
 
+/** Cluster points: like POINT_FRAG, with a per-cluster tone (0 = frost proton, 1 = slate neutron) for contrast on fog. */
+const CLUSTER_FRAG = /* glsl */ `
+uniform vec3 uFrost;
+uniform vec3 uShade;
+uniform float uOpacity;
+varying float vAlpha;
+varying float vSeed;
+varying float vTone;
+void main() {
+  if (vAlpha < 0.01) discard;
+  vec2 d = gl_PointCoord - 0.5;
+  float r = dot(d, d);
+  if (r > 0.25) discard;
+  float a = smoothstep(0.25, 0.0, r);
+  vec3 col = mix(uShade, uFrost, mix(0.62 + 0.38 * vSeed, 0.1 + 0.25 * vSeed, vTone));
+  gl_FragColor = vec4(col, a * vAlpha * uOpacity);
+}
+`;
+
 export const MAX_CLUSTERS = 16;
 
 export type ClusterMaterial = ShaderMaterial & {
@@ -371,6 +393,7 @@ export type ClusterMaterial = ShaderMaterial & {
     uScales: { value: number[] };
     uAlphas: { value: number[] };
     uShimmer: { value: number[] };
+    uTone: { value: number[] };
     uSize: { value: number };
     uOpacity: { value: number };
   };
@@ -379,7 +402,7 @@ export type ClusterMaterial = ShaderMaterial & {
 export function createClusterMaterial(shared: SharedUniforms, size = 2.2): ClusterMaterial {
   return new ShaderMaterial({
     vertexShader: CLUSTER_VERT,
-    fragmentShader: POINT_FRAG,
+    fragmentShader: CLUSTER_FRAG,
     uniforms: {
       uTime: shared.uTime,
       uPixelRatio: shared.uPixelRatio,
@@ -389,6 +412,7 @@ export function createClusterMaterial(shared: SharedUniforms, size = 2.2): Clust
       uScales: { value: new Array<number>(MAX_CLUSTERS).fill(1) },
       uAlphas: { value: new Array<number>(MAX_CLUSTERS).fill(0) },
       uShimmer: { value: new Array<number>(MAX_CLUSTERS).fill(0) },
+      uTone: { value: new Array<number>(MAX_CLUSTERS).fill(0) },
       uSize: { value: size },
       uFrost: { value: COLORS.frost },
       uShade: { value: COLORS.slate },

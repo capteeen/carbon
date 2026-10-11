@@ -13,7 +13,8 @@ import {
 } from '../src/data/derive.js';
 import { gaugeSegments, sentinelPhase } from '../src/data/sentinel.js';
 import { degree, hexSpiral, moleculeLayout } from '../src/three/layouts.js';
-import { chamberTargets } from '../src/three/Chamber.js';
+import { NUC_CENTER_Y, NUC_SCALE, chamberTargets } from '../src/three/Chamber.js';
+import { crystalSize, placeCrystals } from '../src/three/Graphene.js';
 import { ev, fakeId, fixtureLaunch, fixtureLaunches } from './fixtures/events.js';
 
 describe('honesty filters', () => {
@@ -122,6 +123,22 @@ describe('layouts', () => {
     for (let i = 0; i < 200; i++) seen.add(hexSpiral(i).join(','));
     expect(seen.size).toBe(200);
     expect(hexSpiral(0)).toEqual([0, 0]);
+  });
+  it('the nucleus rests above the pedestal; departed neutrons sink into it', () => {
+    expect(NUC_CENTER_Y - 0.86 * NUC_SCALE).toBeGreaterThan(-0.5); // nucleus bottom above the pedestal top
+    const c12 = chamberTargets('C-12', null);
+    const out = c12.filter((t) => t.alpha === 0);
+    expect(out.length).toBe(2);
+    for (const t of out) expect(t.center[1]).toBeLessThan(0.55 - 0.5); // below the nucleus, toward the pedestal
+  });
+  it('graphene crystals: one per launch, size grows with the isotope neutron count', () => {
+    expect(crystalSize('C-11')).toBeLessThan(crystalSize('C-12'));
+    expect(crystalSize('C-12')).toBeLessThan(crystalSize('C-13'));
+    expect(crystalSize('C-13')).toBeLessThan(crystalSize('C-14'));
+    const l = fixtureLaunches(7);
+    const placed = placeCrystals(l);
+    expect(placed.length).toBe(7);
+    expect(new Set(placed.map((p) => `${p.x.toFixed(3)},${p.z.toFixed(3)}`)).size).toBe(7); // one cell each
   });
   it('chamber targets are pure and isotope-dependent', () => {
     expect(chamberTargets('C-12', null)).toEqual(chamberTargets('C-12', null));
