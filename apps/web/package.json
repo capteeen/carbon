@@ -22,6 +22,7 @@
     "@solana/wallet-adapter-react": "0.15.39",
     "@solana/web3.js": "1.98.4",
     "bs58": "6.0.0",
+    "ioredis": "5.11.1",
     "next": "15.5.26",
     "pg": "8.23.0",
     "react": "19.2.8",
