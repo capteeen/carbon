@@ -143,7 +143,8 @@ export interface ChainClient {
    */
   buildLaunchTx(args: { launchId: string; payer: string; name: string; symbol: string; metadataUri: string; devBuySol: number; approvalId: string }): Promise<{ txBase64: string; mint: string }>;
   /** Submit the user-signed tx; confirms; returns signature. */
-  submitLaunchTx(launchId: string, signedTxBase64: string): Promise<{ txSig: string; ca: string }>;
+  /** bornAtMs = the deploy tx's block time (C-14 clock origin). */
+  submitLaunchTx(launchId: string, signedTxBase64: string): Promise<{ txSig: string; ca: string; bornAtMs?: number }>;
   uploadMetadata(args: { name: string; symbol: string; description: string; image: Uint8Array; twitter?: string; website?: string }): Promise<{ metadataUri: string; imageUri: string }>;
   /** Existing coins matching name/ticker, for Sentinel. Throws ChainUnavailableError when the source is unreachable. */
   searchCoins(query: string): Promise<PumpCoinInfo[]>;
@@ -151,7 +152,11 @@ export interface ChainClient {
   claimCreatorFees(launchId: string): Promise<{ claimId: string; lamports: bigint; txSig: string } | null>;
   /** Idempotent: resumes a split by splitId without double-paying. */
   runSplit(launchId: string, claimId: string): Promise<SplitReceipt>;
-  buyCarbon(lamports: bigint, splitId: string): Promise<{ txSig: string; carbonOut: bigint }>;
+  /** lamportsIn = what the trade actually spent, from the on-chain event. */
+  buyCarbon(lamports: bigint, splitId: string): Promise<{ txSig: string; carbonOut: bigint; lamportsIn?: bigint }>;
+  /** Ledger reconciliation (see @carbon/agents ChainLedger): confirmed claims, third-party distributions, buyback acks. */
+  confirmedClaims?(launchId: string): Promise<unknown[]>;
+  scanForeignDistributions?(launchId: string): Promise<unknown[]>;
   lastTradeAt(ca: string): Promise<number | null>;
 }
 
