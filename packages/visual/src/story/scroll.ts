@@ -7,7 +7,8 @@
  * measured scroll distance), so HUD and 3D agree at every scroll position,
  * forward or back.
  */
-import { animate, onScroll } from 'animejs';
+import { animate, engine, onScroll } from 'animejs';
+import { addEffect } from '@react-three/fiber';
 import Lenis from 'lenis';
 import { useEffect, useState, useSyncExternalStore, type RefObject } from 'react';
 import { CHAPTER_COUNT, CHAPTER_RANGES, chapterFade, chapterLocal } from './chapters.js';
@@ -144,13 +145,38 @@ export function useStoryScroll(opts: {
     let lenis: Lenis | null = null;
     if (smooth && typeof window.matchMedia === 'function') {
       // Smooth scroll is an enhancement: if Lenis cannot start, native scroll drives the same store.
+      // Touch is smoothed too (syncTouch), so phones get the same eased scrub as wheels instead of
+      // stepping with the browser's throttled touch-scroll events.
       try {
-        lenis = new Lenis({ autoRaf: true, lerp: 0.09, smoothWheel: true, syncTouch: false });
+        lenis = new Lenis({ autoRaf: false, lerp: 0.075, smoothWheel: true, syncTouch: true, syncTouchLerp: 0.085, touchInertiaExponent: 1.6 });
         lenis.on('scroll', (l: Lenis) => write(l.scroll));
       } catch {
         lenis = null;
       }
     }
+
+    // ONE clock. Lenis and anime.js are ticked from the same frame, before the 3D scene's
+    // useFrame (r3f addEffect runs ahead of every render), so the scroll position, the HUD
+    // layers and the camera pose are all computed from the same value in the same frame:
+    // no one-frame lag between them, which reads as judder. A plain rAF keeps ticking when
+    // no canvas is mounted (no WebGL); a second tick in the same frame is a no-op.
+    const drive = Boolean(lenis) || anime;
+    const prevMainLoop = engine.useDefaultMainLoop;
+    if (drive && anime) engine.useDefaultMainLoop = false;
+    let lastTick = -1;
+    const tick = (t: number) => {
+      if (t === lastTick) return;
+      lastTick = t;
+      lenis?.raf(t);
+      if (anime) engine.update();
+    };
+    const removeEffect = drive ? addEffect(tick) : () => undefined;
+    let rafId = 0;
+    const loop = (t: number) => {
+      tick(t);
+      rafId = requestAnimationFrame(loop);
+    };
+    if (drive) rafId = requestAnimationFrame(loop);
     const onScrollNative = () => write(window.scrollY);
     const onResize = () => {
       measure();
@@ -162,6 +188,9 @@ export function useStoryScroll(opts: {
     ro?.observe(el);
     write(window.scrollY);
     return () => {
+      cancelAnimationFrame(rafId);
+      removeEffect();
+      if (drive && anime) engine.useDefaultMainLoop = prevMainLoop;
       lenis?.destroy();
       window.removeEventListener('scroll', onScrollNative);
       window.removeEventListener('resize', onResize);

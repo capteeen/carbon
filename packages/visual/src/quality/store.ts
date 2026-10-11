@@ -17,18 +17,43 @@ export interface QualityStore {
   subscribe(fn: () => void): () => void;
 }
 
+/**
+ * A resolution change resizes the canvas and its render targets, which costs a
+ * visible hitch. Level changes that reach React (the Canvas DPR) therefore wait
+ * until scrolling has been idle this long; per-frame settings still apply at once.
+ */
+const SCROLL_IDLE_MS = 350;
+let lastScrollAt = -Infinity;
+let scrollWatch = false;
+function watchScroll(): void {
+  if (scrollWatch || typeof window === 'undefined') return;
+  scrollWatch = true;
+  const mark = () => {
+    lastScrollAt = performance.now();
+  };
+  window.addEventListener('scroll', mark, { passive: true });
+  window.addEventListener('touchmove', mark, { passive: true });
+  window.addEventListener('wheel', mark, { passive: true });
+}
+
 export function createQualityStore(opts?: LadderOptions): QualityStore {
   const ladder = new QualityLadder(opts);
   const subs = new Set<() => void>();
-  const notify = () => subs.forEach((fn) => fn());
+  let published = ladder.level;
+  const notify = () => {
+    published = ladder.level;
+    subs.forEach((fn) => fn());
+  };
+  watchScroll();
   return {
     ladder,
     get settings() {
       return ladder.settings;
     },
-    level: () => ladder.level,
+    level: () => published,
     sample(dt) {
-      if (ladder.sample(dt) !== 0) notify();
+      ladder.sample(dt);
+      if (ladder.level !== published && (typeof performance === 'undefined' || performance.now() - lastScrollAt > SCROLL_IDLE_MS)) notify();
     },
     setLevel(l) {
       ladder.reset(l);
