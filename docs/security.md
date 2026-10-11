@@ -79,12 +79,15 @@ devnet (AG-011).
     otherwise, and the worker ignores it. This closes AG-004, the former blocking finding.
   - An attacker's authorize URL is useless to a victim, because the callback needs the
     attacker's own flow cookie.
-- **Weak points remaining (all minor):**
-  - The consumption and its public event are two steps, not one transaction (AG-027).
-  - A party who learns a launch id before the launch is created can erase, but not take over,
-    its pending X connection (AG-036).
-  - The score does not name the draft it scored, and the logo image, banner and site are never
-    content-checked (AG-035).
+- **Fixed in the second fix round:**
+  - An approval is consumed only together with its public `approval.consumed` event: the event
+    is appended under the row lock before the commit, and a crash in between is repaired by the
+    next consume (AG-027).
+  - A pending X connection is replaced only by the wallet that started it; another wallet's flow
+    for the same launch id fails (AG-036).
+  - The score names the draft it scored (event id + content hash), and the gate compares
+    against them. The logo and banner images (LLM vision) and the site text are content-checked;
+    a check that cannot run blocks the launch (AG-035).
 
 ## Money paths *(changed)*
 
@@ -117,10 +120,10 @@ devnet (AG-011).
   A resumed buy is budgeted once, keyed by split and tranche (AG-022).
 - The kill switch stops posts, replies and new buybacks only. Claims, splits and receipts keep
   running (AG-008).
-- **Remaining (minor):**
-  - On DIAMOND, a claim that landed just before a crash is re-driven only through the gated
-    claim call, so a rejected gate leaves it unreceipted (AG-034).
-  - The third-party distribution scan reads at most 1000 signatures per tick (AG-033).
+- *(fixed)* A claim that landed just before a crash is settled by its signature and receipted
+  without a new gated claim (AG-034).
+- *(fixed)* The third-party distribution scan is resumable and never moves its cursor past
+  unread signatures (AG-033).
 
 **Mainnet.**
 - Mainnet runs only with `CARBON_NETWORK=mainnet-beta` and `CARBON_MAINNET_ENABLED=true` (exact
@@ -137,8 +140,8 @@ devnet (AG-011).
   core's bonds, receipts and launch summaries. It holds no secret and makes no write request.
 - Its honesty filters accept only real 64-hex event ids for flashes, hashes, replays and
   crystals. The browser checks in `tests/e2e/honesty.ts` confirm this on the production build.
-- Display-time bonds use the browser's clock (AG-032). This is a display accuracy issue, not a
-  trust boundary: the server never takes bond orders from the client.
+- Display-time bonds use server time: the SSE stream carries the server clock and the browser
+  applies the offset (AG-032, fixed). The server never takes bond orders from the client.
 - `/embed/*` may be framed by any site (player card). Every other page sends
   `X-Frame-Options: DENY`.
 
@@ -148,7 +151,7 @@ devnet (AG-011).
 - **Major:** AG-031. The ≥ 55 fps median on a throttled phone and the under-2 s first frame are
   unverified. The sandbox has no GPU, and its SwiftShader numbers fail at device DPR. This is a
   product-quality risk, not a security one.
-- **Minor, open:** AG-027 to AG-030 and AG-032 to AG-036.
+- **Minor:** none open. AG-027 to AG-030 and AG-032 to AG-036 are fixed.
 - **No live verification of external services.** Solana RPC, pump.fun, pumpportal and api.x.com
   are blocked from the build sandbox. Every chain and X behaviour above was verified against
   in-repo doubles, not the live services. In particular, none of these has been seen working end
