@@ -47,6 +47,18 @@ describe('Treasurer', () => {
     expectReasoningForEveryAction(h.bus);
   });
 
+  it('creates the launch wallet at most once per launch, reading it back from the log after a restart', async () => {
+    const { h, c, forge, draft } = await scored(launchConfig('C-12', 'chain'));
+    await forge.prepareDeploy(draft);
+    h.approvals.policy = (a) => a !== 'launch';
+    expect(await new Treasurer(h.ctx).deploy({ launcherWallet: c.payload.launcherWallet, sign })).toBeNull();
+    h.approvals.policy = () => true;
+    const dep = await new Treasurer(h.ctx).deploy({ launcherWallet: c.payload.launcherWallet, sign }); // fresh instance = restart
+    expect(dep!.payload.creatorWallet).toBe('CreatorWa11et1111111111111111111111111111111');
+    expect(await new Treasurer(h.ctx).launchWallet()).toBe(dep!.payload.creatorWallet);
+    expect(h.chain.walletsCreated).toBe(1);
+  });
+
   it('refuses when the draft changed after the score', async () => {
     const { h, c, forge, draft, narrative } = await scored(launchConfig('C-12', 'chain'));
     const changed = await forge.draft(narrative, narrative.names[0]!, { revision: { name: 'Other Cat', ticker: 'OCAT' }, previous: draft });
@@ -114,6 +126,20 @@ describe('Herald', () => {
     h.bus.append({ launchId: 'L1', kind: 'holders.snapshot', actor: 'system', payload: { slot: 1, holderCount: 100 } });
     expect(await new Keeper(h.ctx).milestones()).toBeNull();
     expectReasoningForEveryAction(h.bus);
+  });
+
+  it('Keeper mention cursor survives a restart (read from the log)', async () => {
+    const { h } = await deployed(launchConfig('C-12', 'ring'));
+    const dep = h.bus.ofKind('launch.deployed')[0]!;
+    h.x.mentionList = [
+      { id: '1000', text: 'gm', authorId: 'a', createdAt: new Date(dep.ts + 1).toISOString() },
+      { id: '1001', text: 'nice', authorId: 'b', createdAt: new Date(dep.ts + 2).toISOString() },
+    ];
+    expect(await new Keeper(h.ctx).respond()).toHaveLength(2);
+    const restarted = new Keeper(h.ctx);
+    expect(await restarted.mentionCursor()).toBe('1001');
+    expect(await restarted.respond()).toHaveLength(0);
+    expect(h.x.replies.map((r) => r.inReplyTo)).toEqual(['1000', '1001']);
   });
 
   it('C-13 heavy Herald doubles only Herald post capacity', async () => {

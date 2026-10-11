@@ -212,7 +212,9 @@ export function scoreContent(findings: ContentFinding[], classifier: { ok: true 
     const f = findings.slice(0, 3).map((x) => `${x.rule} (${x.by}: ${x.evidence})`).join('; ');
     return { key: 'content', points: 0, max: WEIGHTS.content, reason: `Content rule violation: ${f}`, hardFail: true };
   }
-  if (!classifier.ok) return unavailable('content', `classifier not reachable (${classifier.error}); denylist clean`);
+  // Content rules are never assumed clean: if the classifier cannot run, the launch is blocked.
+  if (!classifier.ok)
+    return { ...unavailable('content', `content check could not run (classifier: ${classifier.error}); denylist clean`), hardFail: true };
   return { key: 'content', points: WEIGHTS.content, max: WEIGHTS.content, reason: 'Denylist and classifier found no rule violations', hardFail: false };
 }
 
@@ -229,7 +231,7 @@ export function finalize(inputs: SentinelInput[], threshold: number, run: number
 export function renderFormulaMarkdown(): string {
   const lines: string[] = [];
   lines.push('## Stability score (Sentinel)', '');
-  lines.push('Score is 0-100: the sum of six inputs. A launch stays locked until the score reaches the shape\'s threshold. Content-rule and impersonation failures are hard fails: they block regardless of score. If a data source cannot be reached, that input scores 0 with the reason "source unavailable"; Sentinel never guesses.', '');
+  lines.push('Score is 0-100: the sum of six inputs. A launch stays locked until the score reaches the shape\'s threshold. Content-rule and impersonation failures are hard fails: they block regardless of score. A content check that could not run is also a hard fail. If a data source cannot be reached, that input scores 0 with the reason "source unavailable"; Sentinel never guesses.', '');
   lines.push('| Input | Max points |', '|---|---|');
   for (const k of Object.keys(WEIGHTS) as InputKey[]) lines.push(`| ${INPUT_LABELS[k]} | ${WEIGHTS[k]} |`);
   lines.push('', '### Thresholds by shape', '', '| Shape | Threshold |', '|---|---|');
@@ -248,7 +250,7 @@ export function renderFormulaMarkdown(): string {
   lines.push('', '### Narrative freshness', '');
   lines.push(`Median age of the dated sources Scout cited (X post time): ${FRESHNESS_TIERS.map((t) => `≤${t.maxHours === Infinity ? '∞' : t.maxHours}h → ${t.points}`).join(', ')}. No dated source: 0, source unavailable.`);
   lines.push('', '### Content rules', '');
-  lines.push('A deterministic denylist and an LLM classifier check name, ticker and lore for real people, protected brands, sexual and violent content. Any finding is a hard fail. Clean: 20. Classifier unreachable: 0, source unavailable.');
+  lines.push('A deterministic denylist and an LLM classifier check name, ticker and lore for real people, protected brands, sexual and violent content. Any finding is a hard fail. Clean: 20. Classifier unreachable: 0, "source unavailable: content check could not run", and the launch is blocked (hard fail) until it runs.');
   lines.push('', `Denylist (whole-word, case-insensitive): ${Object.entries(DENYLIST).map(([k, v]) => `**${k}**: ${v.join(', ')}`).join('; ')}.`);
   return lines.join('\n');
 }

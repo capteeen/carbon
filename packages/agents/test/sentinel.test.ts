@@ -39,9 +39,19 @@ describe('Sentinel', () => {
     for (const k of ['collision', 'logo', 'wallet', 'content'] as const) {
       expect(by[k]!.points).toBe(0);
       expect(by[k]!.reason.startsWith('source unavailable')).toBe(true);
-      expect(by[k]!.hardFail).toBe(false);
+      expect(by[k]!.hardFail).toBe(k === 'content');
     }
+    expect(by.content!.reason).toContain('content check could not run');
+    expect(e.payload.hardFail).toBe(true);
     expect(by.sniper!.points).toBeGreaterThan(0);
+    expect(e.payload.passed).toBe(false);
+  });
+
+  it('an unreachable content classifier blocks even when every other input is full', async () => {
+    const { score } = await setup(launchConfig('C-12', 'chain'), { classifierThrows: true });
+    const e = await score();
+    expect(e.payload.score).toBe(80);
+    expect(e.payload.score).toBeGreaterThanOrEqual(e.payload.threshold);
     expect(e.payload.passed).toBe(false);
   });
 

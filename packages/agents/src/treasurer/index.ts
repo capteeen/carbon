@@ -1,7 +1,9 @@
 /**
- * TREASURER: per-launch wallet, the launch transaction (only after a consumed
- * 'launch' approval AND a passing Sentinel score), fee claims, the idempotent
- * 50/30/20 split, and $CARBON buybacks funded only by the 30% leg.
+ * TREASURER: the launch's fee address (native pump.fun fee sharing: the
+ * sharing-config PDA; fallback: a per-launch creator wallet), the launch
+ * transaction (only after a consumed 'launch' approval AND a passing Sentinel
+ * score), the scheduled fee crank, split receipts, and $CARBON buybacks funded
+ * only by the 30% leg (buyCarbon is passed the splitId; idempotent per split).
  *
  * The only chain calls that move value are buildLaunchTx/submitLaunchTx (the
  * launch's own dev buy), runSplit and buyCarbon. Nothing else is ever traded.
@@ -31,11 +33,20 @@ export class Treasurer {
 
   constructor(private readonly ctx: AgentContext) {}
 
+  /**
+   * The launch's fee address (native mode: the coin's pump.fun sharing-config
+   * PDA; wallet mode: the per-launch creator wallet). Read from the log first,
+   * launch.deployed, else the address on Treasurer's launch approval card, so
+   * chain.createLaunchWallet runs at most once per launchId across restarts.
+   */
   async launchWallet(): Promise<string> {
-    if (!this.wallet) {
-      const dep = await latest(this.ctx, 'launch.deployed');
-      this.wallet = dep ? dep.payload.creatorWallet : (await this.ctx.chain.createLaunchWallet(this.ctx.launchId)).address;
-    }
+    if (this.wallet) return this.wallet;
+    const dep = await latest(this.ctx, 'launch.deployed');
+    const carded = (await all(this.ctx, 'approval.requested'))
+      .filter((e) => e.actor === 'treasurer' && e.payload.action === 'launch')
+      .map((e) => (e.payload.draft as ApprovalCard | null)?.details?.launchWallet)
+      .find((a): a is string => typeof a === 'string' && a.length > 0);
+    this.wallet = dep?.payload.creatorWallet ?? carded ?? (await this.ctx.chain.createLaunchWallet(this.ctx.launchId)).address;
     return this.wallet;
   }
 
@@ -55,7 +66,7 @@ export class Treasurer {
     const card: ApprovalCard = {
       title: `Launch ${d.name} ($${d.ticker})`,
       agent: 'treasurer',
-      summary: `Launch on pump.fun (${ctx.chain.network}). Your wallet signs and pays; dev buy ${ctx.config.devBuySol} SOL.`,
+      summary: `Launch on pump.fun (${ctx.chain.network}). Your wallet signs and pays; creator fees go to ${creatorWallet} and are split 50/30/20; dev buy ${ctx.config.devBuySol} SOL.`,
       details: {
         name: d.name,
         ticker: d.ticker,
@@ -63,7 +74,7 @@ export class Treasurer {
         site: d.siteUri,
         metadata: d.metadataUri,
         devBuySol: String(ctx.config.devBuySol),
-        creatorWallet,
+        launchWallet: creatorWallet,
         payer: args.launcherWallet,
         network: ctx.chain.network,
         stability: `${cleared.score.payload.score}/${cleared.score.payload.threshold}`,
@@ -100,7 +111,7 @@ export class Treasurer {
       'treasurer',
       'launch.deployed',
       { ca, txSig, creatorWallet, devBuySol: ctx.config.devBuySol, network: ctx.chain.network },
-      `Deployed $${d.ticker} on ${ctx.chain.network} after approval and Sentinel ${cleared.score.payload.score}/${cleared.score.payload.threshold}; dev buy ${ctx.config.devBuySol} SOL; creator ${creatorWallet}.`,
+      `Deployed $${d.ticker} on ${ctx.chain.network} after approval and Sentinel ${cleared.score.payload.score}/${cleared.score.payload.threshold}; dev buy ${ctx.config.devBuySol} SOL; fee address ${creatorWallet}.`,
     );
   }
 
@@ -113,7 +124,7 @@ export class Treasurer {
     for (const c of claims) {
       const last = receipts.filter((r) => r.payload.claimId === c.payload.claimId).pop();
       if (last && last.payload.legs.every((l) => l.status === 'confirmed')) continue;
-      out.push(await this.split(c.payload.claimId, last ? 'Resumed an unfinished split' : 'Split a claim that had no receipt'));
+      out.push(await this.split(c.payload.claimId, last ? 'Re-read an unfinished split' : 'Receipt for a claim that had none'));
     }
     return out;
   }
@@ -130,12 +141,17 @@ export class Treasurer {
       'treasurer',
       'fee.claimed',
       { claimId: c.claimId, lamports: c.lamports.toString(), txSig: c.txSig },
-      `Claimed ${lamportsToSol(c.lamports)} SOL of creator fees (tx ${c.txSig.slice(0, 8)}).`,
+      `Fee crank collected ${lamportsToSol(c.lamports)} SOL of creator fees (tx ${c.txSig.slice(0, 8)}).`,
     );
-    const receipt = await this.split(c.claimId, 'Split the claim 50/30/20');
+    const receipt = await this.split(c.claimId, '50/30/20 receipt');
     return { claim, receipt };
   }
 
+  /**
+   * Records the receipt the chain reports. Treasurer never moves legs itself:
+   * in native mode runSplit parses the on-chain distribution; in wallet mode
+   * the Solana package's idempotent ledger sends them.
+   */
   private async split(claimId: string, why: string): Promise<CarbonEvent<'split.receipt'>> {
     const r: SplitReceipt = await this.ctx.chain.runSplit(this.ctx.launchId, claimId);
     const legs = r.legs.map((l) => `${l.to} ${lamportsToSol(BigInt(l.lamports))} ${l.status}`).join(', ');

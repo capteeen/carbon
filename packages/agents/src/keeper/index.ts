@@ -27,9 +27,24 @@ export interface KeeperDraftResult {
 }
 
 export class Keeper {
-  private sinceId: string | undefined;
+  /** Mentions the model chose to skip this process (they leave no event; re-evaluated after a restart). */
+  private skipped = new Set<string>();
 
   constructor(private readonly ctx: AgentContext) {}
+
+  /**
+   * Mention cursor, persisted in the log: the highest mention id Keeper has
+   * put on a reply approval card (details.inReplyTo), whatever the decision.
+   */
+  async mentionCursor(): Promise<string | undefined> {
+    let max: bigint | undefined;
+    for (const e of await all(this.ctx, 'approval.requested')) {
+      if (e.actor !== 'keeper' || e.payload.action !== 'reply') continue;
+      const id = (e.payload.draft as ApprovalCard | null)?.details?.inReplyTo;
+      if (typeof id === 'string' && /^\d+$/.test(id) && (max === undefined || BigInt(id) > max)) max = BigInt(id);
+    }
+    return max?.toString();
+  }
 
   /** Reply to new mentions since deploy. Returns the published replies. */
   async respond(): Promise<CarbonEvent<'post.published'>[]> {
@@ -38,19 +53,19 @@ export class Keeper {
     const draft = await latest(ctx, 'forge.draft');
     if (!dep || !draft) return [];
     await gate(ctx, 'keeper', 'read mentions and draft replies', { ca: dep.payload.ca });
+    const cursor = await this.mentionCursor();
     let mentions: XPost[];
     try {
-      mentions = await ctx.x.mentions(ctx.launchId, this.sinceId);
+      mentions = await ctx.x.mentions(ctx.launchId, cursor);
     } catch (e) {
       await emitError(ctx, 'keeper', `Could not read mentions: ${errMsg(e)}`);
       return [];
     }
     const fresh = mentions
-      .filter((m) => Date.parse(m.createdAt) >= dep.ts && (this.sinceId === undefined || BigInt(m.id) > BigInt(this.sinceId)))
+      .filter((m) => /^\d+$/.test(m.id) && Date.parse(m.createdAt) >= dep.ts && !this.skipped.has(m.id) && (cursor === undefined || BigInt(m.id) > BigInt(cursor)))
       .sort((a, b) => (BigInt(a.id) < BigInt(b.id) ? -1 : 1));
     const out: CarbonEvent<'post.published'>[] = [];
     for (const m of fresh) {
-      this.sinceId = m.id;
       const used = await publishedInLastHour(ctx, 'reply');
       if (used >= ctx.config.repliesPerHour) {
         await emitError(ctx, 'keeper', `Reply limit reached (${used}/${ctx.config.repliesPerHour} in the last hour); ${fresh.length - out.length} mentions wait`);
@@ -71,7 +86,10 @@ export class Keeper {
       const o = obj(llmJson(res), 'keeper');
       const reply = optStr(o.reply);
       const why = optStr(o.reasoning) ?? (reply ? `Drafted a reply to mention ${m.id}.` : `Skipped mention ${m.id}.`);
-      if (!reply) continue; // skipped by the model; no action, no event
+      if (!reply) {
+        this.skipped.add(m.id); // skipped by the model; no action, no event
+        continue;
+      }
       const text = reply.slice(0, MAX_POST);
       const card: ApprovalCard = {
         title: `Reply to mention ${m.id}`,

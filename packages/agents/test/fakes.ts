@@ -233,7 +233,9 @@ export class FakeChain implements ChainClient {
   buys: { lamports: bigint; splitId: string }[] = [];
   uploads = 0;
   constructor(private approvals: FakeApprovals) {}
+  walletsCreated = 0;
   async createLaunchWallet() {
+    this.walletsCreated++;
     return { address: 'CreatorWa11et1111111111111111111111111111111' };
   }
   async buildLaunchTx(args: Parameters<ChainClient['buildLaunchTx']>[0]) {
