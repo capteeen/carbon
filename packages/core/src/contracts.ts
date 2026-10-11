@@ -354,6 +354,9 @@ export interface SentinelReport {
   hardFail: boolean;
   passed: boolean; // score >= threshold && !hardFail
   run: number; // re-run counter
+  /** The forge.draft event this score is for, and sha256 of its content (launch gate re-checks both). */
+  draftEventId?: string;
+  contentHash?: string;
 }
 
 export interface SplitReceipt {
