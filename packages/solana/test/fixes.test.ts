@@ -332,6 +332,43 @@ describe('AG-007 and foreign distributions: every claim is in the durable ledger
     expect((await s.client.scanForeignDistributions(s.launchId)).map((c) => c.txSig)).toEqual([sig]);
   });
 
+  // AG-034: a claim broadcast before a crash stays 'sent'. Settling it is bookkeeping:
+  // confirmedClaims resolves it by signature, with no new transaction (and so no approval).
+  it('[AG-034] a claim left "sent" by a crash is listed once it landed, without claimCreatorFees and without a new transaction', async () => {
+    const s = await nativeLaunch();
+    const sig = foreignDistribution(s, 3_000_000n); // the landed distribution (Carbon's own crank)
+    s.chain.signatures.delete(feeSharingConfigPda(s.mint).toBase58()); // not visible to the foreign scan
+    const claimId = id('sent');
+    await db.query(`INSERT INTO sol_claims (claim_id, launch_id, mode, state, tx_sig, raw_tx, lvbh) VALUES ($1,$2,'native','sent',$3,$4,$5)`, [
+      claimId,
+      s.launchId,
+      sig,
+      Buffer.from('signed-bytes').toString('base64'),
+      s.chain.height + 150,
+    ]);
+    const sends = s.chain.sends;
+    expect(await s.client.confirmedClaims(s.launchId)).toEqual([{ claimId, lamports: 3_000_000n, txSig: sig, origin: 'carbon' }]);
+    expect(s.chain.sends).toBe(sends); // nothing built, signed or sent
+    const r = await s.client.runSplit(s.launchId, claimId);
+    expect(r.legs.every((l) => l.status === 'confirmed' && l.txSig === sig)).toBe(true);
+  });
+
+  it('[AG-034] a "sent" claim that never landed and expired goes back to pending (a new claim stays a new, gated action)', async () => {
+    const s = await nativeLaunch();
+    const claimId = id('lost');
+    await db.query(`INSERT INTO sol_claims (claim_id, launch_id, mode, state, tx_sig, raw_tx, lvbh) VALUES ($1,$2,'native','sent',$3,$4,$5)`, [
+      claimId,
+      s.launchId,
+      'never-landed-signature',
+      Buffer.from('signed-bytes').toString('base64'),
+      s.chain.height + 150,
+    ]);
+    s.chain.expireAll();
+    expect(await s.client.confirmedClaims(s.launchId)).toEqual([]);
+    const row = (await db.query(`SELECT state, tx_sig FROM sol_claims WHERE claim_id=$1`, [claimId])).rows[0]!;
+    expect(row).toEqual({ state: 'pending', tx_sig: null });
+  });
+
   it("Carbon's own claims are never mistaken for foreign ones", async () => {
     const s = await nativeLaunch();
     const sig = foreignDistribution(s, 777n);

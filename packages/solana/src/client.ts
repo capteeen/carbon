@@ -43,7 +43,7 @@ import { buildCarbonBuyIxs, buildClaimIxs, buildCrankIxs, buildNativeLaunchIxs, 
 import * as reads from './reads.js';
 import { rpcCall, type RpcLike } from './rpc.js';
 import { takeHolderSnapshot, type SnapshotRequest, type SnapshotResult } from './snapshot.js';
-import { compileAndSign, DEFAULT_POLL, driveTxRow, PACKET_DATA_SIZE, waitForFinal, type PollOptions, type SignedTx } from './tx.js';
+import { compileAndSign, DEFAULT_POLL, driveTxRow, PACKET_DATA_SIZE, signatureStatus, waitForFinal, type PollOptions, type SignedTx } from './tx.js';
 import { keyLabel, openKeypair, sealKeypair } from './vault.js';
 import { pumpSdk } from './sdk.js';
 
@@ -440,6 +440,34 @@ export class CarbonChainClient implements ChainClient {
     return total;
   }
 
+  /**
+   * A claim whose transaction was broadcast before a crash stays 'sent'. Settling it is
+   * bookkeeping, not a new action (AG-034): one look at that exact signature, with no
+   * new transaction built or signed. Landed -> 'confirmed' (then measured and listed by
+   * confirmedClaims, so it is receipted and split without a fresh approval). Failed or
+   * expired -> back to 'pending' (nothing moved; a new claim is a new, gated action).
+   * Still in flight -> the same signed bytes are re-sent and the row stays 'sent'.
+   */
+  private async settleSentClaims(row: LaunchRow): Promise<void> {
+    const r = await this.db.query<{ claim_id: string; tx_sig: string; raw_tx: string; lvbh: string }>(
+      `SELECT claim_id, tx_sig, raw_tx, lvbh::text FROM sol_claims WHERE launch_id=$1 AND state='sent' AND tx_sig IS NOT NULL AND raw_tx IS NOT NULL AND lvbh IS NOT NULL ORDER BY created_at`,
+      [row.launch_id],
+    );
+    for (const c of r.rows) {
+      const s = await signatureStatus(this.rpc, c.tx_sig, Number(c.lvbh));
+      if (s.status === 'confirmed') {
+        await this.db.query(`UPDATE sol_claims SET state='confirmed', last_error=NULL, updated_at=now() WHERE claim_id=$1 AND state='sent' AND tx_sig=$2`, [c.claim_id, c.tx_sig]);
+      } else if (s.status === 'failed' || s.status === 'expired') {
+        await this.db.query(
+          `UPDATE sol_claims SET state='pending', tx_sig=NULL, raw_tx=NULL, lvbh=NULL, last_error=$3, updated_at=now() WHERE claim_id=$1 AND state='sent' AND tx_sig=$2`,
+          [c.claim_id, c.tx_sig, s.status === 'failed' ? `failed on chain: ${s.err ?? ''}` : 'expired before landing'],
+        );
+      } else {
+        await this.rpc.sendRawTransaction(Uint8Array.from(Buffer.from(c.raw_tx, 'base64')), { skipPreflight: true, maxRetries: 0 }).catch(() => undefined);
+      }
+    }
+  }
+
   /** A claim that confirmed on chain before its amount was recorded (crash in between): record it now. */
   private async finishUnmeasuredClaims(row: LaunchRow): Promise<void> {
     const r = await this.db.query<{ claim_id: string; tx_sig: string }>(
@@ -457,12 +485,15 @@ export class CarbonChainClient implements ChainClient {
    * Every confirmed claim of the launch, oldest first, from the durable ledger. A claim
    * row exists (with its signature) before its transaction is broadcast, so a crash
    * between the claim landing and the caller's fee.claimed append is recovered by
-   * reconciling this list against the log (AG-007).
+   * reconciling this list against the log (AG-007). A claim left 'sent' by a crash after
+   * its broadcast is settled here first, so a claim that landed is listed without a new
+   * claimCreatorFees call (and without a new approval on DIAMOND, AG-034).
    */
   async confirmedClaims(launchId: string): Promise<ClaimRecord[]> {
     await this.verifyCluster();
     return withLock(this.db, `sol:claim:${launchId}`, async () => {
       const row = await this.launchRow(launchId);
+      await this.settleSentClaims(row);
       await this.finishUnmeasuredClaims(row);
       const r = await this.db.query<{ claim_id: string; lamports: string; tx_sig: string; origin: string }>(
         `SELECT claim_id, lamports::text, tx_sig, origin FROM sol_claims WHERE launch_id=$1 AND state='confirmed' AND lamports IS NOT NULL AND tx_sig IS NOT NULL ORDER BY created_at, claim_id`,
