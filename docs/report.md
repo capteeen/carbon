@@ -68,7 +68,7 @@ No real devnet coin, X post or fee split could happen. None was faked.
 
 - There is no sample data anywhere.
 - Empty states read exactly `--.--` and "No molecules yet. Launch the first one."
-- Chapters 00–07 are tagged ILLUSTRATED EXPLAINER.
+- Chapters 00–07 each carry the line "// Illustration, not live activity".
 - Chapter 08 replays only a real recorded launch.
 - The same recorded log replays identically.
 

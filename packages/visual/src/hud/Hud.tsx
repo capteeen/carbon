@@ -62,11 +62,8 @@ export function HudTag({ children, testId }: { children: string; testId?: string
 /** HONESTY: the label every illustrated chapter carries. */
 export function IllustrationTag() {
   return (
-    <div data-testid="illustration-tag" data-honesty="illustration">
-      <HudTag>{COPY.illustrationTag}</HudTag>
-      <div className="carbon-hud__meta" style={{ marginTop: 4 }}>
-        {COPY.illustrationNote}
-      </div>
+    <div data-testid="illustration-tag" data-honesty="illustration" className="carbon-hud__meta">
+      {COPY.illustrationNote}
     </div>
   );
 }

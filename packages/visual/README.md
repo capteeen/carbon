@@ -68,7 +68,7 @@ const launches = allLaunchLogs.map(launchSummaryFromEvents).filter(Boolean);
 
 ## Honesty (enforced in code, tested in `test/honesty.test.tsx`)
 
-- **Chapters 00–07** each carry an on-screen `ILLUSTRATED EXPLAINER` tag
+- **Chapters 00–07** each carry an on-screen `// Illustration, not live activity` line
   (`data-honesty="illustration"`). Their motion is illustration and is driven only by scroll.
 - **BONDS n/4 and LOAD** come only from the `live` prop. If it is missing they show `--.--`.
   Bond orders are core's (`Bond[]`) and are never recomputed here.

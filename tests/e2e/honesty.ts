@@ -5,7 +5,7 @@
  *   tsx e2e/honesty.ts --empty=http://127.0.0.1:3201/ --replayUrl=http://127.0.0.1:3202/ \
  *       --replay=<seed json> --db=<postgres url of the replay schema> [--out=file.json]
  *
- * 1. Empty log (/): chapters 00-07 tagged ILLUSTRATED EXPLAINER; ch08 honest empty state;
+ * 1. Empty log (/): chapters 00-07 carry "// Illustration, not live activity"; ch08 honest empty state;
  *    ch09 EMPTY_GRAPHENE; BONDS/LOAD "--.--"; no hashes, feed or receipts.
  * 2. Recorded log (/): ch08 is labelled "replaying $TICKER, <date>", shows the recorded
  *    hand-off hashes in order and the real CA; two independent page loads give identical
@@ -62,9 +62,9 @@ try {
     const tags: boolean[] = [];
     for (let i = 0; i < 8; i++) {
       await scrollTo(page, mid(i));
-      tags.push(/ILLUSTRATED EXPLAINER/.test(await layerText(page, i)));
+      tags.push(/Illustration, not live activity/.test(await layerText(page, i)));
     }
-    ok('empty: chapters 00-07 each carry ILLUSTRATED EXPLAINER', tags.every(Boolean), tags);
+    ok('empty: chapters 00-07 each carry the illustration note', tags.every(Boolean), tags);
     await scrollTo(page, mid(3, 0.1));
     const proton = await layerText(page, 3);
     ok('empty: ch03 BONDS and LOAD readouts are --.--', /BONDS\s+--\.--/.test(proton) && /LOAD\s+--\.--/.test(proton), proton.replace(/\s+/g, ' ').slice(0, 300));
