@@ -1,7 +1,7 @@
 /**
  * SPEC §2: "Devnet by default. Mainnet only behind an env flag the owner sets."
- * ARCHITECTURE: mainnet only when CARBON_NETWORK=mainnet-beta AND CARBON_MAINNET_ENABLED=true.
- * Every place that decides the network: @carbon/solana (config + client construction),
+ * ARCHITECTURE: mainnet only when ARGON_NETWORK=mainnet-beta AND ARGON_MAINNET_ENABLED=true.
+ * Every place that decides the network: @argon/solana (config + client construction),
  * the worker's chain seam, the web app's displayed network, and the browser wallet RPC.
  */
 import { randomBytes } from 'node:crypto';
@@ -10,7 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Keypair } from '@solana/web3.js';
 import { describe, expect, it } from 'vitest';
-import { CarbonChainClient, NetworkGuardError, assertNetworkAllowed, loadSolanaConfig } from '@carbon/solana';
+import { ArgonChainClient, NetworkGuardError, assertNetworkAllowed, loadSolanaConfig } from '@argon/solana';
 import { network as webNetwork } from '@/server/env';
 import { createChainClient as workerChain } from '../../apps/worker/src/chain.js';
 
@@ -18,9 +18,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
 function base(extra: Record<string, string | undefined> = {}): Record<string, string | undefined> {
   return {
-    CARBON_VAULT_KEY: randomBytes(32).toString('hex'),
-    CARBON_BUYBACK_WALLET: Keypair.generate().publicKey.toBase58(),
-    CARBON_TREASURY_WALLET: Keypair.generate().publicKey.toBase58(),
+    ARGON_VAULT_KEY: randomBytes(32).toString('hex'),
+    ARGON_BUYBACK_WALLET: Keypair.generate().publicKey.toBase58(),
+    ARGON_TREASURY_WALLET: Keypair.generate().publicKey.toBase58(),
     ...extra,
   };
 }
@@ -39,10 +39,10 @@ const MATRIX: [string | undefined, string | undefined, 'devnet' | 'mainnet-beta'
   ['mainnet-beta', 'true', 'mainnet-beta'],
 ];
 
-describe('mainnet only with CARBON_NETWORK=mainnet-beta AND CARBON_MAINNET_ENABLED=true', () => {
+describe('mainnet only with ARGON_NETWORK=mainnet-beta AND ARGON_MAINNET_ENABLED=true', () => {
   for (const [net, enabled, want] of MATRIX) {
-    it(`CARBON_NETWORK=${net ?? '(unset)'} CARBON_MAINNET_ENABLED=${enabled ?? '(unset)'} → ${want}`, () => {
-      const env = base({ CARBON_NETWORK: net, CARBON_MAINNET_ENABLED: enabled });
+    it(`ARGON_NETWORK=${net ?? '(unset)'} ARGON_MAINNET_ENABLED=${enabled ?? '(unset)'} → ${want}`, () => {
+      const env = base({ ARGON_NETWORK: net, ARGON_MAINNET_ENABLED: enabled });
       if (want === 'refused') {
         expect(() => loadSolanaConfig(env)).toThrow(NetworkGuardError);
         const w = workerChain({ pool: {} as never, bus: {} as never, env: env as NodeJS.ProcessEnv });
@@ -60,34 +60,34 @@ describe('mainnet only with CARBON_NETWORK=mainnet-beta AND CARBON_MAINNET_ENABL
   }
 
   // AG-018 fixed: the flags are read exactly (never trimmed) by loadSolanaConfig, the
-  // CarbonChainClient re-check, the worker seam and the web app, so all four agree: a padded
+  // ArgonChainClient re-check, the worker seam and the web app, so all four agree: a padded
   // " true" is refused everywhere (the config used to trim it to mainnet-beta).
   it('[AG-018] a whitespace-padded flag never yields a mainnet client, and config, client, worker and web agree', () => {
-    const env = base({ CARBON_NETWORK: 'mainnet-beta', CARBON_MAINNET_ENABLED: ' true' });
+    const env = base({ ARGON_NETWORK: 'mainnet-beta', ARGON_MAINNET_ENABLED: ' true' });
     expect(() => loadSolanaConfig(env)).toThrow(NetworkGuardError);
     const w = workerChain({ pool: {} as never, bus: {} as never, env: env as NodeJS.ProcessEnv });
     expect(w.kind).toBe('unavailable');
     expect(webNetwork(env as NodeJS.ProcessEnv)).toBe('devnet');
   });
 
-  it('a hand-built config cannot bypass the guard: CarbonChainClient re-checks at construction', () => {
+  it('a hand-built config cannot bypass the guard: ArgonChainClient re-checks at construction', () => {
     const cfg = loadSolanaConfig(base());
     const forged = Object.assign(Object.create(Object.getPrototypeOf(cfg)), cfg, { network: 'mainnet-beta' });
     Object.defineProperty(forged, 'secrets', { value: cfg.secrets });
-    expect(() => new CarbonChainClient({ config: forged, rpc: {} as never, db: {} as never, env: {} })).toThrow(NetworkGuardError);
+    expect(() => new ArgonChainClient({ config: forged, rpc: {} as never, db: {} as never, env: {} })).toThrow(NetworkGuardError);
   });
 
   it('a devnet config pointed at an RPC URL that names mainnet is refused', () => {
-    expect(() => loadSolanaConfig(base({ CARBON_RPC_URL: 'https://api.mainnet-beta.solana.com' }))).toThrow(NetworkGuardError);
+    expect(() => loadSolanaConfig(base({ ARGON_RPC_URL: 'https://api.mainnet-beta.solana.com' }))).toThrow(NetworkGuardError);
     expect(() => assertNetworkAllowed('devnet', undefined, 'https://mainnet.helius-rpc.com/?api-key=x')).toThrow(NetworkGuardError);
   });
 
-  // The guard only string-matches "mainnet" in CARBON_RPC_URL. Plenty of mainnet RPC URLs do
+  // The guard only string-matches "mainnet" in ARGON_RPC_URL. Plenty of mainnet RPC URLs do
   // not contain it (e.g. https://rpc.ankr.com/solana, https://solana-rpc.publicnode.com,
   // private/self-hosted nodes). With neither flag set, such a URL yields a client that
   // labels itself devnet and moves real SOL. A genesis-hash check (getGenesisHash) would close it.
   it('[AG-011] without the two flags, an RPC endpoint that is mainnet but does not say so in its URL is refused', () => {
-    expect(() => loadSolanaConfig(base({ CARBON_RPC_URL: 'https://rpc.ankr.com/solana' }))).toThrow(NetworkGuardError);
+    expect(() => loadSolanaConfig(base({ ARGON_RPC_URL: 'https://rpc.ankr.com/solana' }))).toThrow(NetworkGuardError);
   });
 
   it('the browser wallet connection defaults to devnet and the explorer links follow the launch’s own network', () => {

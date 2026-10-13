@@ -1,11 +1,11 @@
 /** Test-only helpers (real Postgres carbon_test in a throwaway schema, real Redis). Never imported from src/. */
 import { randomBytes } from 'node:crypto';
 import pg from 'pg';
-import { createCore, type Core } from '@carbon/core';
+import { createCore, type Core } from '@argon/core';
 import { migrateAll } from '../src/migrate.js';
 
-export const TEST_DB = process.env.CARBON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
-export const TEST_REDIS = process.env.CARBON_TEST_REDIS_URL ?? 'redis://localhost:6379';
+export const TEST_DB = process.env.ARGON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
+export const TEST_REDIS = process.env.ARGON_TEST_REDIS_URL ?? 'redis://localhost:6379';
 
 export interface Env {
   core: Core;

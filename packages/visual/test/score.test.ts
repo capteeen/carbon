@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { BEDS, bedAt, cueStage } from '../src/sound/score.js';
 import { CHAPTERS, CHAPTER_RANGES, globalProgress } from '../src/story/chapters.js';
 
-const inputs = { isotope: 'C-12' as const, shape: 'ring' as const, replayHandoffs: 0 };
+const inputs = { isotope: 'Ar-36' as const, shape: 'ring' as const, replayHandoffs: 0 };
 
 describe('scroll score', () => {
   it('has one bed per chapter', () => {

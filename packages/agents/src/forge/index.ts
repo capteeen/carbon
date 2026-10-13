@@ -7,7 +7,7 @@
  * prepareDeploy() emits a second forge.draft with the same content plus
  * metadataUri (and the IPFS image URI as logoUri).
  */
-import type { CarbonEvent } from '@carbon/core';
+import type { ArgonEvent } from '@argon/core';
 import { type AgentContext, AgentRefusal, emit, gate, think } from '../context.js';
 import { hashImageBytes } from '../image/phash.js';
 import { llmJson, normalizeName, normalizeTicker, obj, optStr, str } from '../json.js';
@@ -42,8 +42,8 @@ export class Forge {
   async draft(
     narrative: Narrative,
     pick: { name: string; ticker: string },
-    opts: { revision?: Revision; previous?: CarbonEvent<'forge.draft'> } = {},
-  ): Promise<CarbonEvent<'forge.draft'>> {
+    opts: { revision?: Revision; previous?: ArgonEvent<'forge.draft'> } = {},
+  ): Promise<ArgonEvent<'forge.draft'>> {
     const ctx = this.ctx;
     const { revision, previous } = opts;
     await gate(ctx, 'forge', revision ? 'revise the coin draft' : 'create the coin draft', {
@@ -110,7 +110,7 @@ export class Forge {
   }
 
   /** After Sentinel clears the draft: upload pump.fun metadata, emit the deploy-ready forge.draft. */
-  async prepareDeploy(draft: CarbonEvent<'forge.draft'>): Promise<CarbonEvent<'forge.draft'>> {
+  async prepareDeploy(draft: ArgonEvent<'forge.draft'>): Promise<ArgonEvent<'forge.draft'>> {
     const ctx = this.ctx;
     const art = this.artifacts.get(draft.id);
     if (!art) throw new AgentRefusal('forge', 'draft artifacts not held by this Forge; re-draft before deploy');

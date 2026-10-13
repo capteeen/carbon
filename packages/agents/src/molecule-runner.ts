@@ -8,7 +8,7 @@
  *          Treasurer claim/split/buyback → Herald loop post → Keeper between.
  * DIAMOND  the CHAIN path with every agent action gated by an approval.
  */
-import type { AgentId, CarbonEvent, SentinelReport } from '@carbon/core';
+import type { AgentId, ArgonEvent, SentinelReport } from '@argon/core';
 import { type AgentContext, AgentRefusal, bondAllowed, emitError, errMsg, handoff, killSwitchEngaged, latest } from './context.js';
 import { Forge, type Revision } from './forge/index.js';
 import { Herald } from './herald/index.js';
@@ -19,23 +19,23 @@ import { lamportsToSol, type SignLaunchTx, Treasurer } from './treasurer/index.j
 
 /** The launcher's choices, answered by the web app (the user taps). */
 export interface LaunchUser {
-  chooseNarrative(proposals: CarbonEvent<'scout.proposals'>): Promise<{ narrative: number; name: number }>;
+  chooseNarrative(proposals: ArgonEvent<'scout.proposals'>): Promise<{ narrative: number; name: number }>;
   signLaunchTx: SignLaunchTx;
   /** Called when Sentinel blocks. Return a revision to re-draft and re-run, or null to stop. */
-  revise?(report: SentinelReport, draft: CarbonEvent<'forge.draft'>): Promise<Revision | null>;
+  revise?(report: SentinelReport, draft: ArgonEvent<'forge.draft'>): Promise<Revision | null>;
 }
 
 export type LaunchOutcome =
-  | { status: 'deployed'; deployed: CarbonEvent<'launch.deployed'>; announcement: CarbonEvent<'post.published'> | null }
-  | { status: 'blocked'; score: CarbonEvent<'sentinel.score'> }
+  | { status: 'deployed'; deployed: ArgonEvent<'launch.deployed'>; announcement: ArgonEvent<'post.published'> | null }
+  | { status: 'blocked'; score: ArgonEvent<'sentinel.score'> }
   | { status: 'not-approved' }
   | { status: 'stopped'; reason: string };
 
 export interface TickResult {
   claimed: boolean;
-  buyback: CarbonEvent<'buyback.executed'> | null;
-  posts: CarbonEvent<'post.published'>[];
-  replies: CarbonEvent<'post.published'>[];
+  buyback: ArgonEvent<'buyback.executed'> | null;
+  posts: ArgonEvent<'post.published'>[];
+  replies: ArgonEvent<'post.published'>[];
   stopped?: string;
 }
 
@@ -97,7 +97,7 @@ export class MoleculeRunner {
     // FORGE → SENTINEL (with revisions)
     let draft = await this.forge.draft(narrative, pick);
     await handoff(ctx, 'forge', 'sentinel', 'coin-draft', `Draft ${draft.payload.name} ($${draft.payload.ticker}) for the stability check.`, draft.id);
-    let score: CarbonEvent<'sentinel.score'>;
+    let score: ArgonEvent<'sentinel.score'>;
     let revisions = 0;
     for (;;) {
       score = await this.sentinel.score({ draft, narrative, launcherWallet });
@@ -136,7 +136,7 @@ export class MoleculeRunner {
   }
 
   /** Keeper's approved drafts reach Herald only through the hand-off it sends. */
-  private async keeperDraft(p: Promise<{ handoff: CarbonEvent<'handoff'> | null } | null>): Promise<CarbonEvent<'post.published'> | null> {
+  private async keeperDraft(p: Promise<{ handoff: ArgonEvent<'handoff'> | null } | null>): Promise<ArgonEvent<'post.published'> | null> {
     const r = await p;
     if (!r?.handoff) return null;
     return this.herald.postApproved(r.handoff);
@@ -175,9 +175,9 @@ export class MoleculeRunner {
         const facts: string[] = [];
         if (claim) {
           facts.push(`Claimed ${lamportsToSol(BigInt(claim.claim.payload.lamports))} SOL creator fees (tx ${claim.claim.payload.txSig}).`);
-          facts.push('Split 50% launcher / 30% $CARBON buyback / 20% Carbon treasury, receipt public.');
+          facts.push('Split 50% launcher / 30% $ARGON buyback / 20% Argon treasury, receipt public.');
         }
-        if (result.buyback) facts.push(`Bought $CARBON with ${lamportsToSol(BigInt(result.buyback.payload.lamportsIn))} SOL (tx ${result.buyback.payload.txSig}).`);
+        if (result.buyback) facts.push(`Bought $ARGON with ${lamportsToSol(BigInt(result.buyback.payload.lamportsIn))} SOL (tx ${result.buyback.payload.txSig}).`);
         const snap = await latest(ctx, 'holders.snapshot');
         if (snap) facts.push(`${snap.payload.holderCount} holders at slot ${snap.payload.slot}.`);
         const ref = result.buyback?.id ?? claim?.receipt.id ?? (await latest(ctx, 'launch.deployed'))!.id;

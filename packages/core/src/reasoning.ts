@@ -1,4 +1,4 @@
-import type { AgentId, CarbonEvent } from './contracts.js';
+import type { AgentId, ArgonEvent } from './contracts.js';
 import type { EventBus } from './ports.js';
 
 export class ReasoningError extends Error {
@@ -21,7 +21,7 @@ export async function emitReasoning(
   agent: AgentId,
   forEventId: string,
   text: string,
-): Promise<CarbonEvent<'reasoning'>> {
+): Promise<ArgonEvent<'reasoning'>> {
   const t = typeof text === 'string' ? text.trim() : '';
   if (!t) throw new ReasoningError('reasoning text is empty');
   if (t.length > MAX_REASONING_CHARS) throw new ReasoningError(`reasoning is a short summary (max ${MAX_REASONING_CHARS} chars)`);
@@ -31,8 +31,8 @@ export async function emitReasoning(
   return bus.append({ launchId, kind: 'reasoning', actor: agent, payload: { agent, forEventId, text: t } });
 }
 
-async function findEvent(bus: EventBus, launchId: string, id: string): Promise<CarbonEvent | undefined> {
-  const withGet = bus as EventBus & { get?: (id: string) => Promise<CarbonEvent | null> };
+async function findEvent(bus: EventBus, launchId: string, id: string): Promise<ArgonEvent | undefined> {
+  const withGet = bus as EventBus & { get?: (id: string) => Promise<ArgonEvent | null> };
   if (typeof withGet.get === 'function') {
     const e = await withGet.get(id);
     return e && e.launchId === launchId ? e : undefined;

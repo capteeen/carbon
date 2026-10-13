@@ -13,7 +13,7 @@ import {
 } from '@solana/spl-token';
 import { PublicKey, type TransactionInstruction } from '@solana/web3.js';
 import BN from 'bn.js';
-import { FEE_SPLIT_BPS } from '@carbon/core';
+import { FEE_SPLIT_BPS } from '@argon/core';
 import type { Share, TxPurpose } from './allowlist.js';
 import { ChainConfigError, ChainUnavailableError } from './errors.js';
 import { asConnection, rpcCall, type RpcLike } from './rpc.js';
@@ -39,10 +39,10 @@ export function solToLamports(sol: number): bigint {
 }
 
 /** The on-chain 50/30/20 shareholder list, in the order update_fee_shares stores it. */
-export function carbonShares(launcher: PublicKey, buyback: PublicKey, treasury: PublicKey): Share[] {
+export function argonShares(launcher: PublicKey, buyback: PublicKey, treasury: PublicKey): Share[] {
   const shares: Share[] = [
     { address: launcher, bps: FEE_SPLIT_BPS.launcher },
-    { address: buyback, bps: FEE_SPLIT_BPS.carbonBuyback },
+    { address: buyback, bps: FEE_SPLIT_BPS.argonBuyback },
     { address: treasury, bps: FEE_SPLIT_BPS.treasury },
   ];
   const total = shares.reduce((s, x) => s + x.bps, 0);
@@ -110,7 +110,7 @@ export interface BuiltLaunch {
 export async function buildNativeLaunchIxs(
   a: LaunchIxArgs & { buybackWallet: PublicKey; treasuryWallet: PublicKey; /** Who gets the 50% launcher share; defaults to the payer. Daughters pass the mother's launcher. */ shareLauncher?: PublicKey },
 ): Promise<BuiltLaunch> {
-  const shares = carbonShares(a.shareLauncher ?? a.payer, a.buybackWallet, a.treasuryWallet);
+  const shares = argonShares(a.shareLauncher ?? a.payer, a.buybackWallet, a.treasuryWallet);
   const sharing = feeSharingConfigPda(a.mint);
   const create = await PUMP_SDK.createV2Instruction({ mint: a.mint, name: a.name, symbol: a.symbol, uri: a.uri, creator: a.payer, user: a.payer, mayhemMode: false });
   const cfg = await PUMP_SDK.createFeeSharingConfig({ creator: a.payer, mint: a.mint, pool: null });
@@ -206,24 +206,24 @@ export async function buildClaimIxs(rpc: RpcLike, mint: PublicKey, creator: Publ
 }
 
 /**
- * $CARBON buy for at most `maxLamports`: on the bonding curve while it is
+ * $ARGON buy for at most `maxLamports`: on the bonding curve while it is
  * live, on the canonical PumpSwap pool once it has graduated.
  */
-export async function buildCarbonBuyIxs(rpc: RpcLike, carbonMint: PublicKey, buyer: PublicKey, maxLamports: bigint): Promise<{ instructions: TransactionInstruction[]; venue: 'curve' | 'pumpswap' }> {
+export async function buildArgonBuyIxs(rpc: RpcLike, argonMint: PublicKey, buyer: PublicKey, maxLamports: bigint): Promise<{ instructions: TransactionInstruction[]; venue: 'curve' | 'pumpswap' }> {
   const sdk = onlinePump(rpc);
-  const curveInfo = await rpcCall('$CARBON bonding curve', () => rpc.getAccountInfo(bondingCurvePda(carbonMint)));
+  const curveInfo = await rpcCall('$ARGON bonding curve', () => rpc.getAccountInfo(bondingCurvePda(argonMint)));
   const curve = curveInfo ? PUMP_SDK.decodeBondingCurve(curveInfo) : null;
   if (curve && !curve.complete) {
     const { global, feeConfig } = await fetchLaunchState(rpc);
-    const tokenProgram = (await rpcCall('$CARBON mint', () => rpc.getAccountInfo(carbonMint)))?.owner ?? TOKEN_2022_PROGRAM_ID;
-    const state = await rpcCall('fetchBuyState', () => sdk.fetchBuyState(carbonMint, buyer, tokenProgram));
+    const tokenProgram = (await rpcCall('$ARGON mint', () => rpc.getAccountInfo(argonMint)))?.owner ?? TOKEN_2022_PROGRAM_ID;
+    const state = await rpcCall('fetchBuyState', () => sdk.fetchBuyState(argonMint, buyer, tokenProgram));
     const lamports = new BN(maxLamports.toString());
     let amount = getBuyTokenAmountFromSolAmount({ global, feeConfig, mintSupply: state.bondingCurve.tokenTotalSupply, bondingCurve: state.bondingCurve, amount: lamports, quoteMint: NATIVE_MINT });
     amount = amount.muln(99).divn(100); // 1% price-move room; max_sol_cost stays maxLamports
-    const ata = getAssociatedTokenAddressSync(carbonMint, buyer, true, tokenProgram);
+    const ata = getAssociatedTokenAddressSync(argonMint, buyer, true, tokenProgram);
     const buy = await PUMP_SDK.getBuyInstructionRaw({
       user: buyer,
-      mint: carbonMint,
+      mint: argonMint,
       creator: state.bondingCurve.creator,
       amount,
       solAmount: lamports,
@@ -231,10 +231,10 @@ export async function buildCarbonBuyIxs(rpc: RpcLike, carbonMint: PublicKey, buy
       buybackFeeRecipient: buybackFeeRecipient(global),
       tokenProgram,
     });
-    return { instructions: [createAssociatedTokenAccountIdempotentInstruction(buyer, ata, buyer, carbonMint, tokenProgram), buy], venue: 'curve' };
+    return { instructions: [createAssociatedTokenAccountIdempotentInstruction(buyer, ata, buyer, argonMint, tokenProgram), buy], venue: 'curve' };
   }
   const amm = new OnlinePumpAmmSdk(asConnection(rpc));
-  const pool = canonicalPumpPoolPda(carbonMint);
+  const pool = canonicalPumpPoolPda(argonMint);
   const state = await rpcCall('PumpSwap swap state', () => amm.swapSolanaState(pool, buyer));
   // buyQuoteInput caps the spend at quote × (1 + slippage%): size the quote so the cap is maxLamports.
   const slippagePct = 1;

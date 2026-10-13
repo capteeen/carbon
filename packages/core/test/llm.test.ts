@@ -40,9 +40,9 @@ afterEach(() => {
 describe('LLM config', () => {
   it('one value per model, env-overridable', () => {
     expect(geminiModel({})).toBe(DEFAULT_GEMINI_MODEL);
-    expect(geminiModel({ CARBON_LLM_MODEL: 'gemini-x' })).toBe('gemini-x');
+    expect(geminiModel({ ARGON_LLM_MODEL: 'gemini-x' })).toBe('gemini-x');
     expect(geminiImageModel({})).toBe(DEFAULT_GEMINI_IMAGE_MODEL);
-    expect(geminiImageModel({ CARBON_LLM_IMAGE_MODEL: 'img-x' })).toBe('img-x');
+    expect(geminiImageModel({ ARGON_LLM_IMAGE_MODEL: 'img-x' })).toBe('img-x');
   });
 });
 
@@ -97,7 +97,7 @@ describe('GeminiProvider request shape (real SDK, stubbed fetch)', () => {
 
   it('plain text without grounding or schema sends neither', async () => {
     const captured = stubFetch(() => ({ id: 'i', status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: 'hello' }] }] }));
-    const res = await new GeminiProvider({ apiKey: FAKE_KEY, env: { CARBON_LLM_MODEL: 'gemini-override' } }).generate({ system: '', prompt: 'hi' });
+    const res = await new GeminiProvider({ apiKey: FAKE_KEY, env: { ARGON_LLM_MODEL: 'gemini-override' } }).generate({ system: '', prompt: 'hi' });
     expect(captured[0]!.body).toEqual({ model: 'gemini-override', input: 'hi' });
     expect(res).toMatchObject({ text: 'hello', sources: [], model: 'gemini-override' });
     expect(res).not.toHaveProperty('json');
@@ -275,7 +275,7 @@ describe.skipIf(!process.env.GEMINI_API_KEY)('Gemini live (runs only when GEMINI
   }, 60_000);
 
   it('generates an image', async () => {
-    const out = await new GeminiProvider().generateImage('a frosted crystal carbon atom on grey fog', '1:1');
+    const out = await new GeminiProvider().generateImage('a frosted crystal argon atom on grey fog', '1:1');
     expect(out.bytes.length).toBeGreaterThan(1000);
   }, 120_000);
 });

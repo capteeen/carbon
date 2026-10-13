@@ -1,8 +1,8 @@
 /**
- * Schema for @carbon/x. Kept byte-identical to migrations/0001_x_tokens.sql
+ * Schema for @argon/x. Kept byte-identical to migrations/0001_x_tokens.sql
  * (a test enforces it). Idempotent.
  */
-export const X_MIGRATION_SQL = `-- @carbon/x 0001: encrypted OAuth tokens and post dedupe ledger
+export const X_MIGRATION_SQL = `-- @argon/x 0001: encrypted OAuth tokens and post dedupe ledger
 CREATE TABLE IF NOT EXISTS x_tokens (
   launch_id          text PRIMARY KEY,
   x_user_id          text NOT NULL,
@@ -29,6 +29,6 @@ CREATE TABLE IF NOT EXISTS x_post_dedupe (
 `;
 
 /** Kept byte-identical to migrations/0002_x_tokens_wallet.sql (a test enforces it). Idempotent. */
-export const X_MIGRATION_0002_SQL = `-- @carbon/x 0002: bind each X connection to the launcher wallet that started the OAuth flow
+export const X_MIGRATION_0002_SQL = `-- @argon/x 0002: bind each X connection to the launcher wallet that started the OAuth flow
 ALTER TABLE x_tokens ADD COLUMN IF NOT EXISTS wallet text;
 `;

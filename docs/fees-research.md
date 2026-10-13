@@ -54,7 +54,7 @@ Tags used below: **[verified]** means read in a primary source. **[secondary]** 
 - `admin_cto` is signed by `Global.adminSetCreatorAuthority`, a pump.fun-controlled key.
 - It can reassign the creator of any non-mayhem coin, and for a fee-shared coin it rewrites the `SharingConfig` to the new creator at 100%.
 - Since the 2026-10 SDK it has replaced `admin_set_creator`, `admin_set_creator_fee_editable`, `set_creator_fee_bps` and `reset_fee_sharing_config*`. **[verified]** [S6]
-- pump.fun can therefore always redirect creator fees, for example after a community takeover (CTO). This is a trust assumption Carbon cannot remove.
+- pump.fun can therefore always redirect creator fees, for example after a community takeover (CTO). This is a trust assumption Argon cannot remove.
 
 ## 2. Fee percentages (current)
 
@@ -120,7 +120,7 @@ The SDK's `buildDistributeCreatorFeesInstructions` builds steps 3 and 4, plus an
 - The only way to change a locked split is pump.fun's `admin_cto`.
 
 **Social recipients.**
-- A shareholder can be a GitHub user's social-fee PDA (`create_social_fee_pda`, claimed only through the pump.fun app). Carbon does not need this.
+- A shareholder can be a GitHub user's social-fee PDA (`create_social_fee_pda`, claimed only through the pump.fun app). Argon does not need this.
 - GitHub organisations are not supported, and fees sent to one can be lost. **[verified]** [S6]
 
 **Devnet.**
@@ -177,13 +177,13 @@ Caveats:
 - **0.5% fee per Local trade** (Lightning is 1%); creation itself is free. [S18]
 - No documented devnet support.
 - No way to set fee sharing or a creator different from the signer is documented.
-- It is an opaque, server-built transaction, so Carbon would have to decode and verify it before asking the user to sign.
+- It is an opaque, server-built transaction, so Argon would have to decode and verify it before asking the user to sign.
 - It lags program upgrades. **[inferred]**
 - `collectCreatorFee` is available ("pump.fun claims creator fees all at once"), but fee-sharing coins are not mentioned. [S19]
 
 **Recommendation.** Build transactions with the official `@pump-fun/pump-sdk`. Use PumpPortal only as a reference.
 
-## 7. Recommendation for Carbon
+## 7. Recommendation for Argon
 
 **Recommended: use native fee sharing for the 50/30/20 split, set atomically in the launch transaction.** Keep the default design as a fallback, used if the devnet spike in step 1 below fails.
 
@@ -193,26 +193,26 @@ Caveats:
 2. The transaction contains, in order:
    1. `create_v2(creator = C)`
    2. `create_fee_sharing_config` (payer = C)
-   3. `update_fee_shares([launcher 5000, Carbon buyback wallet 3000, Carbon treasury 2000])`
+   3. `update_fee_shares([launcher 5000, Argon buyback wallet 3000, Argon treasury 2000])`
    4. the dev buy
 3. The user's wallet signs and pays.
 4. The same-transaction ordering is **[inferred]** and must be proven on devnet first. It may need a v0 transaction with a lookup table because of the account count.
 
 ### Choosing C
 
-- **C = the user's wallet** is simplest. The user signs everything, and Carbon then holds **no per-launch keys at all**. Once the split is locked, the user cannot change it; only pump.fun's `admin_cto` could.
+- **C = the user's wallet** is simplest. The user signs everything, and Argon then holds **no per-launch keys at all**. Once the split is locked, the user cannot change it; only pump.fun's `admin_cto` could.
 - **C = a per-launch server wallet** (the SPEC default) also works. That wallet must co-sign and pay the `sharing_config` rent. After this step the creator becomes the `sharing_config` PDA, so the wallet has no further role.
-- **I recommend C = user wallet.** It fits "the user's wallet signs and pays" and "Carbon never holds YOUR keys". On `/wallets`, list the `sharing_config` PDA and the two Carbon wallets.
+- **I recommend C = user wallet.** It fits "the user's wallet signs and pays" and "Argon never holds YOUR keys". On `/wallets`, list the `sharing_config` PDA and the two Argon wallets.
 
 ### Trade-offs
 
 **Trust**
-- *Native sharing:* pump.fun pays the launcher's 50% directly, so Carbon never holds launcher money. The split is enforced on-chain and locked (one-time policy). The remaining risk is pump.fun's `admin_cto`, which can override it.
-- *Default design:* Carbon holds 100% of the fees in server wallets until it splits them, so key custody becomes the main risk.
+- *Native sharing:* pump.fun pays the launcher's 50% directly, so Argon never holds launcher money. The split is enforced on-chain and locked (one-time policy). The remaining risk is pump.fun's `admin_cto`, which can override it.
+- *Default design:* Argon holds 100% of the fees in server wallets until it splits them, so key custody becomes the main risk.
 
 **Receipts**
 - *Native sharing:* `DistributeCreatorFeesEvent`/`TradeEvent` logs plus the transaction signature form a public, chain-native receipt.
-- *Default design:* Carbon composes receipts from its own transfers.
+- *Default design:* Argon composes receipts from its own transfers.
 
 **Idempotency**
 - *Native sharing:* one `distribute_creator_fees` is atomic, so a crash cannot double-pay. Re-running it pays only new fees.
@@ -231,17 +231,17 @@ Caveats:
 - *Default design:* no minimum.
 
 **Treasurer still has to:**
-1. Run a scheduled crank per coin: sweep any curve/pool buckets (v3), then `transfer_creator_fees_to_pump` (if graduated), then `distribute_creator_fees`, all permissionless with Carbon as fee payer. Each `DistributeCreatorFeesEvent` becomes a receipt.
-2. Buy $CARBON with the SOL that lands in the buyback wallet. This remains a Carbon-side, idempotent step: track consumed balance per receipt, so a buyback is keyed to the distribution signature.
-3. Watch for `AdminCtoEvent` on Carbon's coins and surface any CTO on `/l/[ca]`.
+1. Run a scheduled crank per coin: sweep any curve/pool buckets (v3), then `transfer_creator_fees_to_pump` (if graduated), then `distribute_creator_fees`, all permissionless with Argon as fee payer. Each `DistributeCreatorFeesEvent` becomes a receipt.
+2. Buy $ARGON with the SOL that lands in the buyback wallet. This remains an Argon-side, idempotent step: track consumed balance per receipt, so a buyback is keyed to the distribution signature.
+3. Watch for `AdminCtoEvent` on Argon's coins and surface any CTO on `/l/[ca]`.
 4. Keep `/receipts` and `/wallets` in sync.
 
 **Fallback.** If fee sharing is unavailable on devnet, or the same-transaction setup fails, use the SPEC default:
 - a per-launch creator wallet as `creator`;
 - permissionless `collect_creator_fee*` and `collect_coin_creator_fee` (sweep first);
-- then Carbon executes the 50/30/20 split with a persisted ledger.
+- then Argon executes the 50/30/20 split with a persisted ledger.
 
-Two points apply to both paths: do not use cashback (deprecated) or holder-reward (pays holders, not Carbon), and pin the SDK versions.
+Two points apply to both paths: do not use cashback (deprecated) or holder-reward (pays holders, not Argon), and pin the SDK versions.
 
 ### Open checks before building Treasurer (devnet spike)
 
@@ -297,18 +297,18 @@ Reviewed against SPEC §2. Decision:
 
 - **Primary design: native pump.fun fee sharing**, set once and atomically in the
   launch transaction, `creator = the launcher's wallet`, shares launcher 5000 /
-  Carbon buyback wallet 3000 / Carbon treasury 2000 bps. This is the "cleaner
-  native option" SPEC §2 allows: Carbon never holds the launcher's 50% or any
+  Argon buyback wallet 3000 / Argon treasury 2000 bps. This is the "cleaner
+  native option" SPEC §2 allows: Argon never holds the launcher's 50% or any
   per-launch key, the split is enforced and locked on-chain, and each
   `distribute_creator_fees` is atomic (no double payment by construction).
   The per-launch address shown on `/wallets` is the coin's `sharing-config` PDA
-  (the on-chain fee recipient), alongside the two Carbon wallets.
+  (the on-chain fee recipient), alongside the two Argon wallets.
 - **Fallback: the SPEC default design** (per-launch server creator wallet,
   encrypted at rest, permissionless collect, ledger-driven idempotent 50/30/20
-  split), selected by `CARBON_FEE_MODE=wallet`. Built and tested too, because
+  split), selected by `ARGON_FEE_MODE=wallet`. Built and tested too, because
   the native path is unverified on devnet.
 - Treasurer's remaining money paths in both modes: the scheduled crank, the
-  idempotent $CARBON buyback keyed to the distribution/split signature, and
+  idempotent $ARGON buyback keyed to the distribution/split signature, and
   receipts. It trades nothing else except the launch's own dev buy.
 - **Blocking before mainnet:** the five devnet checks above. They cannot run
   from the build sandbox (Solana RPC and pump.fun are blocked); they are an

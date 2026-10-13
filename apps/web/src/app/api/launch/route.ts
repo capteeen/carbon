@@ -7,7 +7,7 @@
  * gets 409. An X connection counts only if it was started by this same wallet
  * (AG-004); one bound to another wallet is discarded.
  */
-import { AGENT_IDS, ISOTOPES, ISOTOPE_IDS, SHAPE_IDS, launchConfig, type AgentId, type IsotopeId, type ShapeId } from '@carbon/core/contracts';
+import { AGENT_IDS, ISOTOPES, ISOTOPE_IDS, SHAPE_IDS, launchConfig, type AgentId, type IsotopeId, type ShapeId } from '@argon/core/contracts';
 import { isFresh, isWalletAddress, messages, verifyWalletSignature } from '@/lib/signing';
 import { getCore } from '@/server/core';
 import { HttpError, UUID_RE, handle, int, json, readJson, str } from '@/server/http';

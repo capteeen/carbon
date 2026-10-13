@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { CARBON_X } from '@/lib/social';
+import { ARGON_X } from '@/lib/social';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { LaunchLive } from '@/components/LaunchLive';
@@ -21,17 +21,17 @@ export async function generateMetadata({ params }: { params: Promise<{ ca: strin
   const site = siteUrl();
   const title = s.ticker ? `$${s.ticker}` : ca;
   const description = `${s.name ?? ''} · ${s.isotope} · ${s.shape.toUpperCase()} · stability ${s.score === null ? '--.--' : `${s.score}/${s.threshold}`} · CA ${ca}`;
-  const image = { url: `${site}/og/${ca}`, width: 1200, height: 630, alt: `${title} on Carbon` };
+  const image = { url: `${site}/og/${ca}`, width: 1200, height: 630, alt: `${title} on Argon` };
   return {
     title,
     description,
     metadataBase: new URL(site),
-    openGraph: { title: `${title} // CARBON`, description, url: `${site}/l/${ca}`, images: [image], type: 'website' },
+    openGraph: { title: `${title} // ARGON`, description, url: `${site}/l/${ca}`, images: [image], type: 'website' },
     twitter: {
       card: 'player',
-      site: CARBON_X.handle,
-      creator: CARBON_X.handle,
-      title: `${title} // CARBON`,
+      site: ARGON_X.handle,
+      creator: ARGON_X.handle,
+      title: `${title} // ARGON`,
       description,
       images: [image.url],
       players: [{ playerUrl: `${site}/embed/${ca}`, streamUrl: `${site}/embed/${ca}`, width: PLAYER.width, height: PLAYER.height }],

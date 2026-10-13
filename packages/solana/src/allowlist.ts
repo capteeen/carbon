@@ -1,6 +1,6 @@
 /**
  * The Treasurer trade allowlist (SPEC §2: "Treasurer never trades anything
- * except $CARBON buybacks and the launch's own dev buy").
+ * except $ARGON buybacks and the launch's own dev buy").
  *
  * Every transaction this package builds passes through `assertAllowed` with
  * the purpose it was built for. An instruction is accepted only if its
@@ -35,8 +35,8 @@ export type TxPurpose =
   | { kind: 'claim'; mint: PublicKey; creator: PublicKey }
   /** Wallet mode: one leg of the 50/30/20 split. */
   | { kind: 'split'; from: PublicKey; recipients: PublicKey[] }
-  /** $CARBON buyback funded by the buyback leg. */
-  | { kind: 'buyback'; carbonMint: PublicKey; buyer: PublicKey; maxLamports: bigint }
+  /** $ARGON buyback funded by the buyback leg. */
+  | { kind: 'buyback'; argonMint: PublicKey; buyer: PublicKey; maxLamports: bigint }
   /** Daughter airdrop: transfers of the daughter mint only. */
   | { kind: 'airdrop'; mint: PublicKey; from: PublicKey };
 
@@ -86,7 +86,7 @@ function checkPump(d: DecodedPumpIx, p: TxPurpose): void {
     eq(d.account('mint'), p.mint, 'create_v2 mint');
     eq(d.account('user'), p.payer, 'create_v2 user');
     eq(d.data['creator'] as PublicKey, p.creator, 'create_v2 creator');
-    if (d.data['isMayhemMode'] !== false) refuse('mayhem mode is not used by Carbon');
+    if (d.data['isMayhemMode'] !== false) refuse('mayhem mode is not used by Argon');
     const opt = (k: string) => (d.data[k] as { 0?: unknown } | null)?.[0];
     if (opt('isCashbackEnabled') === true) refuse('cashback coins are deprecated');
     if (opt('isHolderReward') === true) refuse('holder-reward coins pay holders, not the split');
@@ -103,12 +103,12 @@ function checkPump(d: DecodedPumpIx, p: TxPurpose): void {
       return;
     }
     if (p.kind === 'buyback') {
-      eq(mint, p.carbonMint, 'buyback mint must be $CARBON');
+      eq(mint, p.argonMint, 'buyback mint must be $ARGON');
       eq(user, p.buyer, 'buyback user');
       if (cost > p.maxLamports) refuse(`buyback cost ${cost} exceeds ${p.maxLamports}`);
       return;
     }
-    refuse(`buy outside a launch or $CARBON buyback`);
+    refuse(`buy outside a launch or $ARGON buyback`);
   }
   if (n === 'sweepCreatorFee') {
     if (p.kind !== 'crank' && p.kind !== 'claim') refuse('sweep outside a crank/claim');
@@ -131,8 +131,8 @@ function checkPump(d: DecodedPumpIx, p: TxPurpose): void {
 function checkAmm(d: DecodedPumpIx, p: TxPurpose): void {
   const n = d.name;
   if (n in AMM_BUY_COST_ARG) {
-    if (p.kind !== 'buyback') refuse('PumpSwap buy outside a $CARBON buyback');
-    eq(d.account('baseMint'), p.carbonMint, 'PumpSwap buy mint must be $CARBON');
+    if (p.kind !== 'buyback') refuse('PumpSwap buy outside a $ARGON buyback');
+    eq(d.account('baseMint'), p.argonMint, 'PumpSwap buy mint must be $ARGON');
     eq(d.account('user'), p.buyer, 'PumpSwap buy user');
     const cost = bnArg(d, AMM_BUY_COST_ARG[n]!);
     if (cost > p.maxLamports) refuse(`PumpSwap buy cost ${cost} exceeds ${p.maxLamports}`);
@@ -219,7 +219,7 @@ function checkAta(ix: TransactionInstruction, p: TxPurpose): void {
   if (!mint) refuse('malformed ATA instruction');
   const allowed: PublicKey[] = [NATIVE_MINT];
   if (p.kind === 'launch' || p.kind === 'crank' || p.kind === 'claim' || p.kind === 'airdrop') allowed.push(p.mint);
-  if (p.kind === 'buyback') allowed.push(p.carbonMint);
+  if (p.kind === 'buyback') allowed.push(p.argonMint);
   if (!allowed.some((m) => m.equals(mint))) refuse(`ATA for mint ${mint.toBase58()} not allowed for ${p.kind}`);
 }
 

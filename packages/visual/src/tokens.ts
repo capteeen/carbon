@@ -1,5 +1,5 @@
 /**
- * Carbon design tokens (SPEC §5). Pure data, safe to import from server code.
+ * Argon design tokens (SPEC §5). Pure data, safe to import from server code.
  *
  * Palette is cold, near-monochrome and foggy. Colour appears ONLY as iridescent
  * chromatic aberration during transitions and on bond/hash flashes; that colour
@@ -25,12 +25,12 @@ export const BLOCK_SIGNAL = '#B5525A' as const;
 /**
  * Fonts. Both are SIL Open Font License 1.1.
  *  - Display: Nunito Black (900), a heavy rounded sans by Vernon Adams et al.
- *    https://fonts.google.com/specimen/Nunito (OFL). Used for the CARBON wordmark
+ *    https://fonts.google.com/specimen/Nunito (OFL). Used for the ARGON wordmark
  *    and section titles only.
  *  - Mono: Space Mono 400/700 by Colophon Foundry. https://fonts.google.com/specimen/Space+Mono (OFL).
  *
  * The app loads them with next/font and exposes them as CSS variables
- * `--font-carbon-display` and `--font-carbon-mono`; the stacks below fall back
+ * `--font-argon-display` and `--font-argon-mono`; the stacks below fall back
  * to the family names (e.g. when loaded via @fontsource in the harness).
  */
 export const FONTS = {
@@ -38,28 +38,28 @@ export const FONTS = {
     family: 'Nunito',
     weight: 900,
     licence: 'SIL OFL 1.1',
-    cssVar: '--font-carbon-display',
-    stack: "var(--font-carbon-display, 'Nunito'), ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif",
+    cssVar: '--font-argon-display',
+    stack: "var(--font-argon-display, 'Nunito'), ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif",
   },
   mono: {
     family: 'Space Mono',
     weight: 400,
     licence: 'SIL OFL 1.1',
-    cssVar: '--font-carbon-mono',
-    stack: "var(--font-carbon-mono, 'Space Mono'), ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace",
+    cssVar: '--font-argon-mono',
+    stack: "var(--font-argon-mono, 'Space Mono'), ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace",
   },
 } as const;
 
 /** CSS custom properties defined in styles.css (kept in sync by a test). */
 export const CSS_VARS = {
-  fogLight: '--carbon-fog-light',
-  fogMid: '--carbon-fog-mid',
-  slate: '--carbon-slate',
-  frost: '--carbon-frost',
-  ink: '--carbon-ink',
-  blockSignal: '--carbon-block-signal',
-  fontDisplay: '--carbon-font-display',
-  fontMono: '--carbon-font-mono',
+  fogLight: '--argon-fog-light',
+  fogMid: '--argon-fog-mid',
+  slate: '--argon-slate',
+  frost: '--argon-frost',
+  ink: '--argon-ink',
+  blockSignal: '--argon-block-signal',
+  fontDisplay: '--argon-font-display',
+  fontMono: '--argon-font-mono',
 } as const;
 
 /** Linear 0..1 RGB of a #RRGGBB hex string (sRGB, not linearised). */

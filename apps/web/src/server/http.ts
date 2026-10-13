@@ -1,6 +1,6 @@
 /** Small helpers for route handlers. Error bodies never include secrets or stack traces. */
 import { verifyWalletSignature } from '@/lib/signing';
-import type { CarbonEvent } from '@carbon/core/contracts';
+import type { ArgonEvent } from '@argon/core/contracts';
 import { launchCreated } from './readmodel';
 
 export class HttpError extends Error {
@@ -50,7 +50,7 @@ export function bool(body: Record<string, unknown>, key: string): boolean {
  * Proves the request comes from the launch's launcher wallet: the signature must
  * verify over `message` against launch.created.payload.launcherWallet.
  */
-export async function requireLauncher(launchId: string, message: string, signature: string): Promise<CarbonEvent<'launch.created'>> {
+export async function requireLauncher(launchId: string, message: string, signature: string): Promise<ArgonEvent<'launch.created'>> {
   const created = await launchCreated(launchId);
   if (!created) throw new HttpError(404, 'unknown launch');
   if (!verifyWalletSignature(created.payload.launcherWallet, message, signature)) {
@@ -66,7 +66,7 @@ export function handle(fn: () => Promise<Response>): Promise<Response> {
     if (name === 'LogNotConfiguredError') return json({ error: (err as Error).message }, 503);
     if (name === 'ApprovalError') return json({ error: (err as Error).message }, 409);
     // Unknown failures: no details leak to the client.
-    console.error('[carbon/web] request failed:', name);
+    console.error('[argon/web] request failed:', name);
     return json({ error: 'internal error' }, 500);
   });
 }

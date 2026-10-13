@@ -14,7 +14,7 @@ import type { BondFlash } from '../types.js';
 
 const PENTATONIC = [0, 3, 5, 7, 10, 12, 15];
 
-class CarbonSound {
+class ArgonSound {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private delay: DelayNode | null = null;
@@ -155,7 +155,7 @@ class CarbonSound {
   }
 }
 
-export const sound = new CarbonSound();
+export const sound = new ArgonSound();
 
 export function useSoundEnabled(): boolean {
   return useSyncExternalStore(sound.subscribe, sound.isEnabled, () => false);

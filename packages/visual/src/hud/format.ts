@@ -2,7 +2,7 @@
  * HUD formatting. Pure. Real values only: anything missing, NaN or infinite
  * renders as EMPTY_READOUT ("--.--"), never as a zero or a guess.
  */
-import { EMPTY_READOUT, ISOTOPES, VALENCE, type IsotopeId } from '@carbon/core/contracts';
+import { EMPTY_READOUT, ISOTOPES, VALENCE, type IsotopeId } from '@argon/core/contracts';
 
 export { EMPTY_READOUT };
 
@@ -61,7 +61,7 @@ export function sectionHead(s: string): string {
 }
 
 const HEX64 = /^[0-9a-f]{64}$/;
-/** True for a CarbonEvent id (sha256 hex). Visuals refuse anything else as a hash. */
+/** True for a ArgonEvent id (sha256 hex). Visuals refuse anything else as a hash. */
 export function isEventId(id: unknown): id is string {
   return typeof id === 'string' && HEX64.test(id);
 }
@@ -85,7 +85,7 @@ export function replayLabel(ticker: string, deployedAt: number): string {
   return `replaying $${t}, ${fmtDate(deployedAt)}`;
 }
 
-/** "ISOTOPE_C14" from the contract table. */
+/** "ISOTOPE_AR39" from the contract table. */
 export function isotopeLabel(id: IsotopeId): string {
   return ISOTOPES[id].label;
 }

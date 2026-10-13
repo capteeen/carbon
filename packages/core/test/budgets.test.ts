@@ -16,7 +16,7 @@ const budgets = () => new PgBudgets({ bus: env.bus, pool: env.bus.pool, now: env
 describe('Budgets', () => {
   it('llm capacity per agent per rolling hour, and budget.exceeded is emitted', async () => {
     const l = await createLaunch(env.bus, 'chain');
-    const cap = launchConfig('C-12', 'chain').capacity.scout.llmCallsPerHour;
+    const cap = launchConfig('Ar-36', 'chain').capacity.scout.llmCallsPerHour;
     const b = budgets();
     for (let i = 0; i < cap; i++) await b.spend(l, 'scout', 'llm');
     await expect(b.spend(l, 'scout', 'llm')).rejects.toBeInstanceOf(BudgetExceededError);
@@ -29,7 +29,7 @@ describe('Budgets', () => {
 
   it('budgets survive a restart (new process, same database)', async () => {
     const l = await createLaunch(env.bus, 'chain');
-    const posts = launchConfig('C-12', 'chain').postsPerHour;
+    const posts = launchConfig('Ar-36', 'chain').postsPerHour;
     for (let i = 0; i < posts; i++) await budgets().spend(l, 'herald', 'post');
     // "Restart": a brand-new bus connection and a brand-new Budgets instance.
     const bus2 = await env.open();
@@ -38,9 +38,9 @@ describe('Budgets', () => {
     expect(await b2.used(l, 'herald', 'post')).toBe(posts);
   });
 
-  it('C-13 heavy Herald gets 2x posts; everyone else is unchanged', async () => {
-    const l = await createLaunch(env.bus, 'ring', 'C-13', 'herald');
-    const base = launchConfig('C-12', 'ring');
+  it('Ar-40 heavy Herald gets 2x posts; everyone else is unchanged', async () => {
+    const l = await createLaunch(env.bus, 'ring', 'Ar-40', 'herald');
+    const base = launchConfig('Ar-36', 'ring');
     const b = budgets();
     for (let i = 0; i < base.postsPerHour * 2; i++) await b.spend(l, 'herald', 'post');
     await expect(b.spend(l, 'herald', 'post')).rejects.toThrow(BudgetExceededError);
@@ -49,8 +49,8 @@ describe('Budgets', () => {
   });
 
   it('dev buy is capped at devBuySol over the launch lifetime', async () => {
-    const l = await createLaunch(env.bus, 'chain', 'C-11');
-    const cap = Math.round(launchConfig('C-11', 'chain').devBuySol * LAMPORTS_PER_SOL);
+    const l = await createLaunch(env.bus, 'chain', 'Ar-41');
+    const cap = Math.round(launchConfig('Ar-41', 'chain').devBuySol * LAMPORTS_PER_SOL);
     const b = budgets();
     await expect(b.spend(l, 'treasurer', 'devbuy-lamports', cap + 1)).rejects.toThrow(BudgetExceededError);
     await b.spend(l, 'treasurer', 'devbuy-lamports', cap);
@@ -60,7 +60,7 @@ describe('Budgets', () => {
 
   it('buyback is capped per tick (ring loop period); chain allows no buyback', async () => {
     const l = await createLaunch(env.bus, 'ring');
-    const cfg = launchConfig('C-12', 'ring');
+    const cfg = launchConfig('Ar-36', 'ring');
     const cap = Math.round(cfg.buybackSolPerTick * LAMPORTS_PER_SOL);
     const b = budgets();
     await b.spend(l, 'treasurer', 'buyback-lamports', cap);
@@ -73,7 +73,7 @@ describe('Budgets', () => {
 
   it('concurrent spends cannot overshoot', async () => {
     const l = await createLaunch(env.bus, 'chain');
-    const cap = launchConfig('C-12', 'chain').capacity.forge.llmCallsPerHour;
+    const cap = launchConfig('Ar-36', 'chain').capacity.forge.llmCallsPerHour;
     const b = budgets();
     const r = await Promise.allSettled(Array.from({ length: cap + 10 }, () => b.spend(l, 'forge', 'llm')));
     expect(r.filter((x) => x.status === 'fulfilled')).toHaveLength(cap);

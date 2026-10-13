@@ -1,4 +1,4 @@
-import type { CarbonEvent, LaunchConfig, XPost } from '@carbon/core';
+import type { ArgonEvent, LaunchConfig, XPost } from '@argon/core';
 import { expect } from 'vitest';
 import type { LaunchUser } from '../src/molecule-runner.js';
 import { FORGE_SYSTEM, HERALD_SYSTEM, KEEPER_SYSTEM, SCOUT_SYSTEM, SENTINEL_CONTENT_SYSTEM, SENTINEL_IMAGE_SYSTEM } from '../src/prompts/index.js';
@@ -73,7 +73,7 @@ export const user: LaunchUser = {
   signLaunchTx: async ({ txBase64 }) => `signed:${txBase64}`,
 };
 
-export async function created(h: Harness, cfg: LaunchConfig, line = 'frost cats on a glacier'): Promise<CarbonEvent<'launch.created'>> {
+export async function created(h: Harness, cfg: LaunchConfig, line = 'frost cats on a glacier'): Promise<ArgonEvent<'launch.created'>> {
   return h.bus.append({
     launchId: h.ctx.launchId,
     kind: 'launch.created',

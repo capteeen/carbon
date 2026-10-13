@@ -2,7 +2,7 @@
  * SPEC §2/§7: "Kill the fee split mid-run and resume: no double payment; receipts
  * match the chain." Same for buybacks and airdrops.
  *
- * Real @carbon/agents Treasurer + real @carbon/solana CarbonChainClient on the
+ * Real @argon/agents Treasurer + real @argon/solana ArgonChainClient on the
  * solana package's test-double chain (FakeChain: it deserializes and applies the
  * real signed transactions), real core bus/approvals/budgets in Postgres.
  */
@@ -13,9 +13,9 @@ import bs58 from 'bs58';
 import pg from 'pg';
 import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { launchConfig, type CarbonEvent, type ChainClient, type Core, type LaunchConfig, type SplitReceipt } from '@carbon/core';
-import { Treasurer, MoleculeRunner, type AgentContext } from '@carbon/agents';
-import { CarbonChainClient, loadSolanaConfig } from '@carbon/solana';
+import { launchConfig, type ArgonEvent, type ChainClient, type Core, type LaunchConfig, type SplitReceipt } from '@argon/core';
+import { Treasurer, MoleculeRunner, type AgentContext } from '@argon/agents';
+import { ArgonChainClient, loadSolanaConfig } from '@argon/solana';
 import { Supervisor } from '../../apps/worker/src/supervisor.js';
 import { FakeChain, type Effect } from '../../packages/solana/test/helpers/fakeChain.js';
 import { encodeAccount, eventLogs } from '../../packages/solana/test/helpers/events.js';
@@ -27,31 +27,31 @@ import { createLaunch, makeEnv, wallet, type Env } from './support/env.js';
 const FAST = { pollMs: 0, maxPolls: 3, rebroadcastEvery: 1 };
 
 function keys() {
-  return { crank: Keypair.generate(), buyback: Keypair.generate(), treasury: Keypair.generate(), carbonMint: Keypair.generate() };
+  return { crank: Keypair.generate(), buyback: Keypair.generate(), treasury: Keypair.generate(), argonMint: Keypair.generate() };
 }
 type Keys = ReturnType<typeof keys>;
 function solEnv(k: Keys, extra: Record<string, string> = {}) {
   return {
-    CARBON_VAULT_KEY: randomBytes(32).toString('hex'),
-    CARBON_BUYBACK_WALLET: k.buyback.publicKey.toBase58(),
-    CARBON_TREASURY_WALLET: k.treasury.publicKey.toBase58(),
-    CARBON_CRANK_KEY: bs58.encode(k.crank.secretKey),
-    CARBON_BUYBACK_KEY: bs58.encode(k.buyback.secretKey),
-    CARBON_MINT: k.carbonMint.publicKey.toBase58(),
+    ARGON_VAULT_KEY: randomBytes(32).toString('hex'),
+    ARGON_BUYBACK_WALLET: k.buyback.publicKey.toBase58(),
+    ARGON_TREASURY_WALLET: k.treasury.publicKey.toBase58(),
+    ARGON_CRANK_KEY: bs58.encode(k.crank.secretKey),
+    ARGON_BUYBACK_KEY: bs58.encode(k.buyback.secretKey),
+    ARGON_MINT: k.argonMint.publicKey.toBase58(),
     PINATA_JWT: 'test-jwt-not-a-secret',
     ...extra,
   } as Record<string, string>;
 }
 
-function client(env: Env, chain: FakeChain, e: Record<string, string>, cfg: LaunchConfig = launchConfig('C-12', 'ring'), db: pg.Pool = env.core.bus.pool) {
-  return new CarbonChainClient({ config: loadSolanaConfig(e), rpc: chain.rpc(), db, env: e, poll: FAST, launchConfig: async () => cfg });
+function client(env: Env, chain: FakeChain, e: Record<string, string>, cfg: LaunchConfig = launchConfig('Ar-36', 'ring'), db: pg.Pool = env.core.bus.pool) {
+  return new ArgonChainClient({ config: loadSolanaConfig(e), rpc: chain.rpc(), db, env: e, poll: FAST, launchConfig: async () => cfg });
 }
 
 function agentCtx(env: Env, core: Core, launchId: string, chain: ChainClient, config: LaunchConfig): AgentContext {
   return { bus: core.bus, handoffs: core.handoffs, approvals: core.approvals, budgets: core.budgets, llm: {} as never, x: {} as never, chain, config, launchId, now: env.clock.now, assets: { put: async () => ({ uri: 'u' }) } };
 }
 
-async function deployedLaunch(env: Env, shape: 'ring' | 'chain' = 'ring', isotope: 'C-12' | 'C-14' = 'C-12') {
+async function deployedLaunch(env: Env, shape: 'ring' | 'chain' = 'ring', isotope: 'Ar-36' | 'Ar-39' = 'Ar-36') {
   const w = wallet();
   const launchId = await createLaunch(env.core, shape, isotope, null, w.address);
   return { launchId, w };
@@ -69,7 +69,7 @@ describe('fee split: kill mid-run, resume through Treasurer (wallet mode, durabl
   async function seed(faults: FakeChain['faults']) {
     const k = keys();
     const chain = new FakeChain();
-    const e = solEnv(k, { CARBON_FEE_MODE: 'wallet' });
+    const e = solEnv(k, { ARGON_FEE_MODE: 'wallet' });
     const c = client(env, chain, e);
     const { launchId } = await deployedLaunch(env);
     const launcher = Keypair.generate().publicKey;
@@ -78,7 +78,7 @@ describe('fee split: kill mid-run, resume through Treasurer (wallet mode, durabl
     chain.fund(k.crank.publicKey, 1_000_000_000n);
     await env.core.bus.pool.query(`UPDATE sol_launches SET state='confirmed', launcher_wallet=$2 WHERE launch_id=$1`, [launchId, launcher.toBase58()]);
     const claimId = randomUUID();
-    // A confirmed claim (claim building itself is covered by @carbon/solana's tests), and its public event.
+    // A confirmed claim (claim building itself is covered by @argon/solana's tests), and its public event.
     await env.core.bus.pool.query(`INSERT INTO sol_claims (claim_id, launch_id, mode, state, tx_sig, lamports) VALUES ($1,$2,'wallet','confirmed','fixture-claim',$3)`, [claimId, launchId, TOTAL.toString()]);
     await env.core.bus.append({ launchId, kind: 'launch.deployed', actor: 'treasurer', payload: { ca: Keypair.generate().publicKey.toBase58(), txSig: 's', creatorWallet: address, devBuySol: 0.25, network: 'devnet' } });
     await env.core.bus.append({ launchId, kind: 'fee.claimed', actor: 'treasurer', payload: { claimId, lamports: TOTAL.toString(), txSig: 'fixture-claim' } });
@@ -87,14 +87,14 @@ describe('fee split: kill mid-run, resume through Treasurer (wallet mode, durabl
   }
 
   async function verify(s: Awaited<ReturnType<typeof seed>>) {
-    const expected = CarbonChainClient.splitAmounts(TOTAL);
+    const expected = ArgonChainClient.splitAmounts(TOTAL);
     const paid = (to: PublicKey) => s.chain.transfers.filter((t) => t.to === to.toBase58());
-    for (const [to, amt] of [[s.launcher, expected.launcher], [s.k.buyback.publicKey, expected['carbon-buyback']], [s.k.treasury.publicKey, expected.treasury]] as const) {
+    for (const [to, amt] of [[s.launcher, expected.launcher], [s.k.buyback.publicKey, expected['argon-buyback']], [s.k.treasury.publicKey, expected.treasury]] as const) {
       expect(paid(to)).toHaveLength(1);
       expect(paid(to)[0]!.lamports).toBe(amt);
     }
     expect(s.chain.transfers).toHaveLength(3);
-    const receipts = (await env.core.bus.list(s.launchId, { kinds: ['split.receipt'] })) as CarbonEvent<'split.receipt'>[];
+    const receipts = (await env.core.bus.list(s.launchId, { kinds: ['split.receipt'] })) as ArgonEvent<'split.receipt'>[];
     const final = receipts[receipts.length - 1]!.payload;
     // Receipt == chain: each leg's txSig landed and moved exactly that many lamports to that address.
     for (const leg of final.legs) {
@@ -118,10 +118,10 @@ describe('fee split: kill mid-run, resume through Treasurer (wallet mode, durabl
   ] as const) {
     it(`${name}: a fresh Treasurer (new process) resumes, pays each leg once, and the receipt matches the chain`, async () => {
       const s = await seed({ ...faults });
-      const t1 = new Treasurer(agentCtx(env, env.core, s.launchId, client(env, s.chain, s.e), launchConfig('C-12', 'ring')));
+      const t1 = new Treasurer(agentCtx(env, env.core, s.launchId, client(env, s.chain, s.e), launchConfig('Ar-36', 'ring')));
       await t1.resumeSplits().catch(() => undefined);
       for (let i = 0; i < 3; i++) {
-        const t = new Treasurer(agentCtx(env, env.core, s.launchId, client(env, s.chain, s.e), launchConfig('C-12', 'ring')));
+        const t = new Treasurer(agentCtx(env, env.core, s.launchId, client(env, s.chain, s.e), launchConfig('Ar-36', 'ring')));
         const out = await t.resumeSplits().catch(() => null);
         if (out && out.length === 0) break;
       }
@@ -132,8 +132,8 @@ describe('fee split: kill mid-run, resume through Treasurer (wallet mode, durabl
   it('two workers resuming the same split at once still pay each leg once', async () => {
     const s = await seed({});
     const core2 = await env.another();
-    const a = new Treasurer(agentCtx(env, env.core, s.launchId, client(env, s.chain, s.e), launchConfig('C-12', 'ring')));
-    const b = new Treasurer(agentCtx(env, core2, s.launchId, client(env, s.chain, s.e, launchConfig('C-12', 'ring'), core2.bus.pool), launchConfig('C-12', 'ring')));
+    const a = new Treasurer(agentCtx(env, env.core, s.launchId, client(env, s.chain, s.e), launchConfig('Ar-36', 'ring')));
+    const b = new Treasurer(agentCtx(env, core2, s.launchId, client(env, s.chain, s.e, launchConfig('Ar-36', 'ring'), core2.bus.pool), launchConfig('Ar-36', 'ring')));
     await Promise.all([a.resumeSplits(), b.resumeSplits()]);
     await verify(s);
   });
@@ -164,9 +164,9 @@ describe('fee claim: kill between the on-chain claim and its public event', () =
       this.pending = 0n;
       return { claimId, lamports, txSig: sig };
     }
-    /** The chain's durable claim ledger (CarbonChainClient.confirmedClaims: sol_claims rows in state confirmed). */
+    /** The chain's durable claim ledger (ArgonChainClient.confirmedClaims: sol_claims rows in state confirmed). */
     async confirmedClaims() {
-      return this.ledger.filter((x) => x.kind === 'claim').map((x) => ({ claimId: x.claimId, lamports: x.lamports, txSig: x.sig, origin: 'carbon' as const }));
+      return this.ledger.filter((x) => x.kind === 'claim').map((x) => ({ claimId: x.claimId, lamports: x.lamports, txSig: x.sig, origin: 'argon' as const }));
     }
     async runSplit(_l: string, claimId: string): Promise<SplitReceipt> {
       const c = this.ledger.find((x) => x.kind === 'claim' && x.claimId === claimId);
@@ -176,7 +176,7 @@ describe('fee claim: kill between the on-chain claim and its public event', () =
   }
 
   // Treasurer.claimAndSplit claims on chain, THEN appends fee.claimed. A crash in between
-  // leaves a confirmed claim (money moved: in wallet mode it now sits in Carbon's per-launch
+  // leaves a confirmed claim (money moved: in wallet mode it now sits in Argon's per-launch
   // wallet) with no fee.claimed event; resumeSplits only walks fee.claimed events and the
   // next claim finds nothing pending, so that claim never gets a split or a public receipt.
   it('[AG-007] every on-chain claim ends up with a fee.claimed event and a split receipt after a crash and restart', async () => {
@@ -199,10 +199,10 @@ describe('fee claim: kill between the on-chain claim and its public event', () =
         return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(t) : v;
       },
     });
-    const ctx1 = { ...agentCtx(env, env.core, launchId, chain as unknown as ChainClient, launchConfig('C-12', 'ring')), bus: crashingBus };
+    const ctx1 = { ...agentCtx(env, env.core, launchId, chain as unknown as ChainClient, launchConfig('Ar-36', 'ring')), bus: crashingBus };
     await new Treasurer(ctx1).claimAndSplit().catch(() => undefined);
     // restart: a new Treasurer, the scheduled tick's two money steps
-    const t2 = new Treasurer(agentCtx(env, env.core, launchId, chain as unknown as ChainClient, launchConfig('C-12', 'ring')));
+    const t2 = new Treasurer(agentCtx(env, env.core, launchId, chain as unknown as ChainClient, launchConfig('Ar-36', 'ring')));
     await t2.resumeSplits();
     await t2.claimAndSplit();
     const claimed = chain.ledger.filter((x) => x.kind === 'claim');
@@ -218,32 +218,32 @@ describe('fee claim: kill between the on-chain claim and its public event', () =
   // fee claims are scheduled Treasurer work, not autopilot.
   it('[AG-008] after the kill switch, the scheduled fee claim + split still runs (only autopilot stops)', async () => {
     const w = wallet();
-    const launchId = await createLaunch(env.core, 'chain', 'C-12', null, w.address);
+    const launchId = await createLaunch(env.core, 'chain', 'Ar-36', null, w.address);
     await env.core.bus.append({ launchId, kind: 'launch.deployed', actor: 'treasurer', payload: { ca: 'Mint', txSig: 's', creatorWallet: 'Fee', devBuySol: 0.1, network: 'devnet' } });
     await env.core.approvals.killSwitch(launchId, w.address, 'stop autopilot');
     const chain = new LedgerChain();
     chain.pending = 5_000_000n;
-    const runner = new MoleculeRunner(agentCtx(env, env.core, launchId, chain as unknown as ChainClient, launchConfig('C-12', 'chain')), { chooseNarrative: async () => ({ narrative: 0, name: 0 }), signLaunchTx: async () => '' });
+    const runner = new MoleculeRunner(agentCtx(env, env.core, launchId, chain as unknown as ChainClient, launchConfig('Ar-36', 'chain')), { chooseNarrative: async () => ({ narrative: 0, name: 0 }), signLaunchTx: async () => '' });
     const r = await runner.tick();
     expect(r.claimed).toBe(true);
   });
 });
 
-describe('$CARBON buyback: receipts match the chain, one receipt per buy', () => {
+describe('$ARGON buyback: receipts match the chain, one receipt per buy', () => {
   let env: Env;
   beforeAll(async () => {
     env = await makeEnv();
   });
   afterAll(async () => env.cleanup());
 
-  const LEG = 50_000_000n; // 0.05 SOL buyback leg; RING C-12 cap is 0.01 SOL per tick
+  const LEG = 50_000_000n; // 0.05 SOL buyback leg; RING Ar-36 cap is 0.01 SOL per tick
 
   async function setup() {
     const k = keys();
     const chain = new FakeChain();
     const g = fixtureGlobal();
     chain.accounts.set(pumpSdk.GLOBAL_PDA.toBase58(), { data: await encodeAccount('pump', 'global', g as never), owner: PUMP_PROGRAM_ID, lamports: 1, executable: false });
-    chain.accounts.set(pumpSdk.bondingCurvePda(k.carbonMint.publicKey).toBase58(), {
+    chain.accounts.set(pumpSdk.bondingCurvePda(k.argonMint.publicKey).toBase58(), {
       data: await encodeAccount('pump', 'bondingCurve', {
         virtualTokenReserves: g.initialVirtualTokenReserves,
         virtualSolReserves: g.initialVirtualSolReserves,
@@ -257,7 +257,7 @@ describe('$CARBON buyback: receipts match the chain, one receipt per buy', () =>
       lamports: 1,
       executable: false,
     });
-    chain.accounts.set(k.carbonMint.publicKey.toBase58(), { data: Buffer.alloc(82), owner: TOKEN_2022_PROGRAM_ID, lamports: 1, executable: false });
+    chain.accounts.set(k.argonMint.publicKey.toBase58(), { data: Buffer.alloc(82), owner: TOKEN_2022_PROGRAM_ID, lamports: 1, executable: false });
     const spentOnChain: bigint[] = [];
     chain.onTx = (_tx, ixs): Effect | void => {
       const buy = ixs.find((ix) => decodePumpIx(ix)?.name === 'buy');
@@ -266,12 +266,12 @@ describe('$CARBON buyback: receipts match the chain, one receipt per buy', () =>
       const sol = max - 200_000n;
       spentOnChain.push(sol + 95_000n + 30_000n);
       return {
-        logs: eventLogs(PUMP_PROGRAM_ID, 'pump', 'tradeEvent', { mint: k.carbonMint.publicKey, isBuy: true, user: k.buyback.publicKey, solAmount: new BN(sol.toString()), fee: new BN(95_000), creatorFee: new BN(30_000) }),
+        logs: eventLogs(PUMP_PROGRAM_ID, 'pump', 'tradeEvent', { mint: k.argonMint.publicKey, isBuy: true, user: k.buyback.publicKey, solAmount: new BN(sol.toString()), fee: new BN(95_000), creatorFee: new BN(30_000) }),
         preTokenBalances: [],
-        postTokenBalances: [{ accountIndex: 1, mint: k.carbonMint.publicKey.toBase58(), owner: k.buyback.publicKey.toBase58(), amount: 351_234_567n }],
+        postTokenBalances: [{ accountIndex: 1, mint: k.argonMint.publicKey.toBase58(), owner: k.buyback.publicKey.toBase58(), amount: 351_234_567n }],
       };
     };
-    const cfg = launchConfig('C-12', 'ring');
+    const cfg = launchConfig('Ar-36', 'ring');
     const e = solEnv(k);
     const c = client(env, chain, e, cfg);
     const { launchId, w } = await deployedLaunch(env);
@@ -281,13 +281,13 @@ describe('$CARBON buyback: receipts match the chain, one receipt per buy', () =>
     const splitId = `split_${claimId}`;
     await env.core.bus.pool.query(`INSERT INTO sol_claims (claim_id, launch_id, mode, state, tx_sig, lamports) VALUES ($1,$2,'native','confirmed','fixture',$3)`, [claimId, launchId, (LEG * 10n / 3n).toString()]);
     await env.core.bus.pool.query(`INSERT INTO sol_splits (split_id, claim_id, launch_id, mode, total) VALUES ($1,$2,$3,'native',$4)`, [splitId, claimId, launchId, (LEG * 10n / 3n).toString()]);
-    await env.core.bus.pool.query(`INSERT INTO split_ledger (claim_id, leg, launch_id, address, lamports, state, tx_sig) VALUES ($1,'carbon-buyback',$2,$3,$4,'confirmed','fixture')`, [claimId, launchId, k.buyback.publicKey.toBase58(), LEG.toString()]);
+    await env.core.bus.pool.query(`INSERT INTO split_ledger (claim_id, leg, launch_id, address, lamports, state, tx_sig) VALUES ($1,'argon-buyback',$2,$3,$4,'confirmed','fixture')`, [claimId, launchId, k.buyback.publicKey.toBase58(), LEG.toString()]);
     await env.core.bus.append({ launchId, kind: 'launch.deployed', actor: 'treasurer', payload: { ca: 'Mint', txSig: 's', creatorWallet: 'Fee', devBuySol: 0.25, network: 'devnet' } });
     await env.core.bus.append({
       launchId,
       kind: 'split.receipt',
       actor: 'treasurer',
-      payload: { splitId, claimId, totalLamports: (LEG * 10n / 3n).toString(), legs: [{ to: 'carbon-buyback', address: k.buyback.publicKey.toBase58(), lamports: LEG.toString(), txSig: 'fixture', status: 'confirmed' }], at: 0 },
+      payload: { splitId, claimId, totalLamports: (LEG * 10n / 3n).toString(), legs: [{ to: 'argon-buyback', address: k.buyback.publicKey.toBase58(), lamports: LEG.toString(), txSig: 'fixture', status: 'confirmed' }], at: 0 },
     });
     await env.core.approvals.setAutopilot(launchId, 'buybacks', true, w.address);
     const treasurer = new Treasurer(agentCtx(env, env.core, launchId, c, cfg));
@@ -310,8 +310,8 @@ describe('$CARBON buyback: receipts match the chain, one receipt per buy', () =>
     expect(BigInt(b!.payload.lamportsIn)).toBe(s.spentOnChain[0]);
   });
 
-  // buyCarbon is idempotent per splitId (ONE buy per split). When the 30% leg is larger than
-  // the per-tick cap, Treasurer sees "remaining funds" on the next tick and calls buyCarbon
+  // buyArgon is idempotent per splitId (ONE buy per split). When the 30% leg is larger than
+  // the per-tick cap, Treasurer sees "remaining funds" on the next tick and calls buyArgon
   // again for the same split; the client returns the FIRST buy's signature and Treasurer
   // publishes a second buyback.executed for a purchase that never happened.
   it('[AG-005] two ticks never publish two buyback receipts for one on-chain buy', async () => {
@@ -319,7 +319,7 @@ describe('$CARBON buyback: receipts match the chain, one receipt per buy', () =>
     await s.treasurer.buyback();
     env.clock.advance(11 * 60_000); // next RING tick: the per-tick budget window has rolled
     await s.treasurer.buyback().catch(() => null);
-    const evs = (await env.core.bus.list(s.launchId, { kinds: ['buyback.executed'] })) as CarbonEvent<'buyback.executed'>[];
+    const evs = (await env.core.bus.list(s.launchId, { kinds: ['buyback.executed'] })) as ArgonEvent<'buyback.executed'>[];
     const sigs = evs.map((e) => e.payload.txSig);
     expect(new Set(sigs).size).toBe(sigs.length);
     expect(evs.length).toBe(s.spentOnChain.length);
@@ -372,13 +372,13 @@ describe('airdrops: kill mid-send and resume', () => {
         return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(t) : v;
       },
     }) as pg.Pool;
-    const cfg = launchConfig('C-14', 'chain');
+    const cfg = launchConfig('Ar-39', 'chain');
     const c = client(env, chain, solEnv(k), cfg, flakyPool);
-    const { launchId } = await deployedLaunch(env, 'chain', 'C-14');
+    const { launchId } = await deployedLaunch(env, 'chain', 'Ar-39');
     await env.core.bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: { name: 'Mother', ticker: 'MOM', lore: 'x', logoUri: 'https://ipfs.io/ipfs/x', logoHash: '0'.repeat(16), bannerUri: 'u', siteUri: 'u' } });
     const deployed = await env.core.bus.append({ launchId, kind: 'launch.deployed', actor: 'treasurer', payload: { ca: Keypair.generate().publicKey.toBase58(), txSig: 's', creatorWallet: 'Fee', devBuySol: 0.1, network: 'devnet' } });
-    const created = (await env.core.bus.list(launchId, { kinds: ['launch.created'] }))[0] as CarbonEvent<'launch.created'>;
-    env.clock.advance(7 * 24 * 3600_000 + 1000); // the C-14 clock ran out
+    const created = (await env.core.bus.list(launchId, { kinds: ['launch.created'] }))[0] as ArgonEvent<'launch.created'>;
+    env.clock.advance(7 * 24 * 3600_000 + 1000); // the Ar-39 clock ran out
     const sup = new Supervisor({
       core: env.core,
       pool: flakyPool,

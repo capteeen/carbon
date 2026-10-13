@@ -5,18 +5,18 @@
  *   carbon_worker_launches so only one worker runs it).
  * - After deploy: emits wallet.created (once) and decay.started (unstable isotopes,
  *   once), then runs the launch's schedule (RING loop every loopMinutes, otherwise
- *   the Treasurer fee-claim schedule) and, for C-11/C-14, the decay watcher.
+ *   the Treasurer fee-claim schedule) and, for Ar-41/Ar-39, the decay watcher.
  * - Restarts: every schedule's next run is computed from the log (the last loop
  *   hand-off / fee claim / deploy event), decay state lives in sol_decay, and a
  *   pre-deploy flow that was running when the worker stopped is marked
  *   interrupted with a public `error` event (the agents' flow is not resumable
  *   mid-way; re-running it would duplicate Scout/Forge work and approvals).
  */
-import { MoleculeRunner, type AgentContext, type AssetStore, type LaunchUser, type RunnerOptions } from '@carbon/agents';
+import { MoleculeRunner, type AgentContext, type AssetStore, type LaunchUser, type RunnerOptions } from '@argon/agents';
 import {
   ISOTOPES,
   configFromCreated,
-  type CarbonEvent,
+  type ArgonEvent,
   type Core,
   type DecayRule,
   type EventKind,
@@ -24,8 +24,8 @@ import {
   type LaunchConfig,
   type LlmProvider,
   type XClient,
-} from '@carbon/core';
-import { DecayWatcher, type CarbonChainClient } from '@carbon/solana';
+} from '@argon/core';
+import { DecayWatcher, type ArgonChainClient } from '@argon/solana';
 import type pg from 'pg';
 import type { WorkerChain } from './chain.js';
 import { WebLaunchUser } from './launch-user.js';
@@ -65,8 +65,8 @@ export class Supervisor {
 
   constructor(private readonly d: SupervisorDeps) {
     this.now = d.now ?? Date.now;
-    this.log = d.log ?? ((m) => console.log(`[carbon/worker] ${m}`));
-    this.decay = d.chain.kind === 'solana' ? new DecayWatcher({ client: d.chain.client as CarbonChainClient, db: d.pool, now: this.now }) : null;
+    this.log = d.log ?? ((m) => console.log(`[argon/worker] ${m}`));
+    this.decay = d.chain.kind === 'solana' ? new DecayWatcher({ client: d.chain.client as ArgonChainClient, db: d.pool, now: this.now }) : null;
   }
 
   private get bus() {
@@ -78,7 +78,7 @@ export class Supervisor {
     return { bus, handoffs, approvals, budgets, llm: this.d.llm, x: this.d.x, chain: this.d.chain.client, config, launchId, now: this.now, assets: this.d.assets };
   }
 
-  private runner(launchId: string, created: CarbonEvent<'launch.created'>): Runner {
+  private runner(launchId: string, created: ArgonEvent<'launch.created'>): Runner {
     let r = this.runners.get(launchId);
     if (!r) {
       const user = this.d.makeUser
@@ -92,14 +92,14 @@ export class Supervisor {
     return r;
   }
 
-  private async events(launchId: string, kinds?: EventKind[]): Promise<CarbonEvent[]> {
+  private async events(launchId: string, kinds?: EventKind[]): Promise<ArgonEvent[]> {
     return this.bus.list(launchId, kinds ? { kinds } : {});
   }
 
   /** Boot: recover state from the log, then follow new launches. */
   async start(): Promise<void> {
     const from = await this.maxSeq();
-    const created = (await this.bus.list('*', { kinds: ['launch.created'] })) as CarbonEvent<'launch.created'>[];
+    const created = (await this.bus.list('*', { kinds: ['launch.created'] })) as ArgonEvent<'launch.created'>[];
     const seen = new Set<string>();
     for (const c of created) {
       if (seen.has(c.launchId)) continue;
@@ -109,7 +109,7 @@ export class Supervisor {
     this.unsubscribe = this.bus.subscribe(
       '*',
       (e) => {
-        if (e.kind === 'launch.created' && !this.stopped) void this.claimAndRun(e as CarbonEvent<'launch.created'>);
+        if (e.kind === 'launch.created' && !this.stopped) void this.claimAndRun(e as ArgonEvent<'launch.created'>);
       },
       { afterSeq: from },
     );
@@ -120,9 +120,9 @@ export class Supervisor {
     return r.rows[0]?.m ? Number(r.rows[0].m) : 0;
   }
 
-  private async recover(created: CarbonEvent<'launch.created'>): Promise<void> {
+  private async recover(created: ArgonEvent<'launch.created'>): Promise<void> {
     const launchId = created.launchId;
-    const deployed = (await this.events(launchId, ['launch.deployed']))[0] as CarbonEvent<'launch.deployed'> | undefined;
+    const deployed = (await this.events(launchId, ['launch.deployed']))[0] as ArgonEvent<'launch.deployed'> | undefined;
     if (deployed) {
       await this.afterDeploy(created, deployed);
       return;
@@ -146,7 +146,7 @@ export class Supervisor {
   }
 
   /** Claims the launch (one worker only) and runs its flow. */
-  async claimAndRun(created: CarbonEvent<'launch.created'>): Promise<void> {
+  async claimAndRun(created: ArgonEvent<'launch.created'>): Promise<void> {
     const launchId = created.launchId;
     const first = (await this.events(launchId, ['launch.created']))[0];
     if (!first || first.id !== created.id) return; // only the launch's first launch.created counts
@@ -160,7 +160,7 @@ export class Supervisor {
     await p;
   }
 
-  private async runFlow(created: CarbonEvent<'launch.created'>): Promise<void> {
+  private async runFlow(created: ArgonEvent<'launch.created'>): Promise<void> {
     const launchId = created.launchId;
     let outcome: string;
     try {
@@ -176,7 +176,7 @@ export class Supervisor {
   }
 
   /** Once deployed: public wallet + decay events (once each), then the schedules. */
-  private async afterDeploy(created: CarbonEvent<'launch.created'>, deployed: CarbonEvent<'launch.deployed'>): Promise<void> {
+  private async afterDeploy(created: ArgonEvent<'launch.created'>, deployed: ArgonEvent<'launch.deployed'>): Promise<void> {
     const launchId = created.launchId;
     const log = await this.events(launchId, ['wallet.created', 'decay.started']);
     if (!log.some((e) => e.kind === 'wallet.created')) {
@@ -196,7 +196,7 @@ export class Supervisor {
   }
 
   /** Next tick = last logged tick (loop hand-off, fee claim or deploy) + period. */
-  async nextTickAt(created: CarbonEvent<'launch.created'>): Promise<number> {
+  async nextTickAt(created: ArgonEvent<'launch.created'>): Promise<number> {
     const cfg = configFromCreated(created.payload);
     const periodMs = (cfg.loopMinutes ?? CLAIM_EVERY_MINUTES) * 60_000;
     const evs = await this.events(created.launchId, ['handoff', 'fee.claimed', 'launch.deployed']);
@@ -208,7 +208,7 @@ export class Supervisor {
     return last + periodMs;
   }
 
-  private async scheduleTick(created: CarbonEvent<'launch.created'>): Promise<void> {
+  private async scheduleTick(created: ArgonEvent<'launch.created'>): Promise<void> {
     if (this.stopped) return;
     const key = `tick:${created.launchId}`;
     const at = await this.nextTickAt(created);
@@ -226,7 +226,7 @@ export class Supervisor {
     });
   }
 
-  private scheduleDecay(created: CarbonEvent<'launch.created'>, deployed: CarbonEvent<'launch.deployed'>, delay: number): void {
+  private scheduleDecay(created: ArgonEvent<'launch.created'>, deployed: ArgonEvent<'launch.deployed'>, delay: number): void {
     if (this.stopped) return;
     const key = `decay:${created.launchId}`;
     if (!this.decay) {
@@ -243,10 +243,10 @@ export class Supervisor {
   }
 
   /** One decay step; appends the watcher's events in order and acks each. Returns true when finished. */
-  async decayTick(created: CarbonEvent<'launch.created'>, deployed: CarbonEvent<'launch.deployed'>): Promise<boolean> {
+  async decayTick(created: ArgonEvent<'launch.created'>, deployed: ArgonEvent<'launch.deployed'>): Promise<boolean> {
     if (!this.decay) return false;
     const launchId = created.launchId;
-    const drafts = (await this.events(launchId, ['forge.draft'])) as CarbonEvent<'forge.draft'>[];
+    const drafts = (await this.events(launchId, ['forge.draft'])) as ArgonEvent<'forge.draft'>[];
     const draft = drafts[drafts.length - 1];
     if (!draft) return false;
     const cfg = configFromCreated(created.payload);

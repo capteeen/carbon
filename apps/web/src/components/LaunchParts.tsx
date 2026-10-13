@@ -1,6 +1,6 @@
 'use client';
 /** Pieces shared by /launch and /l/[ca]. Every value shown is read from a logged event. */
-import { EMPTY_READOUT, type CarbonEvent, type SentinelReport } from '@carbon/core/contracts';
+import { EMPTY_READOUT, type ArgonEvent, type SentinelReport } from '@argon/core/contracts';
 import { useState } from 'react';
 import { postJson } from '@/lib/api';
 import { shortId, type PendingApproval } from '@/lib/launch-view';
@@ -16,7 +16,7 @@ const INPUT_LABELS: Record<SentinelReport['inputs'][number]['key'], string> = {
   content: 'CONTENT RULES',
 };
 
-export function SentinelReportView({ score }: { score: CarbonEvent<'sentinel.score'> | null }) {
+export function SentinelReportView({ score }: { score: ArgonEvent<'sentinel.score'> | null }) {
   if (!score) return <p className="meta">STABILITY {EMPTY_READOUT}</p>;
   const r = score.payload;
   return (
@@ -43,7 +43,7 @@ export function SentinelReportView({ score }: { score: CarbonEvent<'sentinel.sco
   );
 }
 
-export function ThinkingFeed({ reasoning }: { reasoning: CarbonEvent<'reasoning'>[] }) {
+export function ThinkingFeed({ reasoning }: { reasoning: ArgonEvent<'reasoning'>[] }) {
   return (
     <div data-testid="thinking-feed">
       <p className="hud-label">THINKING FEED // agent reasoning</p>
@@ -65,7 +65,7 @@ export function ThinkingFeed({ reasoning }: { reasoning: CarbonEvent<'reasoning'
   );
 }
 
-export function EventLog({ events }: { events: CarbonEvent[] }) {
+export function EventLog({ events }: { events: ArgonEvent[] }) {
   return (
     <details>
       <summary className="hud-label">EVENT LOG ({events.length})</summary>

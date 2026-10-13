@@ -8,16 +8,16 @@
  */
 import { randomBytes, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { launchConfig, type AgentId, type Core } from '@carbon/core';
-import { ApprovalRequiredError, AUTH_COOKIE_NAME, createXClient, PgTokenStore, TokenCipher, XConnectionTakenError } from '@carbon/x';
+import { launchConfig, type AgentId, type Core } from '@argon/core';
+import { ApprovalRequiredError, AUTH_COOKIE_NAME, createXClient, PgTokenStore, TokenCipher, XConnectionTakenError } from '@argon/x';
 import { consumedApprovalCheck } from '../../apps/worker/src/x.js';
 import { makeEnv, wallet, type Env } from './support/env.js';
 
 let env: Env;
 const X_ENV = {
   X_CLIENT_ID: 'agent-g-client',
-  X_REDIRECT_URI: 'https://carbon.invalid/api/x/callback',
-  CARBON_TOKEN_KEY: randomBytes(32).toString('hex'),
+  X_REDIRECT_URI: 'https://argon.invalid/api/x/callback',
+  ARGON_TOKEN_KEY: randomBytes(32).toString('hex'),
 };
 
 // Web modules are imported after the env points at this test's schema.
@@ -32,11 +32,11 @@ let web: {
 };
 let webCore: Core;
 
-const post = (url: string, body: unknown) => new Request(`http://carbon.test${url}`, { method: 'POST', body: JSON.stringify(body) });
+const post = (url: string, body: unknown) => new Request(`http://argon.test${url}`, { method: 'POST', body: JSON.stringify(body) });
 
 beforeAll(async () => {
   env = await makeEnv();
-  Object.assign(process.env, { DATABASE_URL: env.dbUrl, REDIS_URL: 'redis://localhost:6379', CARBON_AGENT_KEY_SEED: env.seed }, X_ENV);
+  Object.assign(process.env, { DATABASE_URL: env.dbUrl, REDIS_URL: 'redis://localhost:6379', ARGON_AGENT_KEY_SEED: env.seed }, X_ENV);
   web = {
     createLaunch: (await import('@/app/api/launch/route')).POST,
     approve: (await import('@/app/api/approvals/[approvalId]/route')).POST,
@@ -53,7 +53,7 @@ afterAll(async () => {
   await env.cleanup();
 });
 
-async function launchViaWeb(w = wallet(), shape: 'chain' | 'ring' | 'diamond' = 'ring', launchId = randomUUID(), isotope: 'C-12' | 'C-13' = 'C-12', heavyAgent: AgentId | null = null) {
+async function launchViaWeb(w = wallet(), shape: 'chain' | 'ring' | 'diamond' = 'ring', launchId = randomUUID(), isotope: 'Ar-36' | 'Ar-40' = 'Ar-36', heavyAgent: AgentId | null = null) {
   const issuedAt = Date.now();
   const line = 'frozen lattice coin';
   const signature = w.sign(web.messages.createLaunch({ launchId, line, isotope, shape, heavyAgent, issuedAt }));
@@ -66,11 +66,11 @@ describe('launch creation is signed by the launcher wallet', () => {
     const { res, launchId, w } = await launchViaWeb();
     expect(res.status).toBe(201);
     const issuedAt = Date.now();
-    const sig = w.sign(web.messages.createLaunch({ launchId: randomUUID(), line: 'x', isotope: 'C-12', shape: 'ring', heavyAgent: null, issuedAt }));
+    const sig = w.sign(web.messages.createLaunch({ launchId: randomUUID(), line: 'x', isotope: 'Ar-36', shape: 'ring', heavyAgent: null, issuedAt }));
     const other = wallet();
-    const r2 = await web.createLaunch(post('/api/launch', { launchId: randomUUID(), line: 'x', isotope: 'C-12', shape: 'diamond', heavyAgent: null, wallet: w.address, issuedAt, signature: sig }));
+    const r2 = await web.createLaunch(post('/api/launch', { launchId: randomUUID(), line: 'x', isotope: 'Ar-36', shape: 'diamond', heavyAgent: null, wallet: w.address, issuedAt, signature: sig }));
     expect(r2.status).toBe(401);
-    const r3 = await web.createLaunch(post('/api/launch', { launchId: randomUUID(), line: 'x', isotope: 'C-12', shape: 'ring', heavyAgent: null, wallet: other.address, issuedAt, signature: sig }));
+    const r3 = await web.createLaunch(post('/api/launch', { launchId: randomUUID(), line: 'x', isotope: 'Ar-36', shape: 'ring', heavyAgent: null, wallet: other.address, issuedAt, signature: sig }));
     expect(r3.status).toBe(401);
     // An existing launch id cannot be taken over.
     const again = await launchViaWeb(wallet(), 'ring', launchId);
@@ -97,7 +97,7 @@ describe('approval decisions', () => {
   it('forged: random bytes as a signature, and the launcher signing a different text, are refused', async () => {
     const { approvalId, w, call, status } = await card();
     expect((await call({ decision: 'grant', signature: 'x'.repeat(88) })).status).toBe(401);
-    expect((await call({ decision: 'grant', signature: w.sign(`CARBON // APPROVAL\napproval: ${approvalId}\ndecision: grant `) })).status).toBe(401);
+    expect((await call({ decision: 'grant', signature: w.sign(`ARGON // APPROVAL\napproval: ${approvalId}\ndecision: grant `) })).status).toBe(401);
     expect(await status()).toBe('pending');
   });
 
@@ -255,9 +255,9 @@ describe('X posting needs a consumed approval for exactly that launch and action
 function signedXConnect(launchId: string, w: ReturnType<typeof wallet>, issuedAt = Date.now(), headers: Record<string, string> = {}) {
   const signature = w.sign(web.messages.xConnect({ launchId, wallet: w.address, issuedAt }));
   return web.xConnect(
-    new Request('http://carbon.test/api/x/connect', {
+    new Request('http://argon.test/api/x/connect', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', origin: 'http://carbon.test', 'sec-fetch-site': 'same-origin', ...headers },
+      headers: { 'content-type': 'application/json', origin: 'http://argon.test', 'sec-fetch-site': 'same-origin', ...headers },
       body: JSON.stringify({ launchId, wallet: w.address, issuedAt, signature }),
     }),
   );
@@ -266,7 +266,7 @@ function signedXConnect(launchId: string, w: ReturnType<typeof wallet>, issuedAt
 describe('X account binding', () => {
   // GET /api/x/connect?launch=<id> works for ANY not-yet-created launch id without a wallet
   // signature, and POST /api/launch then accepts that id from ANY wallet. An attacker who
-  // gets a victim to connect X under an attacker-chosen id (a link to Carbon's own
+  // gets a victim to connect X under an attacker-chosen id (a link to Argon's own
   // /api/x/connect?launch=…) can create the launch first and own the victim's X account
   // for posting (the attacker approves the posts).
   // Fix round: connect is now a signed, same-origin POST (no GET link), so the only flow a
@@ -312,14 +312,14 @@ describe('X account binding', () => {
   it('[AG-004] connect needs a fresh wallet signature, JSON, same origin, and is single-use', async () => {
     const w = wallet();
     const launchId = randomUUID();
-    expect((await web.xConnect(new Request(`http://carbon.test/api/x/connect?launch=${launchId}`))).status).not.toBe(200);
+    expect((await web.xConnect(new Request(`http://argon.test/api/x/connect?launch=${launchId}`))).status).not.toBe(200);
     expect((await signedXConnect(launchId, w, Date.now(), { 'content-type': 'text/plain' })).status).toBe(415);
     expect((await signedXConnect(launchId, w, Date.now(), { origin: 'https://evil.example', 'sec-fetch-site': 'cross-site' })).status).toBe(403);
     expect((await signedXConnect(launchId, w, Date.now() - 10 * 60_000)).status).toBe(401);
     const other = wallet();
     const forged = other.sign(web.messages.xConnect({ launchId, wallet: w.address, issuedAt: Date.now() }));
     const r = await web.xConnect(
-      new Request('http://carbon.test/api/x/connect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ launchId, wallet: w.address, issuedAt: Date.now(), signature: forged }) }),
+      new Request('http://argon.test/api/x/connect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ launchId, wallet: w.address, issuedAt: Date.now(), signature: forged }) }),
     );
     expect(r.status).toBe(401);
     const t = Date.now();
@@ -398,5 +398,5 @@ describe('approval.consumed and launch id uniqueness', () => {
 });
 
 it('sanity: config row for the launches above', () => {
-  expect(launchConfig('C-12', 'ring').gateEveryAction).toBe(false);
+  expect(launchConfig('Ar-36', 'ring').gateEveryAction).toBe(false);
 });

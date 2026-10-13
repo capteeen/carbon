@@ -41,7 +41,7 @@ interface Sample {
 
 async function read(page: Page): Promise<Sample> {
   return page.evaluate(() => {
-    const el = document.querySelector('.carbon-story') as HTMLElement;
+    const el = document.querySelector('.argon-story') as HTMLElement;
     const top = el.getBoundingClientRect().top + window.scrollY;
     const dist = Math.max(1, el.offsetHeight - window.innerHeight);
     const pin = document.querySelector('[data-testid=story-pin]') as HTMLElement;
@@ -49,7 +49,7 @@ async function read(page: Page): Promise<Sample> {
       p: Math.min(1, Math.max(0, (window.scrollY - top) / dist)),
       c3d: Number(pin.dataset.chapter3d ?? -1),
       chud: Number(pin.dataset.chapterHud ?? -1),
-      fades: [...document.querySelectorAll<HTMLElement>('.carbon-chapter')].map((l) => Number(l.dataset.fade ?? -1)),
+      fades: [...document.querySelectorAll<HTMLElement>('.argon-chapter')].map((l) => Number(l.dataset.fade ?? -1)),
       proton: document.querySelector('[data-testid=proton-hud]')?.getAttribute('data-agent') ?? null,
       replayCount: document.querySelector('[data-testid=replay-count]')?.textContent ?? null,
       ca: document.querySelector('[data-ca-typing]')?.textContent ?? null,
@@ -82,7 +82,7 @@ function check(s: Sample): string[] {
 
 async function scrollTo(page: Page, p: number) {
   await page.evaluate((p) => {
-    const el = document.querySelector('.carbon-story') as HTMLElement;
+    const el = document.querySelector('.argon-story') as HTMLElement;
     const top = el.getBoundingClientRect().top + window.scrollY;
     window.scrollTo(0, top + p * (el.offsetHeight - window.innerHeight));
   }, p);
@@ -156,7 +156,7 @@ try {
   const sweep = await page.evaluate(
     () =>
       new Promise<{ p: number; c3d: number; chud: number }[]>((resolve) => {
-        const el = document.querySelector('.carbon-story') as HTMLElement;
+        const el = document.querySelector('.argon-story') as HTMLElement;
         const top = el.getBoundingClientRect().top + window.scrollY;
         const dist = el.offsetHeight - window.innerHeight;
         const pin = document.querySelector('[data-testid=story-pin]') as HTMLElement;
@@ -192,14 +192,14 @@ try {
     await scrollTo(page, p);
     await settle(page);
     const s = await page.evaluate(() => {
-      const el = document.querySelector('.carbon-story') as HTMLElement;
+      const el = document.querySelector('.argon-story') as HTMLElement;
       const top = el.getBoundingClientRect().top + window.scrollY;
       const pin = document.querySelector('[data-testid=story-pin]') as HTMLElement;
       return {
         p: Math.min(1, Math.max(0, (window.scrollY - top) / Math.max(1, el.offsetHeight - window.innerHeight))),
         c3d: Number(pin.dataset.chapter3d),
         chud: Number(pin.dataset.chapterHud),
-        active: [...document.querySelectorAll<HTMLElement>('.carbon-chapter')].findIndex((l) => l.dataset.active === 'true'),
+        active: [...document.querySelectorAll<HTMLElement>('.argon-chapter')].findIndex((l) => l.dataset.active === 'true'),
       };
     });
     const e = chapterAt(s.p);

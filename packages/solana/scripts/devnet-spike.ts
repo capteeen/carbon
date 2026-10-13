@@ -2,13 +2,13 @@
  * Devnet spike: the five open checks from docs/fees-research.md, run against
  * the real devnet programs. DEVNET ONLY; refuses any other network.
  *
- *   CARBON_VAULT_KEY=… CARBON_CRANK_KEY=… CARBON_BUYBACK_WALLET=… CARBON_TREASURY_WALLET=… PINATA_JWT=… \
- *     pnpm --filter @carbon/solana devnet-spike -- --image /path/to/coin.png [--name "Carbon Spike"] [--symbol CSPK]
+ *   ARGON_VAULT_KEY=… ARGON_CRANK_KEY=… ARGON_BUYBACK_WALLET=… ARGON_TREASURY_WALLET=… PINATA_JWT=… \
+ *     pnpm --filter @argon/solana devnet-spike -- --image /path/to/coin.png [--name "Argon Spike"] [--symbol CSPK]
  *
- * The crank wallet (CARBON_CRANK_KEY) pays and acts as the launcher; fund it
- * with devnet SOL first. If CARBON_LOOKUP_TABLE is unset, the script creates
+ * The crank wallet (ARGON_CRANK_KEY) pays and acts as the launcher; fund it
+ * with devnet SOL first. If ARGON_LOOKUP_TABLE is unset, the script creates
  * an address lookup table owned by the crank wallet and prints its address
- * for CARBON_LOOKUP_TABLE (the native launch does not fit one packet without it).
+ * for ARGON_LOOKUP_TABLE (the native launch does not fit one packet without it).
  *
  *   1. Program accounts 6EF8…, pAMM…, pfee… exist and are executable; Global and FeeConfig decode.
  *   2. create_v2 + create_fee_sharing_config + update_fee_shares + dev buy land in ONE transaction.
@@ -23,7 +23,7 @@ import { AddressLookupTableProgram, Connection, Keypair, PublicKey, TransactionM
 import { loadSolanaConfig, ENV } from '../src/config.js';
 import { pumpSdk } from '../src/sdk.js';
 import { PUMP_AMM_PROGRAM_ID, PUMP_FEE_PROGRAM_ID, PUMP_PROGRAM_ID, decodePumpIx } from '../src/programs.js';
-import { buildCrankIxs, buildNativeLaunchIxs, carbonShares, fetchLaunchState, launchLookupAddresses, solToLamports } from '../src/pump.js';
+import { buildCrankIxs, buildNativeLaunchIxs, argonShares, fetchLaunchState, launchLookupAddresses, solToLamports } from '../src/pump.js';
 import { assertAllowed } from '../src/allowlist.js';
 import { PinataUploader } from '../src/metadata.js';
 import { compileAndSign, waitForFinal, DEFAULT_POLL, PACKET_DATA_SIZE } from '../src/tx.js';
@@ -70,8 +70,8 @@ async function main(): Promise<void> {
   const image = arg('image');
   if (!image) throw new Error('--image <path to a PNG/JPEG/WebP/GIF> is required (uploaded to Pinata for the coin metadata)');
   const pinata = new PinataUploader(() => cfg.secrets.requirePinata(), cfg.ipfsGateway);
-  const { metadataUri } = await pinata.uploadMetadata({ name: arg('name') ?? 'Carbon Spike', symbol: arg('symbol') ?? 'CSPK', description: 'Carbon devnet spike: native fee-sharing launch check.', image: readFileSync(image) });
-  const built = await buildNativeLaunchIxs({ global, feeConfig, mint: mint.publicKey, payer: crank.publicKey, name: arg('name') ?? 'Carbon Spike', symbol: arg('symbol') ?? 'CSPK', uri: metadataUri, devBuyLamports, buybackWallet: cfg.buybackWallet, treasuryWallet: cfg.treasuryWallet });
+  const { metadataUri } = await pinata.uploadMetadata({ name: arg('name') ?? 'Argon Spike', symbol: arg('symbol') ?? 'CSPK', description: 'Argon devnet spike: native fee-sharing launch check.', image: readFileSync(image) });
+  const built = await buildNativeLaunchIxs({ global, feeConfig, mint: mint.publicKey, payer: crank.publicKey, name: arg('name') ?? 'Argon Spike', symbol: arg('symbol') ?? 'CSPK', uri: metadataUri, devBuyLamports, buybackWallet: cfg.buybackWallet, treasuryWallet: cfg.treasuryWallet });
   assertAllowed(built.instructions, built.purpose);
 
   let alt: AddressLookupTableAccount | null = null;
@@ -112,7 +112,7 @@ async function main(): Promise<void> {
   }
 
   // ── 3 ──
-  const shares = carbonShares(crank.publicKey, cfg.buybackWallet, cfg.treasuryWallet);
+  const shares = argonShares(crank.publicKey, cfg.buybackWallet, cfg.treasuryWallet);
   const again = await PUMP_SDK.updateFeeShares({
     authority: crank.publicKey,
     mint: mint.publicKey,

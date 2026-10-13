@@ -5,14 +5,14 @@
  * - sig = ed25519 signature over the 32 raw bytes of that hash, by the actor's key
  *   (agents sign with their own key; 'user' and 'system' events are signed by the
  *   system key, since the server appends them on the user's behalf).
- * - Keys are derived with HKDF-SHA256 from CARBON_AGENT_KEY_SEED (hex, >= 32 bytes).
+ * - Keys are derived with HKDF-SHA256 from ARGON_AGENT_KEY_SEED (hex, >= 32 bytes).
  *   Private keys never leave this module's closures; only public keys are exported.
  */
 import { ed25519 } from '@noble/curves/ed25519.js';
 import { hkdf } from '@noble/hashes/hkdf.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, hexToBytes, utf8ToBytes } from '@noble/hashes/utils.js';
-import { AGENT_IDS, type AgentId, type CarbonEvent, type EventKind, type EventPayloads } from './contracts.js';
+import { AGENT_IDS, type AgentId, type ArgonEvent, type EventKind, type EventPayloads } from './contracts.js';
 
 // ───────────────────────────── canonical JSON ─────────────────────────────
 
@@ -68,7 +68,7 @@ export interface EventBody<K extends EventKind = EventKind> {
   launchId: string;
   ts: number;
   kind: K;
-  actor: CarbonEvent['actor'];
+  actor: ArgonEvent['actor'];
   payload: EventPayloads[K];
 }
 
@@ -83,16 +83,17 @@ export function eventId(body: EventBody): string {
 export type SignerId = AgentId | 'system';
 export const SIGNER_IDS: readonly SignerId[] = [...AGENT_IDS, 'system'];
 
+// Key-derivation domains keep the pre-rename 'carbon' prefix: changing them would change every agent key.
 const HKDF_SALT = utf8ToBytes('carbon/agent-keys/v1');
 
 /** Which key signs an event by this actor. */
-export function signerFor(actor: CarbonEvent['actor']): SignerId {
+export function signerFor(actor: ArgonEvent['actor']): SignerId {
   return actor === 'user' || actor === 'system' ? 'system' : actor;
 }
 
 export class MissingSeedError extends Error {
   constructor() {
-    super('CARBON_AGENT_KEY_SEED is not set (hex, at least 32 bytes). The event bus cannot sign without it.');
+    super('ARGON_AGENT_KEY_SEED is not set (hex, at least 32 bytes). The event bus cannot sign without it.');
     this.name = 'MissingSeedError';
   }
 }
@@ -101,7 +102,7 @@ function parseSeed(hex: string): Uint8Array {
   const clean = hex.trim().toLowerCase();
   if (!/^[0-9a-f]+$/.test(clean) || clean.length % 2 !== 0 || clean.length < 64) {
     // Never echo the value.
-    throw new Error('CARBON_AGENT_KEY_SEED must be hex encoding at least 32 bytes');
+    throw new Error('ARGON_AGENT_KEY_SEED must be hex encoding at least 32 bytes');
   }
   return hexToBytes(clean);
 }
@@ -115,7 +116,7 @@ export function resolveSeed(explicitSeedHex?: string, env: NodeJS.ProcessEnv = p
     if (env.NODE_ENV !== 'test') throw new Error('An explicit key seed is only accepted when NODE_ENV=test');
     return parseSeed(explicitSeedHex);
   }
-  const fromEnv = env.CARBON_AGENT_KEY_SEED;
+  const fromEnv = env.ARGON_AGENT_KEY_SEED;
   if (!fromEnv) throw new MissingSeedError();
   return parseSeed(fromEnv);
 }
@@ -155,14 +156,14 @@ export class KeyRing {
   }
 
   /** Signs an event id (hex sha256) with the actor's key. */
-  signId(actor: CarbonEvent['actor'], id: string): { signer: string; sig: string } {
+  signId(actor: ArgonEvent['actor'], id: string): { signer: string; sig: string } {
     const who = signerFor(actor);
     const sk = this.#secrets.get(who)!;
     return { signer: this.#publics.get(who)!, sig: bytesToHex(ed25519.sign(hexToBytes(id), sk)) };
   }
 
   /** Full check: id matches the body, signer is the actor's key, signature valid. */
-  verify(e: CarbonEvent): boolean {
+  verify(e: ArgonEvent): boolean {
     return verifyEvent(e, this.#publics.get(signerFor(e.actor)));
   }
 
@@ -175,7 +176,7 @@ export class KeyRing {
  * Verifies an event's hash and signature. With `expectedSigner`, also requires the
  * signer to be that key (otherwise anyone could re-sign a forged body with their own key).
  */
-export function verifyEvent(e: CarbonEvent, expectedSigner?: string): boolean {
+export function verifyEvent(e: ArgonEvent, expectedSigner?: string): boolean {
   try {
     if (typeof e.id !== 'string' || !/^[0-9a-f]{64}$/.test(e.id)) return false;
     if (eventId(e) !== e.id) return false;

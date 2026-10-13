@@ -46,21 +46,21 @@ describe('keys', () => {
   it('seed rules: explicit seed only under NODE_ENV=test; env otherwise; throw when missing', () => {
     expect(() => resolveSeed(TEST_SEED, { NODE_ENV: 'production' })).toThrow(/only accepted when NODE_ENV=test/);
     expect(() => resolveSeed(undefined, { NODE_ENV: 'production' })).toThrow(MissingSeedError);
-    expect(() => resolveSeed(undefined, { NODE_ENV: 'production', CARBON_AGENT_KEY_SEED: 'abcd' })).toThrow(/at least 32 bytes/);
-    expect(resolveSeed(undefined, { NODE_ENV: 'production', CARBON_AGENT_KEY_SEED: TEST_SEED })).toHaveLength(32);
+    expect(() => resolveSeed(undefined, { NODE_ENV: 'production', ARGON_AGENT_KEY_SEED: 'abcd' })).toThrow(/at least 32 bytes/);
+    expect(resolveSeed(undefined, { NODE_ENV: 'production', ARGON_AGENT_KEY_SEED: TEST_SEED })).toHaveLength(32);
     expect(resolveSeed(TEST_SEED, { NODE_ENV: 'test' })).toHaveLength(32);
   });
   it('bus construction throws without a seed in production', () => {
     const prevEnv = process.env.NODE_ENV;
-    const prevSeed = process.env.CARBON_AGENT_KEY_SEED;
+    const prevSeed = process.env.ARGON_AGENT_KEY_SEED;
     process.env.NODE_ENV = 'production';
-    delete process.env.CARBON_AGENT_KEY_SEED;
+    delete process.env.ARGON_AGENT_KEY_SEED;
     try {
       expect(() => createEventBus({ databaseUrl: TEST_DB_URL })).toThrow(MissingSeedError);
       expect(() => createEventBus({ databaseUrl: TEST_DB_URL, seed: TEST_SEED })).toThrow(/NODE_ENV=test/);
     } finally {
       process.env.NODE_ENV = prevEnv;
-      if (prevSeed !== undefined) process.env.CARBON_AGENT_KEY_SEED = prevSeed;
+      if (prevSeed !== undefined) process.env.ARGON_AGENT_KEY_SEED = prevSeed;
     }
   });
 });

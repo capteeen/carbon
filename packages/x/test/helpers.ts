@@ -1,6 +1,6 @@
 /** Test doubles. Live only under test/; never exported from src/. */
 import { randomBytes } from 'node:crypto';
-import { CarbonXClient, type XClientDeps } from '../src/client.js';
+import { ArgonXClient, type XClientDeps } from '../src/client.js';
 import type { XConfig } from '../src/config.js';
 import { X_API_BASE, X_AUTHORIZE_URL, X_SCOPES } from '../src/config.js';
 import { TokenCipher } from '../src/crypto.js';
@@ -70,7 +70,7 @@ export class MemoryLedger implements PostLedger {
 export const testConfig = (over: Partial<XConfig> = {}): XConfig => ({
   clientId: 'fixture-client-id',
   clientSecret: 'fixture-client-secret',
-  redirectUri: 'https://carbon.example/api/x/callback',
+  redirectUri: 'https://argon.example/api/x/callback',
   bearerToken: 'FIXTURE-APP-BEARER',
   scopes: X_SCOPES,
   apiBase: X_API_BASE,
@@ -102,7 +102,7 @@ export function makeClient(over: Partial<XClientDeps> & { responders?: Responder
   const tokens = (over.tokens as MemoryTokenStore | undefined) ?? new MemoryTokenStore();
   const ledger = (over.ledger as MemoryLedger | undefined) ?? new MemoryLedger();
   const { responders: _r, ...rest } = over;
-  const client = new CarbonXClient({
+  const client = new ArgonXClient({
     config: testConfig(),
     tokens,
     ledger,

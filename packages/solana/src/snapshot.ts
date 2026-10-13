@@ -11,7 +11,7 @@
  * The bonding curve and the canonical pool are excluded (they are the market,
  * not holders). Balances are those at the reported read slot (taken right
  * after the collapse moment; RPC serves no historical state), and wallets
- * whose holding began after the collapse moment are left out. Carbon coins
+ * whose holding began after the collapse moment are left out. Argon coins
  * have no measurements, so
  * heldThroughMeasurementIds is always [].
  */
@@ -84,9 +84,9 @@ export interface SnapshotRequest {
   mint: string;
   /** Collapse moment, unix seconds. */
   collapseAt: number;
-  /** The final quiet period's start (C-11: last trade; C-14: last trade before the clock ran out), unix seconds. */
+  /** The final quiet period's start (Ar-41: last trade; Ar-39: last trade before the clock ran out), unix seconds. */
   quietPeriodStart: number;
-  /** Extra owners never included (e.g. Carbon's own wallets). */
+  /** Extra owners never included (e.g. Argon's own wallets). */
   excludeOwners?: string[];
 }
 

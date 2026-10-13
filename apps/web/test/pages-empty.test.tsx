@@ -4,7 +4,7 @@
  * "No molecules yet. Launch the first one."), nothing seeded, footer everywhere.
  */
 import { cleanup, render, screen } from '@testing-library/react';
-import { EMPTY_GRAPHENE, EMPTY_READOUT, FOOTER_TEXT } from '@carbon/core/contracts';
+import { EMPTY_GRAPHENE, EMPTY_READOUT, FOOTER_TEXT } from '@argon/core/contracts';
 import type { ReactElement, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -40,7 +40,7 @@ class StubEventSource {
 
 beforeAll(() => {
   (globalThis as unknown as { EventSource: unknown }).EventSource = StubEventSource;
-  for (const k of ['CARBON_BUYBACK_WALLET', 'CARBON_TREASURY_WALLET']) delete process.env[k];
+  for (const k of ['ARGON_BUYBACK_WALLET', 'ARGON_TREASURY_WALLET']) delete process.env[k];
 });
 afterEach(cleanup);
 
@@ -67,10 +67,10 @@ describe('pages with an empty log', () => {
     expect(container.querySelectorAll('a[href*="explorer"]').length).toBe(0);
   });
 
-  it('/wallets shows "--.--" for unconfigured Carbon wallets and no launch wallets', async () => {
+  it('/wallets shows "--.--" for unconfigured Argon wallets and no launch wallets', async () => {
     const { container } = render(await page(import('@/app/wallets/page')));
     expect(screen.getByTestId('wallets-empty')).toBeTruthy();
-    expect(screen.getByTestId('carbon-wallets').textContent).toContain(EMPTY_READOUT);
+    expect(screen.getByTestId('argon-wallets').textContent).toContain(EMPTY_READOUT);
     expect(container.textContent).not.toMatch(SAMPLE_WORDS);
   });
 
@@ -92,7 +92,7 @@ describe('pages with an empty log', () => {
   it('a launch with only launch.created shows "--.--" everywhere data is missing', async () => {
     const { LaunchLive } = await import('@/components/LaunchLive');
     const { Providers } = await import('@/components/Providers');
-    const created = ev('L', 'launch.created', { line: 'a line', isotope: 'C-14', shape: 'ring', heavyAgent: null, launcherWallet: '11111111111111111111111111111111', xConnected: false }, 'user');
+    const created = ev('L', 'launch.created', { line: 'a line', isotope: 'Ar-39', shape: 'ring', heavyAgent: null, launcherWallet: '11111111111111111111111111111111', xConnected: false }, 'user');
     render(
       <Providers>
         <LaunchLive launchId="L" initial={[created]} lastSeq={created.seq} renderedAt={created.ts} />

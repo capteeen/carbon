@@ -1,10 +1,10 @@
 /**
- * AssetStore (@carbon/agents) in Postgres. Forge's logo copy, banner and site HTML
+ * AssetStore (@argon/agents) in Postgres. Forge's logo copy, banner and site HTML
  * are stored under a name that carries their content hash, so every URI is
  * immutable. The web app serves them at /api/assets/<launchId>/<name>.
  */
 import { createHash } from 'node:crypto';
-import type { AssetStore } from '@carbon/agents';
+import type { AssetStore } from '@argon/agents';
 import type pg from 'pg';
 
 export const MAX_ASSET_BYTES = 8 * 1024 * 1024;
@@ -17,7 +17,7 @@ export function assetName(name: string, sha256: string): string {
 export class PgAssetStore implements AssetStore {
   constructor(
     private readonly pool: pg.Pool,
-    /** Public origin of the web app, e.g. https://carbon.example. */
+    /** Public origin of the web app, e.g. https://argon.example. */
     private readonly publicUrl: string,
     private readonly now: () => number = Date.now,
   ) {}

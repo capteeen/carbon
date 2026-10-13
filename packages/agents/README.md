@@ -1,4 +1,4 @@
-# @carbon/agents
+# @argon/agents
 
 The six protons (Scout, Forge, Sentinel, Herald, Keeper, Treasurer) and the
 `MoleculeRunner` that runs a launch per shape. Agents touch the world only
@@ -7,7 +7,7 @@ through `AgentContext`.
 ## Wiring (apps/worker)
 
 ```ts
-import { MoleculeRunner, type AgentContext, type AssetStore } from '@carbon/agents';
+import { MoleculeRunner, type AgentContext, type AssetStore } from '@argon/agents';
 const ctx: AgentContext = { bus, handoffs, approvals, budgets, llm, x, chain, config, launchId, now: Date.now, assets };
 const runner = new MoleculeRunner(ctx, { chooseNarrative, signLaunchTx, revise });
 await runner.run();          // Scout → … → deploy → announcement
@@ -30,7 +30,7 @@ immediately before the irreversible call:
 | Herald | `post` | `x.post(launchId, text, approvalId)` |
 | Keeper | `reply` | `x.reply(launchId, inReplyTo, text, approvalId)` |
 | Treasurer | `launch` | `chain.buildLaunchTx({ …, approvalId })` |
-| Treasurer | `buyback` | `chain.buyCarbon(lamports, splitId)` |
+| Treasurer | `buyback` | `chain.buyArgon(lamports, splitId)` |
 | any (DIAMOND) | `action` | the gated action |
 
 **The X and chain approval hooks must CHECK that a consumed approval exists for
@@ -53,7 +53,7 @@ mode: the sharing-config PDA). Treasurer calls it at most once per launch and
 reads it back from the log afterwards (`launch.deployed.creatorWallet`, or the
 `launchWallet` on its launch approval card). `claimCreatorFees` is treated as
 the crank and `runSplit` as the receipt source; Treasurer records receipts and
-never sends legs itself. Buybacks spend only confirmed `carbon-buyback` legs,
+never sends legs itself. Buybacks spend only confirmed `argon-buyback` legs,
 capped per tick, and always pass the `splitId`.
 
 ## Sentinel

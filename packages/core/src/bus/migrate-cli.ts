@@ -1,4 +1,4 @@
-/** `pnpm --filter @carbon/core migrate`: applies migrations to DATABASE_URL. Prints file names only. */
+/** `pnpm --filter @argon/core migrate`: applies migrations to DATABASE_URL. Prints file names only. */
 import pg from 'pg';
 import { migrate } from './migrate.js';
 

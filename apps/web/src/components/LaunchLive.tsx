@@ -1,7 +1,7 @@
 'use client';
 /** /l/[ca]: one launch, fully live from its own events. */
-import { AUTOPILOT_CLASSES, EMPTY_READOUT, ISOTOPES, SHAPES, type AutopilotClass, type CarbonEvent } from '@carbon/core/contracts';
-import { computeBonds } from '@carbon/core/bonds';
+import { AUTOPILOT_CLASSES, EMPTY_READOUT, ISOTOPES, SHAPES, type AutopilotClass, type ArgonEvent } from '@argon/core/contracts';
+import { computeBonds } from '@argon/core/bonds';
 import { useMemo, useState } from 'react';
 import { postJson } from '@/lib/api';
 import { deriveLaunchView, explorerUrl, lamportsToSol, shortId } from '@/lib/launch-view';
@@ -27,7 +27,7 @@ function clock(ms: number): string {
  * time, re-evaluated every second, so bonds age out of the 60 s window even with
  * no new events.
  */
-export function LaunchLive({ launchId, initial, lastSeq, renderedAt }: { launchId: string; initial: CarbonEvent[]; lastSeq: number; renderedAt: number }) {
+export function LaunchLive({ launchId, initial, lastSeq, renderedAt }: { launchId: string; initial: ArgonEvent[]; lastSeq: number; renderedAt: number }) {
   const { events, status } = useEventStream(launchId, initial, lastSeq);
   const v = useMemo(() => deriveLaunchView(launchId, events), [launchId, events]);
   const now = useNow(1000, true, renderedAt) ?? renderedAt;

@@ -3,7 +3,7 @@
  * leader lines attach through refs; tests render this with
  * renderToStaticMarkup to check honesty and empty states.
  */
-import { AGENT_IDS, type AgentId, type IsotopeId, type ShapeId } from '@carbon/core/contracts';
+import { AGENT_IDS, type AgentId, type IsotopeId, type ShapeId } from '@argon/core/contracts';
 import type { Ref } from 'react';
 import { COPY } from '../copy.js';
 import { HudCorner, HudLabel, HudMeta, HudSection, HudTag } from '../hud/Hud.js';
@@ -50,7 +50,7 @@ export function StoryHud(props: StoryHudProps) {
       <section
         key={c.id}
         ref={props.layerRef ? props.layerRef(i) : undefined}
-        className="carbon-chapter"
+        className="argon-chapter"
         data-chapter={i}
         data-mode={c.mode}
         data-active={props.reducedMotion ? String(props.activeChapter === i) : undefined}
@@ -69,7 +69,7 @@ export function StoryHud(props: StoryHudProps) {
         0,
         <>
           <HudCorner at="tl">
-            <h1 className="carbon-wordmark">{COPY.hero.wordmark}</h1>
+            <h1 className="argon-wordmark">{COPY.hero.wordmark}</h1>
             {COPY.hero.meta.map((m) => (
               <HudMeta key={m}>{m}</HudMeta>
             ))}
@@ -81,8 +81,8 @@ export function StoryHud(props: StoryHudProps) {
             ))}
           </HudCorner>
           <HudCorner at="mr" style={{ top: '62%' }}>
-            <HudLabel leaderRef={L('atom')}>ATOM_06</HudLabel>
-            <HudMeta>6 protons · 6 neutrons · 6 electrons</HudMeta>
+            <HudLabel leaderRef={L('atom')}>ATOM_18</HudLabel>
+            <HudMeta>18 protons · 18 electrons · six agents at the core</HudMeta>
           </HudCorner>
           <HudCorner at="br">
             <HudMeta>{COPY.hero.dragHint}</HudMeta>
@@ -113,11 +113,11 @@ export function StoryHud(props: StoryHudProps) {
         <>
           <HudCorner at="tl">
             <HudSection>{COPY.protons.head}</HudSection>
-            <div className="carbon-hud__note" data-testid="protons-note">
+            <div className="argon-hud__note" data-testid="protons-note">
               {COPY.protons.note}
             </div>
           </HudCorner>
-          <HudCorner at="br" className="carbon-hud__proton">
+          <HudCorner at="br" className="argon-hud__proton">
             <ProtonHud agent={agent} live={props.live} onOpenAgent={props.onOpenAgent} leaderRef={L} />
             <HudMeta>{COPY.protons.liveReadouts}</HudMeta>
           </HudCorner>
@@ -128,7 +128,7 @@ export function StoryHud(props: StoryHudProps) {
         <>
           <HudCorner at="tl">
             <HudSection>{COPY.shells.head}</HudSection>
-            <div className="carbon-title" data-testid="shells-note">
+            <div className="argon-title" data-testid="shells-note">
               {COPY.shells.note}
             </div>
           </HudCorner>
@@ -164,7 +164,7 @@ export function StoryHud(props: StoryHudProps) {
               <>
                 <HudMeta>{COPY.bonding.realHashNote}</HudMeta>
                 {hashes.map((h) => (
-                  <div key={h.hash} className="carbon-hud__readout">
+                  <div key={h.hash} className="argon-hud__readout">
                     {`${shortHash(h.hash)} ${h.pairKey.replace('|', '·').toUpperCase()}`}
                   </div>
                 ))}
@@ -179,7 +179,7 @@ export function StoryHud(props: StoryHudProps) {
           <HudCorner at="tl">
             <HudSection>{COPY.chamber.head}</HudSection>
           </HudCorner>
-          <HudCorner at="bc" style={{ width: 'calc(100% - 2 * var(--carbon-gutter))', maxWidth: 520, textAlign: 'left' }}>
+          <HudCorner at="bc" style={{ width: 'calc(100% - 2 * var(--argon-gutter))', maxWidth: 520, textAlign: 'left' }}>
             <div data-interactive>
               <ChamberHud value={props.isotope} onChange={props.onIsotope} heavyAgent={props.heavyAgent} onHeavyAgentChange={props.onHeavyAgent} leaderRef={L} compact />
             </div>

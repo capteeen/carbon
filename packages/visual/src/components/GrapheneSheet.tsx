@@ -71,11 +71,11 @@ export function GrapheneSheet(props: GrapheneSheetProps) {
   const [frame, setFrame] = useState<HTMLDivElement | null>(null);
   const [hovered, setHovered] = useState<LaunchSummary | null>(null);
   return (
-    <div ref={setFrame} className={`carbon-frame carbon-frame--graphene${props.className ? ' ' + props.className : ''}`} data-testid="graphene-sheet">
+    <div ref={setFrame} className={`argon-frame argon-frame--graphene${props.className ? ' ' + props.className : ''}`} data-testid="graphene-sheet">
       <Stage quality={q} reducedMotion={reduced || launches.length === 0} eventSource={frame} ariaLabel="Live graphene sheet of real launches">
         <Sheet launches={launches} onOpen={props.onOpenLaunch} onHover={setHovered} hovered={hovered?.ca ?? null} />
       </Stage>
-      <div className="carbon-hud">
+      <div className="argon-hud">
         <HudCorner at="tl">
           <HudSection>{COPY.live.head.replace('09 ', '')}</HudSection>
           <HudTag>{COPY.liveTag}</HudTag>

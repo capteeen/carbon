@@ -2,13 +2,13 @@
  * TREASURER: the launch's fee address (native pump.fun fee sharing: the
  * sharing-config PDA; fallback: a per-launch creator wallet), the launch
  * transaction (only after a consumed 'launch' approval AND a passing Sentinel
- * score), the scheduled fee crank, split receipts, and $CARBON buybacks funded
- * only by the 30% leg (buyCarbon is passed the splitId; idempotent per split).
+ * score), the scheduled fee crank, split receipts, and $ARGON buybacks funded
+ * only by the 30% leg (buyArgon is passed the splitId; idempotent per split).
  *
  * The only chain calls that move value are buildLaunchTx/submitLaunchTx (the
- * launch's own dev buy), runSplit and buyCarbon. Nothing else is ever traded.
+ * launch's own dev buy), runSplit and buyArgon. Nothing else is ever traded.
  */
-import { ISOTOPES, type AgentId, type BudgetKind, type CarbonEvent, type ChainClient, type SplitReceipt } from '@carbon/core';
+import { ISOTOPES, type AgentId, type BudgetKind, type ArgonEvent, type ChainClient, type SplitReceipt } from '@argon/core';
 import type { ApprovalCard } from '../cards.js';
 import { type AgentContext, AgentRefusal, all, emit, emitError, errMsg, gate, latest, requestApproval } from '../context.js';
 import { assertLaunchCleared } from '../sentinel/index.js';
@@ -26,12 +26,12 @@ export function lamportsToSol(l: bigint): string {
 }
 
 /**
- * Optional chain-ledger reads that @carbon/solana's CarbonChainClient implements and
+ * Optional chain-ledger reads that @argon/solana's ArgonChainClient implements and
  * the ChainClient port does not (yet) declare. Local type, proposed for ports.ts.
  */
 export interface ChainLedger {
   /** Every confirmed claim/distribution in the chain's durable ledger (AG-007). */
-  confirmedClaims?(launchId: string): Promise<{ claimId: string; lamports: bigint; txSig: string; origin?: 'carbon' | 'foreign' }[]>;
+  confirmedClaims?(launchId: string): Promise<{ claimId: string; lamports: bigint; txSig: string; origin?: 'argon' | 'foreign' }[]>;
   /** Native mode: record distributions a third party cranked on the coin's sharing config. */
   scanForeignDistributions?(launchId: string): Promise<unknown[]>;
   /** The split's open (unacknowledged) buy, if any: resumed without a new request. */
@@ -40,8 +40,8 @@ export interface ChainLedger {
   ackBuyback?(splitId: string, txSig: string): Promise<void>;
 }
 
-/** What buyCarbon may report beyond the port: the SOL the confirmed trade actually spent. */
-type BuyResult = Awaited<ReturnType<ChainClient['buyCarbon']>> & { lamportsIn?: bigint; event?: { payload?: { lamportsIn?: string } } };
+/** What buyArgon may report beyond the port: the SOL the confirmed trade actually spent. */
+type BuyResult = Awaited<ReturnType<ChainClient['buyArgon']>> & { lamportsIn?: bigint; event?: { payload?: { lamportsIn?: string } } };
 /** What submitLaunchTx may report beyond the port: the create transaction's block time. */
 type SubmitResult = Awaited<ReturnType<ChainClient['submitLaunchTx']>> & { bornAtMs?: number | null };
 
@@ -51,7 +51,7 @@ async function spendOnce(ctx: AgentContext, agent: AgentId, kind: BudgetKind, am
   await spend(ctx.launchId, agent, kind, amount, key);
 }
 
-/** The user's wallet signs and pays the launch tx; Carbon never holds that key. */
+/** The user's wallet signs and pays the launch tx; Argon never holds that key. */
 export type SignLaunchTx = (args: { txBase64: string; mint: string }) => Promise<string>;
 
 export class Treasurer {
@@ -81,7 +81,7 @@ export class Treasurer {
    * exact draft being deployed and the user granted a 'launch' approval, which
    * is consumed before the transaction is built.
    */
-  async deploy(args: { launcherWallet: string; sign: SignLaunchTx }): Promise<CarbonEvent<'launch.deployed'> | null> {
+  async deploy(args: { launcherWallet: string; sign: SignLaunchTx }): Promise<ArgonEvent<'launch.deployed'> | null> {
     const ctx = this.ctx;
     if (await latest(ctx, 'launch.deployed')) throw new AgentRefusal('treasurer', 'launch already deployed');
     const cleared = await assertLaunchCleared(ctx);
@@ -171,7 +171,7 @@ export class Treasurer {
    * landing and its append is recovered on the next tick. In native mode, distributions
    * a third party cranked on the coin's sharing config are found and receipted the same way.
    */
-  async reconcileClaims(): Promise<CarbonEvent<'fee.claimed'>[]> {
+  async reconcileClaims(): Promise<ArgonEvent<'fee.claimed'>[]> {
     const ctx = this.ctx;
     const chain = ctx.chain as ChainClient & ChainLedger;
     if (!chain.confirmedClaims || !(await latest(ctx, 'launch.deployed'))) return [];
@@ -183,7 +183,7 @@ export class Treasurer {
       }
     }
     const logged = new Set((await all(ctx, 'fee.claimed')).map((e) => e.payload.claimId));
-    const out: CarbonEvent<'fee.claimed'>[] = [];
+    const out: ArgonEvent<'fee.claimed'>[] = [];
     for (const c of await chain.confirmedClaims(ctx.launchId)) {
       if (logged.has(c.claimId)) continue;
       const sol = lamportsToSol(c.lamports);
@@ -198,12 +198,12 @@ export class Treasurer {
   }
 
   /** Re-run any split that has no fully confirmed receipt (idempotent on the chain side). */
-  async resumeSplits(): Promise<CarbonEvent<'split.receipt'>[]> {
+  async resumeSplits(): Promise<ArgonEvent<'split.receipt'>[]> {
     const ctx = this.ctx;
     await this.reconcileClaims();
     const claims = await all(ctx, 'fee.claimed');
     const receipts = await all(ctx, 'split.receipt');
-    const out: CarbonEvent<'split.receipt'>[] = [];
+    const out: ArgonEvent<'split.receipt'>[] = [];
     for (const c of claims) {
       const last = receipts.filter((r) => r.payload.claimId === c.payload.claimId).pop();
       if (last && last.payload.legs.every((l) => l.status === 'confirmed')) continue;
@@ -213,7 +213,7 @@ export class Treasurer {
   }
 
   /** Scheduled: claim creator fees and split them. Returns null when there was nothing to claim. */
-  async claimAndSplit(): Promise<{ claim: CarbonEvent<'fee.claimed'>; receipt: CarbonEvent<'split.receipt'> } | null> {
+  async claimAndSplit(): Promise<{ claim: ArgonEvent<'fee.claimed'>; receipt: ArgonEvent<'split.receipt'> } | null> {
     const ctx = this.ctx;
     if (!(await latest(ctx, 'launch.deployed'))) return null;
     await gate(ctx, 'treasurer', 'claim creator fees and run the 50/30/20 split', { network: ctx.chain.network });
@@ -235,13 +235,13 @@ export class Treasurer {
    * in native mode runSplit parses the on-chain distribution; in wallet mode
    * the Solana package's idempotent ledger sends them.
    */
-  private async split(claimId: string, why: string): Promise<CarbonEvent<'split.receipt'>> {
+  private async split(claimId: string, why: string): Promise<ArgonEvent<'split.receipt'>> {
     const r: SplitReceipt = await this.ctx.chain.runSplit(this.ctx.launchId, claimId);
     const legs = r.legs.map((l) => `${l.to} ${lamportsToSol(BigInt(l.lamports))} ${l.status}`).join(', ');
     return emit(this.ctx, 'treasurer', 'split.receipt', r, `${why}: ${legs}.`);
   }
 
-  /** Unspent lamports on confirmed carbon-buyback legs, per split, oldest first (leg minus what receipted buys spent). */
+  /** Unspent lamports on confirmed argon-buyback legs, per split, oldest first (leg minus what receipted buys spent). */
   async buybackFunds(): Promise<{ splitId: string; remaining: bigint; bought: number }[]> {
     const receipts = await all(this.ctx, 'split.receipt');
     const latestBySplit = new Map<string, SplitReceipt>();
@@ -253,7 +253,7 @@ export class Treasurer {
     }
     const out: { splitId: string; remaining: bigint; bought: number }[] = [];
     for (const [splitId, r] of latestBySplit) {
-      const funded = r.legs.filter((l) => l.to === 'carbon-buyback' && l.status === 'confirmed').reduce((s, l) => s + BigInt(l.lamports), 0n);
+      const funded = r.legs.filter((l) => l.to === 'argon-buyback' && l.status === 'confirmed').reduce((s, l) => s + BigInt(l.lamports), 0n);
       const s = spent.get(splitId) ?? { lamports: 0n, n: 0 };
       const remaining = funded - s.lamports;
       if (remaining > 0n) out.push({ splitId, remaining, bought: s.n });
@@ -267,7 +267,7 @@ export class Treasurer {
    * its budget spent (keyed by split and buy number) before it started, so nothing is
    * requested or counted again. Runs even after the kill switch: it only completes a receipt.
    */
-  async resumeBuyback(): Promise<CarbonEvent<'buyback.executed'> | null> {
+  async resumeBuyback(): Promise<ArgonEvent<'buyback.executed'> | null> {
     const chain = this.ctx.chain as ChainClient & ChainLedger;
     if (!chain.recordedBuyback) return null;
     const logged = await all(this.ctx, 'buyback.executed');
@@ -281,14 +281,14 @@ export class Treasurer {
         continue;
       }
       await spendOnce(this.ctx, 'treasurer', 'buyback-lamports', Number(rec.lamports), buybackKey(f.splitId, f.bought));
-      const res: BuyResult = await chain.buyCarbon(rec.lamports, f.splitId);
+      const res: BuyResult = await chain.buyArgon(rec.lamports, f.splitId);
       return this.recordBuy(res, f.splitId, 'Finished a buyback recorded on chain without a receipt');
     }
     return null;
   }
 
   /** One receipt per on-chain buy: the log is checked by txSig before appending; the chain is then told it is receipted. */
-  private async recordBuy(res: BuyResult, splitId: string, why: string): Promise<CarbonEvent<'buyback.executed'>> {
+  private async recordBuy(res: BuyResult, splitId: string, why: string): Promise<ArgonEvent<'buyback.executed'>> {
     const ctx = this.ctx;
     const chain = ctx.chain as ChainClient & ChainLedger;
     let e = (await all(ctx, 'buyback.executed')).find((x) => x.payload.txSig === res.txSig);
@@ -300,16 +300,16 @@ export class Treasurer {
         ctx,
         'treasurer',
         'buyback.executed',
-        { lamportsIn: reported.toString(), carbonOut: res.carbonOut.toString(), txSig: res.txSig, funding: 'fee-split', splitId },
-        `${why}: bought ${res.carbonOut} base units of $CARBON for ${lamportsToSol(reported)} SOL from split ${splitId.slice(0, 8)}'s 30% leg (tx ${res.txSig.slice(0, 8)}).`,
+        { lamportsIn: reported.toString(), argonOut: res.argonOut.toString(), txSig: res.txSig, funding: 'fee-split', splitId },
+        `${why}: bought ${res.argonOut} base units of $ARGON for ${lamportsToSol(reported)} SOL from split ${splitId.slice(0, 8)}'s 30% leg (tx ${res.txSig.slice(0, 8)}).`,
       );
     }
     await chain.ackBuyback?.(splitId, res.txSig);
     return e;
   }
 
-  /** Buy $CARBON with at most buybackSolPerTick, from the 30% leg only. Needs a 'buyback' approval (or autopilot). */
-  async buyback(): Promise<CarbonEvent<'buyback.executed'> | null> {
+  /** Buy $ARGON with at most buybackSolPerTick, from the 30% leg only. Needs a 'buyback' approval (or autopilot). */
+  async buyback(): Promise<ArgonEvent<'buyback.executed'> | null> {
     const ctx = this.ctx;
     const resumed = await this.resumeBuyback();
     if (resumed) return resumed;
@@ -319,12 +319,12 @@ export class Treasurer {
     if (!fund) return null;
     const amount = fund.remaining < cap ? fund.remaining : cap;
     const card: ApprovalCard = {
-      title: `Buy $CARBON with ${lamportsToSol(amount)} SOL`,
+      title: `Buy $ARGON with ${lamportsToSol(amount)} SOL`,
       agent: 'treasurer',
       summary: 'Funded only by the 30% buyback share of a fee split.',
       details: { splitId: fund.splitId, lamports: amount.toString(), capPerTick: ctx.config.buybackSolPerTick.toString() },
     };
-    const { decision } = await requestApproval(ctx, 'treasurer', 'buyback', card, `Split ${fund.splitId.slice(0, 8)} has ${lamportsToSol(fund.remaining)} SOL of buyback funds; buying ${lamportsToSol(amount)} SOL of $CARBON (cap per tick).`);
+    const { decision } = await requestApproval(ctx, 'treasurer', 'buyback', card, `Split ${fund.splitId.slice(0, 8)} has ${lamportsToSol(fund.remaining)} SOL of buyback funds; buying ${lamportsToSol(amount)} SOL of $ARGON (cap per tick).`);
     if (!decision.granted) return null;
     // Recompute: never spend more than the leg funded, even if two ticks raced.
     const again = (await this.buybackFunds()).find((f) => f.splitId === fund.splitId);
@@ -332,7 +332,7 @@ export class Treasurer {
     await ctx.approvals.consume(ctx.launchId, decision.approvalId, 'buyback');
     // Keyed by split and buy number: a resumed buy is never counted twice (AG-022).
     await spendOnce(ctx, 'treasurer', 'buyback-lamports', Number(amount), buybackKey(fund.splitId, fund.bought));
-    const res: BuyResult = await ctx.chain.buyCarbon(amount, fund.splitId);
+    const res: BuyResult = await ctx.chain.buyArgon(amount, fund.splitId);
     return this.recordBuy(res, fund.splitId, 'Buyback');
   }
 }

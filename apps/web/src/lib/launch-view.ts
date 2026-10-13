@@ -9,19 +9,19 @@ import {
   ISOTOPES,
   launchConfig,
   type AutopilotClass,
-  type CarbonEvent,
+  type ArgonEvent,
   type EventPayloads,
   type LaunchConfig,
-} from '@carbon/core/contracts';
-import { foldMolecule, type MoleculeSnapshot } from '@carbon/core/molecule';
+} from '@argon/core/contracts';
+import { foldMolecule, type MoleculeSnapshot } from '@argon/core/molecule';
 
-type Ev<K extends keyof EventPayloads> = CarbonEvent<K>;
+type Ev<K extends keyof EventPayloads> = ArgonEvent<K>;
 
 export interface PendingApproval {
   approvalId: string;
   action: EventPayloads['approval.requested']['action'];
   draft: unknown;
-  actor: CarbonEvent['actor'];
+  actor: ArgonEvent['actor'];
   eventId: string;
   ts: number;
 }
@@ -64,7 +64,7 @@ export interface LaunchView {
   lastSeq: number;
 }
 
-export function deriveLaunchView(launchId: string, events: readonly CarbonEvent[]): LaunchView {
+export function deriveLaunchView(launchId: string, events: readonly ArgonEvent[]): LaunchView {
   const evs = [...events].filter((e) => e.launchId === launchId).sort((a, b) => a.seq - b.seq);
   const of = <K extends keyof EventPayloads>(k: K) => evs.filter((e) => e.kind === k) as Ev<K>[];
   const last = <T>(xs: T[]): T | null => (xs.length ? xs[xs.length - 1]! : null);
@@ -136,7 +136,7 @@ export function deriveLaunchView(launchId: string, events: readonly CarbonEvent[
 }
 
 /** Merge new events into a list without duplicates, in seq order. */
-export function mergeEvents(prev: readonly CarbonEvent[], incoming: readonly CarbonEvent[]): CarbonEvent[] {
+export function mergeEvents(prev: readonly ArgonEvent[], incoming: readonly ArgonEvent[]): ArgonEvent[] {
   const seen = new Set(prev.map((e) => e.seq));
   const out = [...prev];
   for (const e of incoming) if (!seen.has(e.seq)) {

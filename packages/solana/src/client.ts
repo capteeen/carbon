@@ -1,12 +1,12 @@
 /**
- * CarbonChainClient: the ChainClient port (packages/core/src/ports.ts).
+ * ArgonChainClient: the ChainClient port (packages/core/src/ports.ts).
  *
- * Two fee modes (CARBON_FEE_MODE):
+ * Two fee modes (ARGON_FEE_MODE):
  *   native (default)  pump.fun native fee sharing, set once in the launch tx;
  *                     creator = payer = the launcher's wallet; claims are the
  *                     permissionless distribute crank; receipts come from the
  *                     on-chain DistributeCreatorFeesEvent + balance deltas.
- *   wallet (fallback) per-launch creator keypair held encrypted by Carbon;
+ *   wallet (fallback) per-launch creator keypair held encrypted by Argon;
  *                     claims collect to it; the 50/30/20 split is executed
  *                     from the durable split_ledger.
  *
@@ -14,7 +14,7 @@
  * an `event` ({kind, payload}) for the calling agent to append.
  */
 import { createHash, randomUUID } from 'node:crypto';
-import type { ChainClient, EventPayloads, LaunchConfig, PumpCoinInfo, SplitReceipt } from '@carbon/core';
+import type { ChainClient, EventPayloads, LaunchConfig, PumpCoinInfo, SplitReceipt } from '@argon/core';
 import {
   AddressLookupTableAccount,
   Keypair,
@@ -39,7 +39,7 @@ import { ensureSchema, withLock, type Db } from './db.js';
 import { ChainConfigError, ChainUnavailableError, LaunchNotAllowedError, LedgerError, NetworkGuardError, TradeNotAllowedError, TxFailedError, TxTooLargeError } from './errors.js';
 import { decodeTxEvents, lamportDelta, tokenDelta } from './events.js';
 import { PinataUploader, MAX_URI_LENGTH, type FetchLike } from './metadata.js';
-import { buildCarbonBuyIxs, buildClaimIxs, buildCrankIxs, buildNativeLaunchIxs, buildWalletLaunchIxs, fetchLaunchState, solToLamports, type BuiltLaunch } from './pump.js';
+import { buildArgonBuyIxs, buildClaimIxs, buildCrankIxs, buildNativeLaunchIxs, buildWalletLaunchIxs, fetchLaunchState, solToLamports, type BuiltLaunch } from './pump.js';
 import * as reads from './reads.js';
 import { rpcCall, type RpcLike } from './rpc.js';
 import { takeHolderSnapshot, type SnapshotRequest, type SnapshotResult } from './snapshot.js';
@@ -101,14 +101,14 @@ export interface ClaimRecord {
   claimId: string;
   lamports: bigint;
   txSig: string;
-  /** 'carbon': Carbon's crank/claim; 'foreign': a third party cranked the distribution. */
-  origin: 'carbon' | 'foreign';
+  /** 'argon': Argon's crank/claim; 'foreign': a third party cranked the distribution. */
+  origin: 'argon' | 'foreign';
 }
 
-const LEGS = ['launcher', 'carbon-buyback', 'treasury'] as const;
+const LEGS = ['launcher', 'argon-buyback', 'treasury'] as const;
 type Leg = (typeof LEGS)[number];
 
-export class CarbonChainClient implements ChainClient {
+export class ArgonChainClient implements ChainClient {
   readonly network: 'devnet' | 'mainnet-beta';
   readonly feeMode: 'native' | 'wallet';
   private readonly cfg: SolanaConfig;
@@ -319,7 +319,7 @@ export class CarbonChainClient implements ChainClient {
       if (row.state === 'built') {
         const tx = VersionedTransaction.deserialize(Buffer.from(signedTxBase64, 'base64'));
         const hash = createHash('sha256').update(tx.message.serialize()).digest('hex');
-        if (hash !== row.message_hash) throw new LaunchNotAllowedError('signed transaction differs from the one Carbon built');
+        if (hash !== row.message_hash) throw new LaunchNotAllowedError('signed transaction differs from the one Argon built');
         const n = tx.message.header.numRequiredSignatures;
         if (tx.signatures.length !== n || tx.signatures.some((s) => s.every((b) => b === 0))) throw new LaunchNotAllowedError('transaction is missing a signature');
         const sig = bs58.encode(tx.signatures[0]!);
@@ -499,15 +499,15 @@ export class CarbonChainClient implements ChainClient {
         `SELECT claim_id, lamports::text, tx_sig, origin FROM sol_claims WHERE launch_id=$1 AND state='confirmed' AND lamports IS NOT NULL AND tx_sig IS NOT NULL ORDER BY created_at, claim_id`,
         [launchId],
       );
-      return r.rows.map((c) => ({ claimId: c.claim_id, lamports: BigInt(c.lamports), txSig: c.tx_sig, origin: c.origin === 'foreign' ? 'foreign' : 'carbon' }));
+      return r.rows.map((c) => ({ claimId: c.claim_id, lamports: BigInt(c.lamports), txSig: c.tx_sig, origin: c.origin === 'foreign' ? 'foreign' : 'argon' }));
     });
   }
 
   /**
    * Native mode: distribute_creator_fees is permissionless, so anyone can crank the
-   * coin's sharing config before Carbon does. Scans the sharing config's signatures
+   * coin's sharing config before Argon does. Scans the sharing config's signatures
    * (newest first, back to the last scanned one) for successful transactions that are
-   * not Carbon's own claims and carry a DistributeCreatorFeesEvent for this mint, and
+   * not Argon's own claims and carry a DistributeCreatorFeesEvent for this mint, and
    * records each as a confirmed 'foreign' claim, so it gets fee.claimed and a split
    * receipt like any other. Returns the claims it found.
    *
@@ -613,14 +613,14 @@ export class CarbonChainClient implements ChainClient {
   // ───────────────────────────── split ─────────────────────────────
 
   private legAddress(leg: Leg, launcher: string): string {
-    return leg === 'launcher' ? launcher : leg === 'carbon-buyback' ? this.cfg.buybackWallet.toBase58() : this.cfg.treasuryWallet.toBase58();
+    return leg === 'launcher' ? launcher : leg === 'argon-buyback' ? this.cfg.buybackWallet.toBase58() : this.cfg.treasuryWallet.toBase58();
   }
 
   /** 50/30/20 of `total` with floors; the treasury leg takes the remainder so legs always sum to total. */
   static splitAmounts(total: bigint): Record<Leg, bigint> {
     const launcher = (total * 5000n) / 10000n;
     const buyback = (total * 3000n) / 10000n;
-    return { launcher, 'carbon-buyback': buyback, treasury: total - launcher - buyback };
+    return { launcher, 'argon-buyback': buyback, treasury: total - launcher - buyback };
   }
 
   async runSplit(launchId: string, claimId: string): Promise<SplitReceipt> {
@@ -648,7 +648,7 @@ export class CarbonChainClient implements ChainClient {
         for (const h of holders) {
           const addr = h.address.toBase58();
           const leg = LEGS.find((l) => this.legAddress(l, launcher) === addr);
-          if (!leg) throw new LedgerError(`sharing config pays ${addr}, which is not a Carbon split leg (admin_cto?)`);
+          if (!leg) throw new LedgerError(`sharing config pays ${addr}, which is not an Argon split leg (admin_cto?)`);
           const paid = lamportDelta(tx, h.address);
           await this.db.query(
             `INSERT INTO split_ledger (claim_id, leg, launch_id, address, lamports, state, tx_sig) VALUES ($1,$2,$3,$4,$5,'confirmed',$6) ON CONFLICT (claim_id, leg) DO NOTHING`,
@@ -656,7 +656,7 @@ export class CarbonChainClient implements ChainClient {
           );
         }
       } else {
-        const amounts = CarbonChainClient.splitAmounts(total);
+        const amounts = ArgonChainClient.splitAmounts(total);
         for (const leg of LEGS) {
           await this.db.query(
             `INSERT INTO split_ledger (claim_id, leg, launch_id, address, lamports, state) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (claim_id, leg) DO NOTHING`,
@@ -704,13 +704,13 @@ export class CarbonChainClient implements ChainClient {
   // ───────────────────────────── buyback ─────────────────────────────
 
   /**
-   * Buy $CARBON with the buyback leg of one split. Idempotent per splitId: one
+   * Buy $ARGON with the buyback leg of one split. Idempotent per splitId: one
    * ledger row, at most one confirmed buy. Spend = min(requested, the leg's
    * confirmed lamports, the launch config's buybackSolPerTick).
    */
   /**
    * The open (not yet acknowledged) buy of a split, if any: the caller resumes it with
-   * buyCarbon (no new request) and acknowledges it with ackBuyback once its receipt is
+   * buyArgon (no new request) and acknowledges it with ackBuyback once its receipt is
    * in the public log. txSig is null while nothing has been signed.
    */
   async recordedBuyback(splitId: string): Promise<{ tranche: number; lamports: bigint; state: 'pending' | 'sent' | 'confirmed'; txSig: string | null } | null> {
@@ -728,7 +728,7 @@ export class CarbonChainClient implements ChainClient {
   }
 
   /**
-   * Buy $CARBON with the buyback leg of one split, in tranches of at most the launch's
+   * Buy $ARGON with the buyback leg of one split, in tranches of at most the launch's
    * per-tick cap. Idempotent: while a split's latest buy is not acknowledged (ackBuyback,
    * after its receipt is appended) every call resumes and returns THAT buy, whatever
    * amount is asked; only an acknowledged split starts a new tranche, from what the leg
@@ -736,9 +736,9 @@ export class CarbonChainClient implements ChainClient {
    * confirmed trade spent (the on-chain trade event: SOL in + protocol fee + creator
    * fee), never the requested maximum (AG-006).
    */
-  async buyCarbon(lamports: bigint, splitId: string): Promise<{ txSig: string; carbonOut: bigint; lamportsIn: bigint; event: EventData<'buyback.executed'> }> {
-    const carbonMint = this.cfg.carbonMint;
-    if (!carbonMint) throw new ChainConfigError(`${ENV.CARBON_MINT} is required for $CARBON buybacks`);
+  async buyArgon(lamports: bigint, splitId: string): Promise<{ txSig: string; argonOut: bigint; lamportsIn: bigint; event: EventData<'buyback.executed'> }> {
+    const argonMint = this.cfg.argonMint;
+    if (!argonMint) throw new ChainConfigError(`${ENV.ARGON_MINT} is required for $ARGON buybacks`);
     await this.verifyCluster();
     return withLock(this.db, `sol:buyback:${splitId}`, async () => {
       const s = await this.db.query<{ claim_id: string; launch_id: string }>('SELECT claim_id, launch_id FROM sol_splits WHERE split_id=$1', [splitId]);
@@ -746,10 +746,10 @@ export class CarbonChainClient implements ChainClient {
       if (!split) throw new LedgerError(`split ${splitId} not found`);
       let open = await this.recordedBuyback(splitId);
       if (!open) {
-        const leg = await this.db.query<{ lamports: string; state: string }>(`SELECT lamports::text, state FROM split_ledger WHERE claim_id=$1 AND leg='carbon-buyback'`, [split.claim_id]);
+        const leg = await this.db.query<{ lamports: string; state: string }>(`SELECT lamports::text, state FROM split_ledger WHERE claim_id=$1 AND leg='argon-buyback'`, [split.claim_id]);
         const l = leg.rows[0];
         if (!l || l.state !== 'confirmed') throw new LedgerError(`buyback leg of ${splitId} is not confirmed`);
-        if (!this.deps.launchConfig) throw new ChainConfigError('buyCarbon requires the launch config (buybackSolPerTick cap)');
+        if (!this.deps.launchConfig) throw new ChainConfigError('buyArgon requires the launch config (buybackSolPerTick cap)');
         const cap = solToLamports((await this.deps.launchConfig(split.launch_id)).buybackSolPerTick);
         const done = await this.db.query<{ spent: string; n: string }>(
           'SELECT COALESCE(SUM(lamports_spent), 0)::text AS spent, COALESCE(MAX(tranche), 0)::text AS n FROM sol_buybacks WHERE split_id=$1',
@@ -766,8 +766,8 @@ export class CarbonChainClient implements ChainClient {
       const maxLamports = open.lamports;
       const buyer = this.cfg.secrets.requireBuyback();
       const { sig } = await driveTxRow(this.db, this.rpc, { table: 'sol_buybacks', key: { split_id: splitId, tranche } }, async () => {
-        const built = await buildCarbonBuyIxs(this.rpc, carbonMint, buyer.publicKey, maxLamports);
-        assertAllowed(built.instructions, { kind: 'buyback', carbonMint, buyer: buyer.publicKey, maxLamports });
+        const built = await buildArgonBuyIxs(this.rpc, argonMint, buyer.publicKey, maxLamports);
+        assertAllowed(built.instructions, { kind: 'buyback', argonMint, buyer: buyer.publicKey, maxLamports });
         await this.db.query('UPDATE sol_buybacks SET venue=$3 WHERE split_id=$1 AND tranche=$2', [splitId, tranche, built.venue]);
         const signed = await compileAndSign({ rpc: this.rpc, payer: buyer.publicKey, instructions: built.instructions, signers: [buyer], priorityFeeMicroLamports: this.cfg.priorityFeeMicroLamports, computeUnits: 300_000 });
         // Same blockhash + same amount = the same signature as an earlier tranche: the chain would
@@ -777,14 +777,14 @@ export class CarbonChainClient implements ChainClient {
         return signed;
       }, this.poll);
       const tx = await this.fetchTx(sig);
-      const carbonOut = tokenDelta(tx, buyer.publicKey, carbonMint);
-      const spent = spentFromTradeEvents(tx, carbonMint);
-      await this.db.query('UPDATE sol_buybacks SET carbon_out=$3, lamports_spent=$4 WHERE split_id=$1 AND tranche=$2', [splitId, tranche, carbonOut.toString(), spent.toString()]);
+      const argonOut = tokenDelta(tx, buyer.publicKey, argonMint);
+      const spent = spentFromTradeEvents(tx, argonMint);
+      await this.db.query('UPDATE sol_buybacks SET carbon_out=$3, lamports_spent=$4 WHERE split_id=$1 AND tranche=$2', [splitId, tranche, argonOut.toString(), spent.toString()]);
       return {
         txSig: sig,
-        carbonOut,
+        argonOut,
         lamportsIn: spent,
-        event: { kind: 'buyback.executed', payload: { lamportsIn: spent.toString(), carbonOut: carbonOut.toString(), txSig: sig, funding: 'fee-split', splitId } },
+        event: { kind: 'buyback.executed', payload: { lamportsIn: spent.toString(), argonOut: argonOut.toString(), txSig: sig, funding: 'fee-split', splitId } },
       };
     });
   }
@@ -792,7 +792,7 @@ export class CarbonChainClient implements ChainClient {
   // ───────────────────────────── decay: daughter + airdrop ─────────────────────────────
 
   /**
-   * Carbon-paid daughter launch. Payer (and, in native mode, creator) is the
+   * Argon-paid daughter launch. Payer (and, in native mode, creator) is the
    * crank key; the fee split keeps the mother's launcher at 50%. The dev buy
    * (the daughter's own, capped by the mother's devBuySol) lands in the crank
    * wallet and is the pool the airdrop distributes. Durable: the signature is
@@ -873,7 +873,7 @@ export class CarbonChainClient implements ChainClient {
 
   /**
    * The launch's on-chain birth: the block time of its confirmed create transaction
-   * (unix ms), or null when Carbon has no confirmed record of it. The C-14 clock starts here (AG-025).
+   * (unix ms), or null when Argon has no confirmed record of it. The Ar-39 clock starts here (AG-025).
    */
   async launchBornAtMs(launchId: string): Promise<number | null> {
     const r = await this.db.query<{ born_at_ms: string | null; state: string }>('SELECT born_at_ms::text, state FROM sol_launches WHERE launch_id=$1', [launchId]);
@@ -881,7 +881,7 @@ export class CarbonChainClient implements ChainClient {
     return row && row.state === 'confirmed' && row.born_at_ms !== null ? Number(row.born_at_ms) : null;
   }
 
-  /** Public key of the Carbon crank wallet (fee payer, daughter creator in native mode). */
+  /** Public key of the Argon crank wallet (fee payer, daughter creator in native mode). */
   crankAddress(): string {
     return this.crank().publicKey.toBase58();
   }
@@ -909,6 +909,6 @@ export function spentFromTradeEvents(tx: VersionedTransactionResponse, mint: Pub
   throw new ChainUnavailableError('buyback transaction has no trade event');
 }
 
-export function createChainClient(deps: ChainClientDeps): CarbonChainClient {
-  return new CarbonChainClient(deps);
+export function createChainClient(deps: ChainClientDeps): ArgonChainClient {
+  return new ArgonChainClient(deps);
 }

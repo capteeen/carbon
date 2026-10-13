@@ -1,4 +1,4 @@
-/** Typed errors for @carbon/x. Messages never contain token material. */
+/** Typed errors for @argon/x. Messages never contain token material. */
 
 export class XError extends Error {
   constructor(message: string) {

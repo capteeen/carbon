@@ -31,12 +31,12 @@ const browser = await launch();
 try {
   const { page, cdp } = await phonePage(browser, { dpr: 1 });
   await page.goto(`${url}?view=story&smooth=0&fixture=1&dpr=0.3`);
-  await page.waitForFunction(() => window.__carbon?.firstFrameAt != null);
+  await page.waitForFunction(() => window.__argon?.firstFrameAt != null);
   const sweep = () =>
     page.evaluate(
       () =>
         new Promise<void>((resolve) => {
-          const el = document.querySelector('.carbon-story') as HTMLElement;
+          const el = document.querySelector('.argon-story') as HTMLElement;
           const top = el.getBoundingClientRect().top + window.scrollY;
           const dist = el.offsetHeight - window.innerHeight;
           const t0 = performance.now();

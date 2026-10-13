@@ -18,7 +18,7 @@ try {
   if (desktop) await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(appUrl || `${url}?view=story&smooth=0${fixture ? '&fixture=1' : ''}`);
   if (appUrl) await page.waitForSelector('[data-testid=story-pin]');
-  else await page.waitForFunction(() => window.__carbon?.firstFrameAt != null, null, { timeout: 30000 });
+  else await page.waitForFunction(() => window.__argon?.firstFrameAt != null, null, { timeout: 30000 });
   await page.waitForTimeout(1500);
   for (const r of CHAPTER_RANGES) {
     const extra = r.index === 3 ? [0.08, 0.5] : r.index === 9 ? [0.15, 0.9] : r.index === 4 ? [0.3, 0.6, 0.9] : [0.5];

@@ -1,8 +1,8 @@
 /**
  * SPEC §1/§7: "Each isotope × shape applies exactly its config row (budget, cadence,
- * threshold, decay); C-13's extra neutron affects only the chosen agent."
+ * threshold, decay); Ar-40's extra neutron affects only the chosen agent."
  * Checked at RUNTIME (budgets.spend against the Postgres ledger, Sentinel's report,
- * the worker supervisor's schedule, @carbon/solana's decay), not just in the table.
+ * the worker supervisor's schedule, @argon/solana's decay), not just in the table.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
@@ -14,16 +14,16 @@ import {
   SHAPE_IDS,
   launchConfig,
   type AgentId,
-  type CarbonEvent,
+  type ArgonEvent,
   type ChainClient,
   type IsotopeId,
   type LaunchConfig,
   type LlmProvider,
   type ShapeId,
   type XClient,
-} from '@carbon/core';
-import { Herald, Sentinel, postRate, type AgentContext } from '@carbon/agents';
-import { C11_HALF_LIFE_SEC, collapseAtMs, decayReadout } from '@carbon/solana';
+} from '@argon/core';
+import { Herald, Sentinel, postRate, type AgentContext } from '@argon/agents';
+import { AR41_HALF_LIFE_SEC, collapseAtMs, decayReadout } from '@argon/solana';
 import { Supervisor } from '../../apps/worker/src/supervisor.js';
 import { createLaunch, makeEnv, wallet, type Env } from './support/env.js';
 
@@ -89,7 +89,7 @@ describe('every config row is what budgets.spend enforces at runtime', () => {
     await expect(b.spend(launchId, agent, kind, 1)).rejects.toBeInstanceOf(BudgetExceededError);
   }
 
-  it(`${ROWS.length} rows (12 isotope × shape, C-13 with each heavy agent): llm per agent, posts, replies, dev buy, buyback per tick`, async () => {
+  it(`${ROWS.length} rows (12 isotope × shape, Ar-40 with each heavy agent): llm per agent, posts, replies, dev buy, buyback per tick`, async () => {
     for (const r of ROWS) {
       const cfg = launchConfig(r.isotope, r.shape, r.heavy);
       const launchId = await createLaunch(env.core, r.shape, r.isotope, r.heavy);
@@ -103,7 +103,7 @@ describe('every config row is what budgets.spend enforces at runtime', () => {
 
   it('windows: llm/posts/replies roll over after 1 h; buyback after the shape’s loop period (10 min default); dev buy never', async () => {
     for (const shape of SHAPE_IDS) {
-      const cfg = launchConfig('C-12', shape);
+      const cfg = launchConfig('Ar-36', shape);
       const launchId = await createLaunch(env.core, shape);
       const b = env.core.budgets;
       await b.spend(launchId, 'scout', 'llm', cfg.capacity.scout.llmCallsPerHour);
@@ -122,11 +122,11 @@ describe('every config row is what budgets.spend enforces at runtime', () => {
     }
   });
 
-  it('C-13: the extra neutron doubles only the chosen agent; every other number equals C-12 on the same shape', () => {
+  it('Ar-40: the extra neutron doubles only the chosen agent; every other number equals Ar-36 on the same shape', () => {
     for (const shape of SHAPE_IDS) {
-      const base = launchConfig('C-12', shape);
+      const base = launchConfig('Ar-36', shape);
       for (const heavy of AGENT_IDS) {
-        const c = launchConfig('C-13', shape, heavy);
+        const c = launchConfig('Ar-40', shape, heavy);
         for (const a of AGENT_IDS) {
           const k = a === heavy ? 2 : 1;
           expect(c.capacity[a]).toEqual({ llmCallsPerHour: base.capacity[a].llmCallsPerHour * k, concurrency: base.capacity[a].concurrency * k });
@@ -137,14 +137,14 @@ describe('every config row is what budgets.spend enforces at runtime', () => {
         expect(strip(c)).toEqual(strip(base));
       }
     }
-    expect(() => launchConfig('C-13', 'ring', null)).toThrow();
-    expect(() => launchConfig('C-12', 'ring', 'herald')).toThrow();
+    expect(() => launchConfig('Ar-40', 'ring', null)).toThrow();
+    expect(() => launchConfig('Ar-36', 'ring', 'herald')).toThrow();
   });
 
-  it('C-13 heavy Herald: Herald’s posting rate check uses the doubled number at runtime; heavy Scout leaves Herald unchanged', async () => {
+  it('Ar-40 heavy Herald: Herald’s posting rate check uses the doubled number at runtime; heavy Scout leaves Herald unchanged', async () => {
     for (const heavy of ['herald', 'scout'] as const) {
-      const cfg = launchConfig('C-13', 'ring', heavy);
-      const launchId = await createLaunch(env.core, 'ring', 'C-13', heavy);
+      const cfg = launchConfig('Ar-40', 'ring', heavy);
+      const launchId = await createLaunch(env.core, 'ring', 'Ar-40', heavy);
       const ctx = ctxFor(env, launchId, cfg);
       for (let i = 0; i < cfg.postsPerHour; i++) {
         expect((await postRate(ctx)).ok).toBe(true);
@@ -164,15 +164,15 @@ describe('Sentinel scores against the launch’s own threshold', () => {
   });
   afterAll(async () => env.cleanup());
 
-  it('for every shape (and the C-11 small budget), report.threshold is the config row’s and passed = score ≥ threshold && !hardFail', async () => {
+  it('for every shape (and the Ar-41 small budget), report.threshold is the config row’s and passed = score ≥ threshold && !hardFail', async () => {
     for (const shape of SHAPE_IDS) {
-      for (const isotope of ['C-11', 'C-12'] as const) {
+      for (const isotope of ['Ar-41', 'Ar-36'] as const) {
         const w = wallet();
         const launchId = await createLaunch(env.core, shape, isotope, null, w.address);
         const cfg = launchConfig(isotope, shape);
         // DIAMOND gates every action: approve Sentinel's gate card as the launcher.
         const unsub = env.core.bus.subscribe(launchId, (e) => {
-          if (e.kind === 'approval.requested') void env.core.approvals.decide((e as CarbonEvent<'approval.requested'>).payload.approvalId, true, w.address);
+          if (e.kind === 'approval.requested') void env.core.approvals.decide((e as ArgonEvent<'approval.requested'>).payload.approvalId, true, w.address);
         });
         const draft = await env.core.bus.append({
           launchId,
@@ -192,7 +192,7 @@ describe('Sentinel scores against the launch’s own threshold', () => {
   });
 });
 
-describe('cadence and decay come from the row in the worker and @carbon/solana', () => {
+describe('cadence and decay come from the row in the worker and @argon/solana', () => {
   let env: Env;
   beforeAll(async () => {
     env = await makeEnv();
@@ -215,22 +215,22 @@ describe('cadence and decay come from the row in the worker and @carbon/solana',
   }
 
   async function deployed(isotope: IsotopeId, shape: ShapeId) {
-    const launchId = await createLaunch(env.core, shape, isotope, isotope === 'C-13' ? 'herald' : null);
+    const launchId = await createLaunch(env.core, shape, isotope, isotope === 'Ar-40' ? 'herald' : null);
     const dep = await env.core.bus.append({
       launchId,
       kind: 'launch.deployed',
       actor: 'treasurer',
       payload: { ca: 'Mint1111111111111111111111111111111111111', txSig: 'sig', creatorWallet: 'Fee11111111111111111111111111111111111111', devBuySol: 0.1, network: 'devnet' },
     });
-    const created = (await env.core.bus.list(launchId, { kinds: ['launch.created'] }))[0] as CarbonEvent<'launch.created'>;
+    const created = (await env.core.bus.list(launchId, { kinds: ['launch.created'] }))[0] as ArgonEvent<'launch.created'>;
     return { launchId, dep, created };
   }
 
   it('RING loops every loopMinutes (10) from the last loop hand-off; CHAIN/DIAMOND claim hourly', async () => {
     const sup = supervisor();
     for (const shape of SHAPE_IDS) {
-      const { launchId, dep, created } = await deployed('C-12', shape);
-      const cfg = launchConfig('C-12', shape);
+      const { launchId, dep, created } = await deployed('Ar-36', shape);
+      const cfg = launchConfig('Ar-36', shape);
       const period = (cfg.loopMinutes ?? 60) * 60_000;
       expect(await sup.nextTickAt(created)).toBe(dep.ts + period);
       env.clock.advance(7 * 60_000);
@@ -240,7 +240,7 @@ describe('cadence and decay come from the row in the worker and @carbon/solana',
     await sup.stop();
   });
 
-  it('after deploy the supervisor publishes the row’s decay clock: C-14 collapses at deploy + 7 d, C-11 on 20 min of quiet, C-12/C-13 never', async () => {
+  it('after deploy the supervisor publishes the row’s decay clock: Ar-39 collapses at deploy + 7 d, Ar-41 on 20 min of quiet, Ar-36/Ar-40 never', async () => {
     const launches: Record<string, Awaited<ReturnType<typeof deployed>>> = {};
     for (const iso of ISOTOPE_IDS) launches[iso] = await deployed(iso, 'chain');
     const sup = supervisor();
@@ -248,7 +248,7 @@ describe('cadence and decay come from the row in the worker and @carbon/solana',
     await sup.stop();
     for (const iso of ISOTOPE_IDS) {
       const { launchId, dep } = launches[iso]!;
-      const started = (await env.core.bus.list(launchId, { kinds: ['decay.started'] })) as CarbonEvent<'decay.started'>[];
+      const started = (await env.core.bus.list(launchId, { kinds: ['decay.started'] })) as ArgonEvent<'decay.started'>[];
       const rule = ISOTOPES[iso].decay;
       if (rule.kind === 'none') expect(started).toHaveLength(0);
       else {
@@ -259,20 +259,20 @@ describe('cadence and decay come from the row in the worker and @carbon/solana',
     }
   });
 
-  it('@carbon/solana collapse times follow the row exactly (trades reset C-11, never C-14)', () => {
+  it('@argon/solana collapse times follow the row exactly (trades reset Ar-41, never Ar-39)', () => {
     const born = 1_900_000_000_000;
-    const c11 = ISOTOPES['C-11'].decay;
-    const c14 = ISOTOPES['C-14'].decay;
+    const c11 = ISOTOPES['Ar-41'].decay;
+    const c14 = ISOTOPES['Ar-39'].decay;
     expect(collapseAtMs(c11, born, null)).toBe(born + 20 * 60_000);
     expect(collapseAtMs(c11, born, born + 5 * 60_000)).toBe(born + 25 * 60_000);
     expect(collapseAtMs(c14, born, born + 6 * 24 * 3600_000)).toBe(born + 7 * 24 * 3600_000);
-    expect(collapseAtMs(ISOTOPES['C-12'].decay, born, null)).toBeNull();
-    expect(collapseAtMs(ISOTOPES['C-13'].decay, born, null)).toBeNull();
+    expect(collapseAtMs(ISOTOPES['Ar-36'].decay, born, null)).toBeNull();
+    expect(collapseAtMs(ISOTOPES['Ar-40'].decay, born, null)).toBeNull();
     // 1 s before: not collapsed; at the instant: collapsed
     expect(decayReadout(c11, born, null, born + 20 * 60_000 - 1000).remainingMs).toBe(1000);
     expect(decayReadout(c11, born, null, born + 20 * 60_000).progress).toBe(1);
-    // The 20.4-min half-life is illustration only, not the rule.
-    expect(C11_HALF_LIFE_SEC).toBe(1224);
+    // The 109.6-min half-life is illustration only, not the rule.
+    expect(AR41_HALF_LIFE_SEC).toBe(6577);
     expect(c11).toEqual({ kind: 'quiet', quietSec: 1200 });
   });
 });

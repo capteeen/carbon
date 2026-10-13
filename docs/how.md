@@ -1,14 +1,19 @@
-# How Carbon works
+# How Argon works
 
-Carbon is a pump.fun launchpad run by a molecule of six AI agents. You connect
+Argon is a pump.fun launchpad run by a molecule of six AI agents. You connect
 your Solana wallet (and, if you want, your project's X account), type one line,
 pick an isotope and a shape, and the agents research, create, check and launch
 a coin. You approve every launch. Posts need your approval unless you turn on
 posts autopilot (off by default).
 
-Carbon is element 6 because it has 6 protons. Carbon has 6 agents.
+Argon is element 18 because it has 18 protons. Argon has 6 agents: the story
+gives one of those protons to each agent, so six agents sit at the core.
 
-## The six protons
+Real argon is a noble gas: its electron shells (2, 8, 8) are full, so it almost
+never bonds. Argon's agents do. Their bonds and valence below are the product's
+rules, not argon's chemistry.
+
+## The six agent protons
 
 | Proton | Agent | Role |
 |---|---|---|
@@ -16,12 +21,12 @@ Carbon is element 6 because it has 6 protons. Carbon has 6 agents.
 | PROTON_02 | FORGE | Creates the coin: name, ticker, lore, logo, banner, site; prepares the pump.fun deploy |
 | PROTON_03 | HERALD | Drafts posts and, after approval, posts from your connected X account |
 | PROTON_04 | KEEPER | Community: replies, holder milestones, recruiting drafts |
-| PROTON_05 | TREASURER | The launch's fee address, fee claims, the 50/30/20 split, $CARBON buybacks, public receipts |
+| PROTON_05 | TREASURER | The launch's fee address, fee claims, the 50/30/20 split, $ARGON buybacks, public receipts |
 | PROTON_06 | SENTINEL | Risk checks; computes the stability score; can block a launch |
 
 ## Valence
 
-Every agent has valence 4: it holds at most 4 bond orders at once. A hand-off
+Every agent has valence 4 (a product rule; real argon's valence is 0): it holds at most 4 bond orders at once. A hand-off
 that would give an agent a fifth is queued (a `handoff.queued` event) until a
 bond frees up. Valence is not configurable.
 
@@ -47,32 +52,35 @@ Hand-offs are only allowed along the bonds of the launch's shape.
 ## Isotopes
 
 Isotopes differ only in neutrons, so each isotope is a different agent
-configuration.
+configuration. Neutrons are the real counts for each argon isotope (mass number
+minus 18 protons).
 
 | Isotope | Neutrons | Name | Behaviour |
 |---|---|---|---|
-| C-11 | 5 | FLASH | Small budget (half of the shape's base), fast meme. Unstable: decays to a daughter after 20 minutes with no trades. |
-| C-12 | 6 | CORE | Balanced and stable. The default. |
-| C-13 | 7 | HEAVY | Stable. The extra neutron doubles the capacity of one agent you choose. No other agent changes. |
-| C-14 | 8 | RADIOACTIVE | Decays to a daughter on a visible 7-day clock. Trades do not reset it. |
+| Ar-36 | 18 | CORE | Balanced and stable. The default. |
+| Ar-39 | 21 | RADIOACTIVE | Decays to a daughter on a visible 7-day clock. Trades do not reset it. |
+| Ar-40 | 22 | HEAVY | Stable. A heavy neutron doubles the capacity of one agent you choose. No other agent changes. |
+| Ar-41 | 23 | FLASH | Small budget (half of the shape's base), fast meme. Unstable: decays to a daughter after 20 minutes with no trades. |
 
-The isotope names are the story, not a promise. Real carbon-11 has a half-life
-of about 20.4 minutes. Real carbon-14 has a half-life of about 5,730 years; a
-C-14 coin decays after 7 days and does not last anywhere near that long.
+The isotope names are the story, not a promise. Argon-36 and argon-40 are
+stable; argon-40 makes up about 99.6% of natural argon. Real argon-41 has a
+half-life of about 110 minutes; an Ar-41 coin decays 20 minutes after its last
+trade. Real argon-39 has a half-life of about 269 years; an Ar-39 coin decays
+after 7 days and does not last anywhere near that long.
 
 ### Decay
 
-When a C-11 or C-14 coin collapses, Carbon snapshots the mother coin's holders,
+When a Ar-41 or Ar-39 coin collapses, Argon snapshots the mother coin's holders,
 launches a daughter coin and airdrops it to the mother's holders in proportion
 to their snapshot balances. The snapshot, the collapse, the daughter and every
 airdrop are public events.
 
-When a coin collapses is Carbon's own rule, taken from the config table. It is
-not a half-life and no random draw decides it. A C-11 coin collapses 20 minutes
-after its last trade. A C-14 coin collapses 7 days after launch, whatever
+When a coin collapses is Argon's own rule, taken from the config table. It is
+not a half-life and no random draw decides it. A Ar-41 coin collapses 20 minutes
+after its last trade. A Ar-39 coin collapses 7 days after launch, whatever
 happens to trades.
 
-Carbon imports these functions from `@qsd/protocol` (the qsd-market repo) and
+Argon imports these functions from `@qsd/protocol` (the qsd-market repo) and
 does not reimplement them:
 
 - `daughterName`: the daughter coin's name.
@@ -80,10 +88,10 @@ does not reimplement them:
   snapshot.
 - `allocationProof` and `verifyAllocationProof`: a proof for each wallet's
   share of the table.
-- `decayProgressFor`: only the illustrative C-11 curve, drawn with real
-  carbon-11's 20.4-minute half-life. It never decides the collapse.
+- `decayProgressFor`: only the illustrative Ar-41 curve, drawn with real
+  argon-41's 109.6-minute half-life. It never decides the collapse.
 
-Carbon does not use qsd's own decay state machine, which resolves collapse by a
+Argon does not use qsd's own decay state machine, which resolves collapse by a
 quantum measurement.
 
 ## Shapes
@@ -96,7 +104,7 @@ quantum measurement.
 | DIAMOND | Every agent may bond with every other, so each can hold a triple bond (valence 4 still caps its total). Max budget. Every action gated behind your approval. Autopilot is unavailable. |
 <!-- generated:shapes-table:end -->
 
-Graphene is not a shape: it is the live sheet of every real launch on the home
+The lattice is not a shape: it is the live sheet of every real launch on the home
 page.
 
 <!-- generated:config-table:start -->
@@ -104,23 +112,23 @@ page.
 
 | Isotope | Shape | Sentinel threshold | Decay | Dev buy (SOL) | Buyback / tick (SOL) | LLM calls / agent / h | Posts / h | Replies / h | Posting window | Loop | Every action gated |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| C-11 | CHAIN | 60 | after 20 min with no trades | 0.05 | 0 | 10 | 1 | 3 | 120 min | none | no |
-| C-11 | RING | 70 | after 20 min with no trades | 0.125 | 0.005 | 20 | 3 | 10 | none | every 10 min | no |
-| C-11 | DIAMOND | 85 | after 20 min with no trades | 0.25 | 0.01 | 40 | 3 | 15 | none | none | yes |
-| C-12 | CHAIN | 60 | none (stable) | 0.1 | 0 | 20 | 2 | 6 | 120 min | none | no |
-| C-12 | RING | 70 | none (stable) | 0.25 | 0.01 | 40 | 6 | 20 | none | every 10 min | no |
-| C-12 | DIAMOND | 85 | none (stable) | 0.5 | 0.02 | 80 | 6 | 30 | none | none | yes |
-| C-13 | CHAIN | 60 | none (stable) | 0.1 | 0 | 20 (heavy agent: 40) | 2 (heavy Herald: 4) | 6 (heavy Keeper: 12) | 120 min | none | no |
-| C-13 | RING | 70 | none (stable) | 0.25 | 0.01 | 40 (heavy agent: 80) | 6 (heavy Herald: 12) | 20 (heavy Keeper: 40) | none | every 10 min | no |
-| C-13 | DIAMOND | 85 | none (stable) | 0.5 | 0.02 | 80 (heavy agent: 160) | 6 (heavy Herald: 12) | 30 (heavy Keeper: 60) | none | none | yes |
-| C-14 | CHAIN | 60 | fixed clock, 7 days | 0.1 | 0 | 20 | 2 | 6 | 120 min | none | no |
-| C-14 | RING | 70 | fixed clock, 7 days | 0.25 | 0.01 | 40 | 6 | 20 | none | every 10 min | no |
-| C-14 | DIAMOND | 85 | fixed clock, 7 days | 0.5 | 0.02 | 80 | 6 | 30 | none | none | yes |
+| Ar-36 | CHAIN | 60 | none (stable) | 0.1 | 0 | 20 | 2 | 6 | 120 min | none | no |
+| Ar-36 | RING | 70 | none (stable) | 0.25 | 0.01 | 40 | 6 | 20 | none | every 10 min | no |
+| Ar-36 | DIAMOND | 85 | none (stable) | 0.5 | 0.02 | 80 | 6 | 30 | none | none | yes |
+| Ar-39 | CHAIN | 60 | fixed clock, 7 days | 0.1 | 0 | 20 | 2 | 6 | 120 min | none | no |
+| Ar-39 | RING | 70 | fixed clock, 7 days | 0.25 | 0.01 | 40 | 6 | 20 | none | every 10 min | no |
+| Ar-39 | DIAMOND | 85 | fixed clock, 7 days | 0.5 | 0.02 | 80 | 6 | 30 | none | none | yes |
+| Ar-40 | CHAIN | 60 | none (stable) | 0.1 | 0 | 20 (heavy agent: 40) | 2 (heavy Herald: 4) | 6 (heavy Keeper: 12) | 120 min | none | no |
+| Ar-40 | RING | 70 | none (stable) | 0.25 | 0.01 | 40 (heavy agent: 80) | 6 (heavy Herald: 12) | 20 (heavy Keeper: 40) | none | every 10 min | no |
+| Ar-40 | DIAMOND | 85 | none (stable) | 0.5 | 0.02 | 80 (heavy agent: 160) | 6 (heavy Herald: 12) | 30 (heavy Keeper: 60) | none | none | yes |
+| Ar-41 | CHAIN | 60 | after 20 min with no trades | 0.05 | 0 | 10 | 1 | 3 | 120 min | none | no |
+| Ar-41 | RING | 70 | after 20 min with no trades | 0.125 | 0.005 | 20 | 3 | 10 | none | every 10 min | no |
+| Ar-41 | DIAMOND | 85 | after 20 min with no trades | 0.25 | 0.01 | 40 | 3 | 15 | none | none | yes |
 
-- C-13 (HEAVY): you choose one agent; its LLM capacity and concurrency double. If you choose Herald, posts per hour double; if Keeper, replies per hour double. No other agent changes.
-- C-11 budgets are ×0.5 of the shape's base budgets.
+- Ar-40 (HEAVY): you choose one agent; its LLM capacity and concurrency double. If you choose Herald, posts per hour double; if Keeper, replies per hour double. No other agent changes.
+- Ar-41 budgets are ×0.5 of the shape's base budgets.
 - A buyback tick is the shape's loop period, or 10 minutes when the shape has no loop. Buybacks are funded only by the 30% fee share.
-- Every agent has valence 4: at most 4 bond orders at once. Extra hand-offs queue.
+- Every agent has valence 4 (a product rule, not argon chemistry): at most 4 bond orders at once. Extra hand-offs queue.
 <!-- generated:config-table:end -->
 
 <!-- generated:sentinel-formula:start -->
@@ -213,18 +221,18 @@ Denylist (whole-word, case-insensitive): **real_person**: elon, musk, trump, bid
 Each launch records its fee mode in its `wallet.created` event, and /wallets
 shows the mode of every launch.
 
-- **Native mode** (the default): Carbon uses pump.fun's native creator-fee
+- **Native mode** (the default): Argon uses pump.fun's native creator-fee
   sharing. The launch transaction sets the coin's fee shares once, on chain.
   The coin's fee address is its sharing-config account, and every distribution
-  pays the shares below directly. In native mode Carbon never holds your 50%.
+  pays the shares below directly. In native mode Argon never holds your 50%.
 - **Wallet mode** (a fallback the owner can switch on with
-  `CARBON_FEE_MODE=wallet`): Carbon's per-launch wallet receives all of the
+  `ARGON_FEE_MODE=wallet`): Argon's per-launch wallet receives all of the
   launch's creator fees. Treasurer claims them and splits them, paying your 50%
-  to your wallet with a public receipt. Until a split runs, Carbon's per-launch
+  to your wallet with a public receipt. Until a split runs, Argon's per-launch
   wallet holds your share.
 
-In both modes Carbon never holds your keys. Your wallet signs and pays the
-launch; Carbon never stores your wallet's keys.
+In both modes Argon never holds your keys. Your wallet signs and pays the
+launch; Argon never stores your wallet's keys.
 
 <!-- generated:fee-split:start -->
 ## Fee split
@@ -232,35 +240,35 @@ launch; Carbon never stores your wallet's keys.
 | Recipient | Share of every claimed creator fee | Basis points |
 |---|---|---|
 | The launcher's wallet | 50% | 5000 |
-| $CARBON buyback wallet | 30% | 3000 |
-| Carbon treasury | 20% | 2000 |
+| $ARGON buyback wallet | 30% | 3000 |
+| Argon treasury | 20% | 2000 |
 <!-- generated:fee-split:end -->
 
 - Treasurer runs the claim on a schedule (every RING loop, otherwise hourly)
   and publishes a receipt for every split: amounts, transaction signatures and
   time. A split that is interrupted resumes without paying twice.
-- $CARBON buybacks are funded only by the 30% share and are capped per tick.
-- Treasurer trades nothing except $CARBON buybacks and the launch's own dev
+- $ARGON buybacks are funded only by the 30% share and are capped per tick.
+- Treasurer trades nothing except $ARGON buybacks and the launch's own dev
   buy.
-- Every launch's fee address and Carbon's two wallets are public on /wallets.
+- Every launch's fee address and Argon's two wallets are public on /wallets.
   Every receipt is public on /receipts.
-- Carbon runs on Solana devnet by default. Mainnet needs a setting only the
+- Argon runs on Solana devnet by default. Mainnet needs a setting only the
   owner can change.
 
 ## The agents' model
 
-The agents are powered by Google Gemini. Carbon is not affiliated with or
+The agents are powered by Google Gemini. Argon is not affiliated with or
 endorsed by Google. Each agent writes a short reasoning summary for its
 actions, labelled "agent reasoning" and tied to the event it explains.
 
-## What Carbon never does
+## What Argon never does
 
 - Never holds your wallet's keys.
 - Never launches a coin without your approval, and never autopilots a launch.
 - Never posts to X without your approval or the posts autopilot you turned on.
 - Never creates X accounts. It only connects your own project account, with
   OAuth.
-- Never trades anything except $CARBON buybacks and the launch's own dev buy.
+- Never trades anything except $ARGON buybacks and the launch's own dev buy.
 - Never moves money without a public receipt.
 - Never shows a number it did not log. Missing data is shown as `--.--`.
 - Never runs on a quantum computer.

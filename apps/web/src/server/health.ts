@@ -20,9 +20,9 @@ function withTimeout<T>(p: Promise<T>): Promise<T> {
 
 export async function checkHealth(env: NodeJS.ProcessEnv = process.env): Promise<Health> {
   const checks: Health['checks'] = [];
-  const seed = env.CARBON_AGENT_KEY_SEED?.trim();
+  const seed = env.ARGON_AGENT_KEY_SEED?.trim();
   checks.push({
-    name: 'CARBON_AGENT_KEY_SEED',
+    name: 'ARGON_AGENT_KEY_SEED',
     state: !seed ? 'missing' : /^[0-9a-fA-F]{64,}$/.test(seed) ? 'ok' : 'invalid',
     fix: 'Set it in Vercel to the same hex value (at least 32 bytes) the worker uses.',
   });

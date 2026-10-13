@@ -7,7 +7,7 @@
  */
 import type { ThreeEvent } from '@react-three/fiber';
 import type { Object3D } from 'three';
-import type { AgentId } from '@carbon/core/contracts';
+import type { AgentId } from '@argon/core/contracts';
 
 export type InspectTarget = { kind: 'agent'; agent: AgentId } | { kind: 'neutron' };
 

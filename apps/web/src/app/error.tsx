@@ -17,7 +17,7 @@ export default function ErrorPage({ reset }: { error: Error; reset: () => void }
   return (
     <div>
       <h1 className="section-title">Log unreachable</h1>
-      <p className="meta">// Carbon could not read its event log just now, so nothing is shown rather than something made up.</p>
+      <p className="meta">// Argon could not read its event log just now, so nothing is shown rather than something made up.</p>
       <HealthList />
       <button type="button" onClick={reset}>
         Try again

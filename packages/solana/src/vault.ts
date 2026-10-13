@@ -1,5 +1,5 @@
 /**
- * Secrets at rest: AES-256-GCM (@noble/ciphers) under CARBON_VAULT_KEY.
+ * Secrets at rest: AES-256-GCM (@noble/ciphers) under ARGON_VAULT_KEY.
  *
  *   nonce = 12 random bytes
  *   AAD   = utf8(label)        a blob cannot be moved to another launch or purpose
@@ -57,7 +57,7 @@ export function openKeypair(key: Uint8Array, blob: string, label: string): Keypa
   }
 }
 
-/** Labels bind a blob to one launch and one purpose. */
+/** Labels bind a blob to one launch and one purpose. They keep the pre-rename 'carbon/' prefix so stored blobs still open. */
 export const keyLabel = {
   mint: (launchId: string) => `carbon/launch/${launchId}/mint`,
   creator: (launchId: string) => `carbon/launch/${launchId}/creator`,

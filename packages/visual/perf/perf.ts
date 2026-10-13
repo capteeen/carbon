@@ -1,5 +1,5 @@
 /**
- * Perf + sync check for the Carbon story (Playwright + CDP, Chromium).
+ * Perf + sync check for the Argon story (Playwright + CDP, Chromium).
  *
  *   npx tsx perf/perf.ts [--throttle=4] [--seconds=16] [--empty] [--out=perf/results/latest.json]
  *   npx tsx perf/perf.ts --url=http://127.0.0.1:3124/ [--dpr=0.3]   (a running app page, e.g. the Next production build)
@@ -37,17 +37,17 @@ const cycles = Number(arg('cycles', '3'));
 const appUrl = arg('url', '');
 const outPath = arg('out', `perf/results/${appUrl ? 'app' : 'latest'}${empty ? '-empty' : ''}${throttle !== 4 ? `-x${throttle}` : ''}${dprCap ? `-dpr${dprCap}` : ''}.json`);
 
-/** Installed before any page script in --url mode (the harness defines its own window.__carbon). */
+/** Installed before any page script in --url mode (the harness defines its own window.__argon). */
 const APP_SHIM = `(() => {
   const c = { frames: [], recording: false, firstFrameAt: null, last: null };
   c.store = { get() {
-    const el = document.querySelector('.carbon-story'); if (!el) return 0;
+    const el = document.querySelector('.argon-story'); if (!el) return 0;
     const top = el.getBoundingClientRect().top + window.scrollY;
     const dist = Math.max(1, el.offsetHeight - window.innerHeight);
     return Math.min(1, Math.max(0, (window.scrollY - top) / dist));
   } };
   c.quality = { level() { const pin = document.querySelector('[data-testid=story-pin]'); return Number(pin && pin.dataset.quality !== undefined ? pin.dataset.quality : -1); } };
-  window.__carbon = c;
+  window.__argon = c;
   const tick = (t) => {
     if (c.firstFrameAt === null) { const pin = document.querySelector('[data-testid=story-pin]'); if (pin && pin.dataset.chapter3d !== undefined) c.firstFrameAt = performance.now(); }
     if (c.recording && c.last !== null) c.frames.push(t - c.last);
@@ -66,7 +66,7 @@ function pageUrl(base: string, o: { smooth: boolean; reduced?: boolean; dpr?: st
 async function open(page: Page, base: string, o: { smooth: boolean; reduced?: boolean; dpr?: string }) {
   if (appUrl) await page.emulateMedia({ reducedMotion: o.reduced ? 'reduce' : 'no-preference' });
   await page.goto(pageUrl(base, o));
-  await page.waitForFunction(() => window.__carbon?.firstFrameAt != null, null, { timeout: 60000 });
+  await page.waitForFunction(() => window.__argon?.firstFrameAt != null, null, { timeout: 60000 });
 }
 
 type Page = Awaited<ReturnType<typeof phonePage>>['page'];
@@ -79,7 +79,7 @@ async function settle(page: Page, ms = 160) {
 async function readSync(page: Page) {
   return page.evaluate(() => {
     const pin = document.querySelector('[data-testid=story-pin]') as HTMLElement;
-    const layers = [...document.querySelectorAll<HTMLElement>('.carbon-chapter')];
+    const layers = [...document.querySelectorAll<HTMLElement>('.argon-chapter')];
     const fades = layers.map((l) => Number(l.dataset.fade ?? (l.dataset.active === 'true' ? 1 : 0)));
     let best = -1;
     let bestV = -1;
@@ -91,7 +91,7 @@ async function readSync(page: Page) {
     });
     const proton = document.querySelector('[data-testid=proton-hud]')?.getAttribute('data-agent') ?? null;
     return {
-      p: window.__carbon.store.get(),
+      p: window.__argon.store.get(),
       chapter3d: Number(pin.dataset.chapter3d),
       chapterHud: Number(pin.dataset.chapterHud),
       copyLayer: best,
@@ -162,7 +162,7 @@ try {
     const { page, cdp, errors, context } = await phonePage(browser, { throttle, dpr: deviceDpr });
     await init(context);
     await open(page, url, { smooth: false, dpr: dprCap });
-    const firstFrameMs = await page.evaluate(() => window.__carbon.firstFrameAt);
+    const firstFrameMs = await page.evaluate(() => window.__argon.firstFrameAt);
     await page.waitForTimeout(1500);
     await cdp.send('HeapProfiler.enable');
     await cdp.send('HeapProfiler.collectGarbage');
@@ -173,7 +173,7 @@ try {
       page.evaluate(
         ({ secs, measure }) =>
           new Promise<number[]>((resolve) => {
-            const el = document.querySelector('.carbon-story') as HTMLElement;
+            const el = document.querySelector('.argon-story') as HTMLElement;
             const top = el.getBoundingClientRect().top + window.scrollY;
             const dist = el.offsetHeight - window.innerHeight;
             const frames: number[] = [];
@@ -209,14 +209,14 @@ try {
     await page.waitForTimeout(800);
     await cdp.send('HeapProfiler.collectGarbage');
     const idle0 = (await cdp.send('Runtime.getHeapUsage')) as { usedSize: number };
-    const idleFrames0 = await page.evaluate(() => window.__carbon.frames.length);
-    await page.evaluate(() => (window.__carbon.recording = true));
+    const idleFrames0 = await page.evaluate(() => window.__argon.frames.length);
+    await page.evaluate(() => (window.__argon.recording = true));
     await page.waitForTimeout(5000);
     const idle1 = (await cdp.send('Runtime.getHeapUsage')) as { usedSize: number };
-    const idleFrames = (await page.evaluate(() => window.__carbon.frames.length)) - idleFrames0;
-    await page.evaluate(() => (window.__carbon.recording = false));
+    const idleFrames = (await page.evaluate(() => window.__argon.frames.length)) - idleFrames0;
+    await page.evaluate(() => (window.__argon.recording = false));
     const fs = stats(frames);
-    const level = await page.evaluate(() => window.__carbon.quality.level());
+    const level = await page.evaluate(() => window.__argon.quality.level());
     result.firstFrameMs = Math.round(firstFrameMs ?? -1);
     result.frames = { ...fs, medianFps: Number((1000 / fs.median).toFixed(1)), p95FrameMs: Number(fs.p95.toFixed(2)), meanFps: Number((1000 / fs.mean).toFixed(1)) };
     result.qualityLevelAfter = level;
@@ -278,8 +278,8 @@ try {
       await settle(page, 450);
       const s = await page.evaluate(() => {
         const pin = document.querySelector('[data-testid=story-pin]') as HTMLElement;
-        const active = [...document.querySelectorAll<HTMLElement>('.carbon-chapter')].findIndex((l) => l.dataset.active === 'true');
-        return { p: window.__carbon.store.get(), chapter3d: Number(pin.dataset.chapter3d), chapterHud: Number(pin.dataset.chapterHud), active };
+        const active = [...document.querySelectorAll<HTMLElement>('.argon-chapter')].findIndex((l) => l.dataset.active === 'true');
+        return { p: window.__argon.store.get(), chapter3d: Number(pin.dataset.chapter3d), chapterHud: Number(pin.dataset.chapterHud), active };
       });
       const e = chapterAt(s.p);
       if (s.chapter3d !== e || s.chapterHud !== e || s.active !== e) rmFailures.push({ ...s, expected: e });

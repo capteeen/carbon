@@ -3,7 +3,7 @@ import { defineConfig } from 'vite';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 
-/** Tiny dev/perf harness for @carbon/visual. Not shipped. */
+/** Tiny dev/perf harness for @argon/visual. Not shipped. */
 export default defineConfig({
   root,
   base: './',

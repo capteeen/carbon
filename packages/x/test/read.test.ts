@@ -6,10 +6,10 @@ import { forbiddenProblem, mentions, searchRecent, trends, usersMe } from './fix
 describe('searchRecent', () => {
   it('uses the app bearer token, clamps max_results and maps posts', async () => {
     const ctx = makeClient({ responders: [() => json(searchRecent)] });
-    const posts = await ctx.client.searchRecent('carbon -is:retweet', { max: 500 });
+    const posts = await ctx.client.searchRecent('argon -is:retweet', { max: 500 });
     const u = new URL(ctx.calls[0]!.url);
     expect(u.pathname).toBe('/2/tweets/search/recent');
-    expect(u.searchParams.get('query')).toBe('carbon -is:retweet');
+    expect(u.searchParams.get('query')).toBe('argon -is:retweet');
     expect(u.searchParams.get('max_results')).toBe('100');
     expect(u.searchParams.get('tweet.fields')).toBe('created_at,author_id,public_metrics');
     expect(ctx.calls[0]!.headers.authorization).toBe('Bearer FIXTURE-APP-BEARER');
@@ -27,9 +27,9 @@ describe('searchRecent', () => {
     const tokens = new MemoryTokenStore();
     await tokens.put(connectedTokens());
     const ctx = makeClient({ tokens, config: { ...testConfig(), bearerToken: undefined } as never, responders: [() => json({ meta: { result_count: 0 } })] });
-    await expect(ctx.client.searchRecent('carbon', { launchId: 'launch-1' })).resolves.toEqual([]);
+    await expect(ctx.client.searchRecent('argon', { launchId: 'launch-1' })).resolves.toEqual([]);
     expect(ctx.calls[0]!.headers.authorization).toBe('Bearer FIXTURE-ACCESS-TOKEN-stored');
-    await expect(ctx.client.searchRecent('carbon')).rejects.toThrow(XConfigError);
+    await expect(ctx.client.searchRecent('argon')).rejects.toThrow(XConfigError);
   });
 });
 

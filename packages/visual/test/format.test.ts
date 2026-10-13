@@ -43,7 +43,7 @@ describe('HUD formatting', () => {
 
   it('label grammar', () => {
     expect(snake('hello world-x')).toBe('HELLO_WORLD_X');
-    expect(meta('Element 06')).toBe('// Element 06');
+    expect(meta('Element 18')).toBe('// Element 18');
     expect(sectionHead('Manifesto')).toBe('////// Manifesto');
   });
 

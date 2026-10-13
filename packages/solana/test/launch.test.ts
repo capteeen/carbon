@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AddressLookupTableAccount, Keypair, PublicKey, VersionedTransaction, type TransactionInstruction } from '@solana/web3.js';
 import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import bs58 from 'bs58';
-import { launchConfig } from '@carbon/core';
+import { launchConfig } from '@argon/core';
 import { pumpSdk } from '../src/sdk.js';
 import { decodePumpIx, PUMP_PROGRAM_ID } from '../src/programs.js';
 import { buildNativeLaunchIxs, launchLookupAddresses } from '../src/pump.js';
@@ -14,7 +14,7 @@ import { makeClient, testDb, testEnv, testKeys } from './helpers/env.js';
 import { fixtureFeeConfig, fixtureGlobal } from './fixtures/pump.js';
 
 const { GLOBAL_PDA, feeSharingConfigPda, creatorVaultPda, bondingCurvePda } = pumpSdk;
-const CFG = launchConfig('C-12', 'ring'); // devBuySol 0.25
+const CFG = launchConfig('Ar-36', 'ring'); // devBuySol 0.25
 const URI = 'https://ipfs.io/ipfs/bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsck7e7aqa4s52zy';
 
 async function chainWithGlobal(): Promise<FakeChain> {
@@ -97,7 +97,7 @@ describe('launch transaction (native fee sharing)', () => {
     const keys = testKeys();
     const chain = await chainWithGlobal();
     const payer = Keypair.generate().publicKey.toBase58();
-    const args = { launchId: 'L-gate', payer, name: 'Carbon Gate', symbol: 'GATE', metadataUri: URI, devBuySol: CFG.devBuySol, approvalId: 'appr-1' };
+    const args = { launchId: 'L-gate', payer, name: 'Argon Gate', symbol: 'GATE', metadataUri: URI, devBuySol: CFG.devBuySol, approvalId: 'appr-1' };
     const noHook = makeClient({ env: testEnv(keys), rpc: chain.rpc(), db });
     await noHook.createLaunchWallet('L-gate');
     await expect(noHook.buildLaunchTx(args)).rejects.toBeInstanceOf(LaunchNotAllowedError);
@@ -117,22 +117,22 @@ describe('launch transaction (native fee sharing)', () => {
 
   it('builds ONE v0 transaction: create_v2 → fee sharing → 50/30/20 shares → dev buy, creator = payer, partially signed by the mint', async () => {
     const keys = testKeys();
-    const env = testEnv(keys, { CARBON_LOOKUP_TABLE: Keypair.generate().publicKey.toBase58() });
+    const env = testEnv(keys, { ARGON_LOOKUP_TABLE: Keypair.generate().publicKey.toBase58() });
     const chain = await chainWithGlobal();
     const seen: [string, string][] = [];
     const client = makeClient({ env, rpc: chain.rpc(), db, assertLaunchAllowed: async (l, a) => void seen.push([l, a]) });
     const user = Keypair.generate();
     await client.createLaunchWallet('L-native');
 
-    const args = { launchId: 'L-native', payer: user.publicKey.toBase58(), name: 'Carbon One', symbol: 'ONE', metadataUri: URI, devBuySol: CFG.devBuySol, approvalId: 'appr-n' };
+    const args = { launchId: 'L-native', payer: user.publicKey.toBase58(), name: 'Argon One', symbol: 'ONE', metadataUri: URI, devBuySol: CFG.devBuySol, approvalId: 'appr-n' };
     // Without a lookup table the native launch does not fit one packet.
-    const noAlt = makeClient({ env: { ...env, CARBON_LOOKUP_TABLE: undefined }, rpc: chain.rpc(), db, assertLaunchAllowed: async () => undefined });
+    const noAlt = makeClient({ env: { ...env, ARGON_LOOKUP_TABLE: undefined }, rpc: chain.rpc(), db, assertLaunchAllowed: async () => undefined });
     await expect(noAlt.buildLaunchTx(args)).rejects.toBeInstanceOf(TxTooLargeError);
     // Configured but not on chain: refused, never guessed.
-    await expect(client.buildLaunchTx(args)).rejects.toThrow(/CARBON_LOOKUP_TABLE account not found/);
+    await expect(client.buildLaunchTx(args)).rejects.toThrow(/ARGON_LOOKUP_TABLE account not found/);
     chain.lookupTable = await lookupTableFor();
 
-    const { txBase64, mint } = await client.buildLaunchTx({ launchId: 'L-native', payer: user.publicKey.toBase58(), name: 'Carbon One', symbol: 'ONE', metadataUri: URI, devBuySol: CFG.devBuySol, approvalId: 'appr-n' });
+    const { txBase64, mint } = await client.buildLaunchTx({ launchId: 'L-native', payer: user.publicKey.toBase58(), name: 'Argon One', symbol: 'ONE', metadataUri: URI, devBuySol: CFG.devBuySol, approvalId: 'appr-n' });
     expect(seen).toContainEqual(['L-native', 'appr-n']);
     const raw = Buffer.from(txBase64, 'base64');
     expect(raw.length).toBeLessThanOrEqual(1232);
@@ -209,13 +209,13 @@ describe('launch transaction (native fee sharing)', () => {
   it('wallet mode: creator = per-launch wallet (not the payer), no fee-sharing instructions, fits without a lookup table', async () => {
     const keys = testKeys();
     const chain = await chainWithGlobal();
-    const client = makeClient({ env: testEnv(keys, { CARBON_FEE_MODE: 'wallet' }), rpc: chain.rpc(), db, assertLaunchAllowed: async () => undefined });
+    const client = makeClient({ env: testEnv(keys, { ARGON_FEE_MODE: 'wallet' }), rpc: chain.rpc(), db, assertLaunchAllowed: async () => undefined });
     const user = Keypair.generate();
     const { address } = await client.createLaunchWallet('L-wallet');
     const row = (await db.query(`SELECT creator, creator_secret FROM sol_launches WHERE launch_id='L-wallet'`)).rows[0]!;
     expect(row.creator).toBe(address);
     expect(row.creator_secret).toMatch(/^v1:/);
-    const { txBase64 } = await client.buildLaunchTx({ launchId: 'L-wallet', payer: user.publicKey.toBase58(), name: 'Carbon Two', symbol: 'TWO', metadataUri: URI, devBuySol: CFG.devBuySol, approvalId: 'a' });
+    const { txBase64 } = await client.buildLaunchTx({ launchId: 'L-wallet', payer: user.publicKey.toBase58(), name: 'Argon Two', symbol: 'TWO', metadataUri: URI, devBuySol: CFG.devBuySol, approvalId: 'a' });
     const tx = VersionedTransaction.deserialize(Buffer.from(txBase64, 'base64'));
     expect(tx.message.addressTableLookups.length).toBe(0);
     const pump = decompile(tx).map(decodePumpIx).filter((d) => d !== null);

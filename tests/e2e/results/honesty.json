@@ -14,7 +14,7 @@
   },
   "empty: ch03 BONDS and LOAD readouts are --.--": {
     "ok": true,
-    "detail": "////// 03 Six protons6 protons make it carbon. 6 agents make it a Carbon launch.ILLUSTRATED EXPLAINER// Illustration, not live activityPROTON_01_SCOUTPROTON_01SCOUTFinds live trends on X, proposes 3-5 narratives and namesBONDS --.--// bonds: no molecule handing off yetLOAD --.--// no live data yetCL"
+    "detail": "////// 03 Six protons6 protons make it argon. 6 agents make it a Argon launch.ILLUSTRATED EXPLAINER// Illustration, not live activityPROTON_01_SCOUTPROTON_01SCOUTFinds live trends on X, proposes 3-5 narratives and namesBONDS --.--// bonds: no molecule handing off yetLOAD --.--// no live data yetCL"
   },
   "empty: ch05 shows no hashes (\"No hand-offs recorded yet\")": {
     "ok": true
@@ -29,7 +29,7 @@
   },
   "replay: label is \"replaying $TICKER, <date>\"": {
     "ok": true,
-    "detail": "////// 08 The launchREPLAYreplaying $GPROBE, 2026-10-11COIN_GPROBEISOTOPE C-13SHAPE RINGSTABILITY 82/100 · PASSEDHAND-OFFS 7/7// d73d62eb SENTINEL→FORGE// abaa2f25 SENTINEL→TREASURER// 46fa0888 TREASU"
+    "detail": "////// 08 The launchREPLAYreplaying $GPROBE, 2026-10-11COIN_GPROBEISOTOPE Ar-40SHAPE RINGSTABILITY 82/100 · PASSEDHAND-OFFS 7/7// d73d62eb SENTINEL→FORGE// abaa2f25 SENTINEL→TREASURER// 46fa0888 TREASU"
   },
   "replay: ch08 lists the last recorded hand-off hashes in order": {
     "ok": true,

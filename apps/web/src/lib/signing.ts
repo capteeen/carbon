@@ -14,7 +14,7 @@ import bs58 from 'bs58';
 export const SIGNATURE_MAX_AGE_MS = 5 * 60_000;
 
 function message(action: string, fields: [string, string][]): string {
-  return ['CARBON // ' + action, ...fields.map(([k, v]) => `${k}: ${v}`)].join('\n');
+  return ['ARGON // ' + action, ...fields.map(([k, v]) => `${k}: ${v}`)].join('\n');
 }
 
 const oneLine = (s: string) => s.replace(/[\r\n]+/g, ' ');

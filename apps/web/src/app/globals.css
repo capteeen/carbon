@@ -6,9 +6,9 @@
   --frost: #e6ebf2;
   --ink: #2b313b;
   --gutter: 16px;
-  /* next/font sets the @carbon/visual variables on <html>; the app's names alias them. */
-  --font-mono: var(--font-carbon-mono);
-  --font-display: var(--font-carbon-display);
+  /* next/font sets the @argon/visual variables on <html>; the app's names alias them. */
+  --font-mono: var(--font-argon-mono);
+  --font-display: var(--font-argon-display);
 }
 
 /* The scroll story is full-bleed even inside the centred page column. */

@@ -9,13 +9,13 @@ import {
   type ApprovalAction,
   type AutopilotClass,
   type Bond,
-  type CarbonEvent,
+  type ArgonEvent,
   type EventKind,
   type LaunchConfig,
   type SplitReceipt,
   VALENCE,
   pairKey,
-} from '@carbon/core';
+} from '@argon/core';
 import type {
   AppendInput,
   ApprovalDecision,
@@ -30,7 +30,7 @@ import type {
   PumpCoinInfo,
   XClient,
   XPost,
-} from '@carbon/core';
+} from '@argon/core';
 import type { AgentContext, AssetStore } from '../src/context.js';
 
 export class Clock {
@@ -45,23 +45,23 @@ const canon = (v: unknown): string =>
   JSON.stringify(v, (_k, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => a.localeCompare(b))) : x));
 
 export class FakeBus implements EventBus {
-  events: CarbonEvent[] = [];
-  private listeners = new Set<{ launchId: string; cb: (e: CarbonEvent) => void }>();
+  events: ArgonEvent[] = [];
+  private listeners = new Set<{ launchId: string; cb: (e: ArgonEvent) => void }>();
   constructor(private clock: Clock) {}
-  async append<K extends EventKind>(input: AppendInput<K>): Promise<CarbonEvent<K>> {
+  async append<K extends EventKind>(input: AppendInput<K>): Promise<ArgonEvent<K>> {
     const body = { launchId: input.launchId, kind: input.kind, actor: input.actor, payload: input.payload, ts: this.clock.now(), n: this.events.length };
     const id = createHash('sha256').update(canon(body)).digest('hex');
-    const e = { id, seq: this.events.length + 1, launchId: input.launchId, ts: body.ts, kind: input.kind, actor: input.actor, payload: input.payload, signer: 'test', sig: 'test' } as CarbonEvent<K>;
-    this.events.push(e as CarbonEvent);
-    for (const l of [...this.listeners]) if (l.launchId === '*' || l.launchId === e.launchId) l.cb(e as CarbonEvent);
+    const e = { id, seq: this.events.length + 1, launchId: input.launchId, ts: body.ts, kind: input.kind, actor: input.actor, payload: input.payload, signer: 'test', sig: 'test' } as ArgonEvent<K>;
+    this.events.push(e as ArgonEvent);
+    for (const l of [...this.listeners]) if (l.launchId === '*' || l.launchId === e.launchId) l.cb(e as ArgonEvent);
     return e;
   }
-  async list(launchId: string, opts: { afterSeq?: number; kinds?: EventKind[]; limit?: number } = {}): Promise<CarbonEvent[]> {
+  async list(launchId: string, opts: { afterSeq?: number; kinds?: EventKind[]; limit?: number } = {}): Promise<ArgonEvent[]> {
     let out = this.events.filter((e) => (launchId === '*' || e.launchId === launchId) && e.seq > (opts.afterSeq ?? 0) && (!opts.kinds || opts.kinds.includes(e.kind)));
     if (opts.limit) out = out.slice(0, opts.limit);
     return out;
   }
-  subscribe(launchId: string, cb: (e: CarbonEvent) => void): () => void {
+  subscribe(launchId: string, cb: (e: ArgonEvent) => void): () => void {
     const l = { launchId, cb };
     this.listeners.add(l);
     return () => this.listeners.delete(l);
@@ -69,8 +69,8 @@ export class FakeBus implements EventBus {
   verify(): boolean {
     return true;
   }
-  ofKind<K extends EventKind>(k: K): CarbonEvent<K>[] {
-    return this.events.filter((e) => e.kind === k) as CarbonEvent<K>[];
+  ofKind<K extends EventKind>(k: K): ArgonEvent<K>[] {
+    return this.events.filter((e) => e.kind === k) as ArgonEvent<K>[];
   }
 }
 
@@ -237,7 +237,7 @@ export class FakeChain implements ChainClient {
   splits = new Map<string, SplitReceipt>();
   payouts: { splitId: string; to: string; lamports: string }[] = [];
   buys: { lamports: bigint; splitId: string }[] = [];
-  /** Block time the create transaction reports (CarbonChainClient: from getTransaction). */
+  /** Block time the create transaction reports (ArgonChainClient: from getTransaction). */
   bornAtMs: number | null = null;
   /** SOL a buy actually spends for a requested maximum (default: all of it). */
   buySpend: (requested: bigint) => bigint = (r) => r;
@@ -279,7 +279,7 @@ export class FakeChain implements ChainClient {
     const legs: SplitReceipt['legs'] = (
       [
         ['launcher', 5000n],
-        ['carbon-buyback', 3000n],
+        ['argon-buyback', 3000n],
         ['treasury', 2000n],
       ] as const
     ).map(([to, bps], i) => {
@@ -292,10 +292,10 @@ export class FakeChain implements ChainClient {
     this.splits.set(claimId, r);
     return r;
   }
-  async buyCarbon(lamports: bigint, splitId: string) {
+  async buyArgon(lamports: bigint, splitId: string) {
     this.buys.push({ lamports, splitId });
-    // Like CarbonChainClient: lamportsIn is what the trade spent, reported by the chain.
-    return { txSig: `buy-${this.buys.length}`, carbonOut: lamports * 1000n, lamportsIn: this.buySpend(lamports) };
+    // Like ArgonChainClient: lamportsIn is what the trade spent, reported by the chain.
+    return { txSig: `buy-${this.buys.length}`, argonOut: lamports * 1000n, lamportsIn: this.buySpend(lamports) };
   }
   async lastTradeAt() {
     return null;

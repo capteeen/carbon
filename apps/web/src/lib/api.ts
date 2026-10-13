@@ -1,5 +1,5 @@
 'use client';
-/** JSON POST to the Carbon API; throws with the server's error message. */
+/** JSON POST to the Argon API; throws with the server's error message. */
 export async function postJson<T = unknown>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const text = await res.text();

@@ -2,22 +2,22 @@
  * The worker's LLM choice (AG-013). Production is Gemini only, whatever NODE_ENV a
  * host defaults to:
  * - The deploy pins NODE_ENV=production (package.json start, railway.json).
- * - A non-Gemini fallback is refused unless CARBON_LLM_ALLOW_FALLBACK=true, and is
+ * - A non-Gemini fallback is refused unless ARGON_LLM_ALLOW_FALLBACK=true, and is
  *   never allowed when NODE_ENV=production. The default is false everywhere.
  * - The boot line names the active provider and model, and the fallback reason when
  *   one was used. It never contains a key.
  */
-import { selectLlm, type LlmProvider, type LlmSelection } from '@carbon/core';
+import { selectLlm, type LlmProvider, type LlmSelection } from '@argon/core';
 
 export class LlmFallbackRefusedError extends Error {
   constructor(reason: string) {
-    super(`Gemini is not usable (${reason}) and the fallback provider is not allowed (CARBON_LLM_ALLOW_FALLBACK is not "true", or NODE_ENV=production)`);
+    super(`Gemini is not usable (${reason}) and the fallback provider is not allowed (ARGON_LLM_ALLOW_FALLBACK is not "true", or NODE_ENV=production)`);
     this.name = 'LlmFallbackRefusedError';
   }
 }
 
 export function fallbackAllowed(env: NodeJS.ProcessEnv): boolean {
-  return env.NODE_ENV !== 'production' && env.CARBON_LLM_ALLOW_FALLBACK?.trim() === 'true';
+  return env.NODE_ENV !== 'production' && env.ARGON_LLM_ALLOW_FALLBACK?.trim() === 'true';
 }
 
 /** One boot line: provider id, model, and the fallback reason if any. No secrets. */

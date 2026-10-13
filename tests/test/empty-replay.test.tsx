@@ -10,8 +10,8 @@ import { randomBytes } from 'node:crypto';
 import { createElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { EMPTY_GRAPHENE, EMPTY_READOUT, FOOTER_TEXT, EventBusHandoffs, foldMolecule, type CarbonEvent } from '@carbon/core';
-import { sseStream } from '@carbon/core/sse';
+import { EMPTY_GRAPHENE, EMPTY_READOUT, FOOTER_TEXT, EventBusHandoffs, foldMolecule, type ArgonEvent } from '@argon/core';
+import { sseStream } from '@argon/core/sse';
 import { createLaunch, makeEnv, TEST_REDIS, type Env } from './support/env.js';
 
 // apps/web is inlined, so Next's modules are mocked by the path apps/web resolves them to.
@@ -39,14 +39,14 @@ beforeAll(async () => {
   env = await makeEnv();
   process.env.DATABASE_URL = env.dbUrl;
   process.env.REDIS_URL = TEST_REDIS;
-  process.env.CARBON_AGENT_KEY_SEED = env.seed;
-  for (const k of ['CARBON_BUYBACK_WALLET', 'CARBON_TREASURY_WALLET', 'CARBON_NETWORK', 'CARBON_MAINNET_ENABLED']) delete process.env[k];
-  (globalThis as { __carbonCore?: unknown }).__carbonCore = undefined;
+  process.env.ARGON_AGENT_KEY_SEED = env.seed;
+  for (const k of ['ARGON_BUYBACK_WALLET', 'ARGON_TREASURY_WALLET', 'ARGON_NETWORK', 'ARGON_MAINNET_ENABLED']) delete process.env[k];
+  (globalThis as { __argonCore?: unknown }).__argonCore = undefined;
 });
 afterAll(async () => {
-  const g = globalThis as { __carbonCore?: Promise<{ close(): Promise<void> }> };
-  if (g.__carbonCore) await (await g.__carbonCore).close().catch(() => undefined);
-  g.__carbonCore = undefined;
+  const g = globalThis as { __argonCore?: Promise<{ close(): Promise<void> }> };
+  if (g.__argonCore) await (await g.__argonCore).close().catch(() => undefined);
+  g.__argonCore = undefined;
   await env.cleanup();
 });
 
@@ -63,7 +63,7 @@ describe('empty event log, real read model: honest empty states and the footer o
     expect(html).toContain(EMPTY_GRAPHENE);
     expect(html).toContain(EMPTY_READOUT);
     expect(html).not.toMatch(SAMPLE_WORDS);
-    expect(html.replace(/\$CARBON/g, '')).not.toMatch(/\$[A-Z]{2,10}\b/); // no ticker that did not come from the log
+    expect(html.replace(/\$ARGON/g, '')).not.toMatch(/\$[A-Z]{2,10}\b/); // no ticker that did not come from the log
     expect(html).toContain(esc(FOOTER_TEXT));
   });
 
@@ -125,12 +125,12 @@ async function drain(stream: ReadableStream<Uint8Array>, ms: number, ac: AbortCo
 }
 
 /** Events delivered over SSE (parsed from data lines), stopping once `n` arrived. */
-async function sseEvents(launchId: string, lastEventId: string | null, n: number): Promise<CarbonEvent[]> {
+async function sseEvents(launchId: string, lastEventId: string | null, n: number): Promise<ArgonEvent[]> {
   const ac = new AbortController();
   const reader = sseStream(env.core.bus, launchId, lastEventId, { signal: ac.signal }).getReader();
   const dec = new TextDecoder();
   let buf = '';
-  const out: CarbonEvent[] = [];
+  const out: ArgonEvent[] = [];
   const deadline = Date.now() + 8000;
   while (out.length < n && Date.now() < deadline) {
     const r = await Promise.race([reader.read(), new Promise<null>((ok) => setTimeout(() => ok(null), 100))]);
@@ -142,7 +142,7 @@ async function sseEvents(launchId: string, lastEventId: string | null, n: number
       const frame = buf.slice(0, i);
       buf = buf.slice(i + 2);
       const d = /^data: (.*)$/m.exec(frame);
-      if (d) out.push(JSON.parse(d[1]!) as CarbonEvent);
+      if (d) out.push(JSON.parse(d[1]!) as ArgonEvent);
     }
   }
   ac.abort();
@@ -152,9 +152,9 @@ async function sseEvents(launchId: string, lastEventId: string | null, n: number
 
 describe('a recorded stream replays identically', () => {
   let launchId: string;
-  let recorded: CarbonEvent[];
+  let recorded: ArgonEvent[];
   beforeAll(async () => {
-    launchId = await createLaunch(env.core, 'ring', 'C-14');
+    launchId = await createLaunch(env.core, 'ring', 'Ar-39');
     const h = new EventBusHandoffs({ bus: env.core.bus, pool: env.core.bus.pool, now: env.clock.now, pollMs: 10, maxWaitMs: 100 });
     const ring = [['scout', 'forge'], ['forge', 'sentinel'], ['sentinel', 'treasurer'], ['treasurer', 'herald'], ['herald', 'keeper'], ['keeper', 'scout']] as const;
     for (let i = 0; i < 24; i++) {
@@ -170,7 +170,7 @@ describe('a recorded stream replays identically', () => {
   it('folding the recorded log twice, or after a JSON round trip, or out of order, gives the same molecule', () => {
     const a = foldMolecule(recorded);
     const b = foldMolecule(recorded);
-    const c = foldMolecule(JSON.parse(JSON.stringify(recorded)) as CarbonEvent[]);
+    const c = foldMolecule(JSON.parse(JSON.stringify(recorded)) as ArgonEvent[]);
     const d = foldMolecule([...recorded].reverse());
     expect(b).toEqual(a);
     expect(c).toEqual(a);

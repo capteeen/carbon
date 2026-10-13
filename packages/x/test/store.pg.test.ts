@@ -1,6 +1,6 @@
 /**
  * Runs against the local Postgres test database (carbon_test) in a throwaway
- * schema. Set CARBON_TEST_DATABASE_URL to override.
+ * schema. Set ARGON_TEST_DATABASE_URL to override.
  */
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -12,7 +12,7 @@ import { migrate, PgPostLedger, PgTokenStore } from '../src/store.js';
 import { XConnectionTakenError } from '../src/errors.js';
 import { connectedTokens } from './helpers.js';
 
-const url = process.env.CARBON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
+const url = process.env.ARGON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
 const schema = `x_test_${process.pid}_${randomBytes(3).toString('hex')}`;
 const pool = new pg.Pool({ connectionString: url, max: 2, options: `-c search_path=${schema}` });
 const cipher = new TokenCipher(Uint8Array.from(randomBytes(32)));
@@ -122,7 +122,7 @@ describe('PgPostLedger', () => {
   });
 });
 
-describe('CARBON_TOKEN_KEY parsing', () => {
+describe('ARGON_TOKEN_KEY parsing', () => {
   it('accepts 32-byte hex or base64 and rejects anything else', () => {
     const k = randomBytes(32);
     expect(parseTokenKey(k.toString('hex'))).toEqual(Uint8Array.from(k));

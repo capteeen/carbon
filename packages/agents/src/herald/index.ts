@@ -2,9 +2,9 @@
  * HERALD: drafts posts, asks for a one-tap approval, and only after a granted
  * (and consumed) approval calls x.post with that approvalId. Enforces the
  * shape's posting window (from launch.deployed) and postsPerHour (from the log,
- * so C-13 heavy Herald's doubled capacity applies here and nowhere else).
+ * so Ar-40 heavy Herald's doubled capacity applies here and nowhere else).
  */
-import type { CarbonEvent } from '@carbon/core';
+import type { ArgonEvent } from '@argon/core';
 import type { ApprovalCard } from '../cards.js';
 import { type AgentContext, all, emit, emitError, latest, requestApproval, think } from '../context.js';
 import { llmJson, obj, optStr, str } from '../json.js';
@@ -57,7 +57,7 @@ export class Herald {
   constructor(private readonly ctx: AgentContext) {}
 
   /** Launch announcement with the CA. */
-  async announce(): Promise<CarbonEvent<'post.published'> | null> {
+  async announce(): Promise<ArgonEvent<'post.published'> | null> {
     const ctx = this.ctx;
     const dep = await latest(ctx, 'launch.deployed');
     const draft = await latest(ctx, 'forge.draft');
@@ -82,7 +82,7 @@ export class Herald {
   }
 
   /** RING loop post, grounded only in facts from the log that the caller passes. */
-  async loopPost(facts: string[]): Promise<CarbonEvent<'post.published'> | null> {
+  async loopPost(facts: string[]): Promise<ArgonEvent<'post.published'> | null> {
     const ctx = this.ctx;
     const dep = await latest(ctx, 'launch.deployed');
     const draft = await latest(ctx, 'forge.draft');
@@ -109,7 +109,7 @@ export class Herald {
    * Publish a post Keeper drafted and the user already approved. `trigger` is
    * Keeper's hand-off; its refEventId is the approval.requested event.
    */
-  async postApproved(trigger: CarbonEvent<'handoff'>): Promise<CarbonEvent<'post.published'> | null> {
+  async postApproved(trigger: ArgonEvent<'handoff'>): Promise<ArgonEvent<'post.published'> | null> {
     const ctx = this.ctx;
     const req = (await all(ctx, 'approval.requested')).find((e) => e.id === trigger.payload.refEventId);
     if (!req || req.payload.action !== 'post') return this.refuse('hand-off does not reference a post approval');
@@ -133,7 +133,7 @@ export class Herald {
     return null;
   }
 
-  private async publish(text: string, title: string, why: string, approvedId?: string): Promise<CarbonEvent<'post.published'> | null> {
+  private async publish(text: string, title: string, why: string, approvedId?: string): Promise<ArgonEvent<'post.published'> | null> {
     const ctx = this.ctx;
     let approvalId = approvedId;
     if (!approvalId) {

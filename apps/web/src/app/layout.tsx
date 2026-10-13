@@ -4,21 +4,21 @@ import type { ReactNode } from 'react';
 import { Footer } from '@/components/Footer';
 import { logConfigured } from '@/server/log-config';
 import { Providers } from '@/components/Providers';
-import { CARBON_X } from '@/lib/social';
+import { ARGON_X } from '@/lib/social';
 import { SoundToggle } from '@/visual';
-import '@carbon/visual/styles.css';
+import '@argon/visual/styles.css';
 import './globals.css';
 
 // Typewriter mono for everything; a heavy rounded display face (OFL) for the wordmark and section titles.
-// Exposed as @carbon/visual's font variables; globals.css aliases --font-mono / --font-display to them.
-const mono = Space_Mono({ subsets: ['latin'], weight: ['400', '700'], variable: '--font-carbon-mono', display: 'swap' });
-const display = Nunito({ subsets: ['latin'], weight: ['900'], variable: '--font-carbon-display', display: 'swap' });
+// Exposed as @argon/visual's font variables; globals.css aliases --font-mono / --font-display to them.
+const mono = Space_Mono({ subsets: ['latin'], weight: ['400', '700'], variable: '--font-argon-mono', display: 'swap' });
+const display = Nunito({ subsets: ['latin'], weight: ['900'], variable: '--font-argon-display', display: 'swap' });
 
 export const metadata: Metadata = {
-  title: { default: 'CARBON // Agents that bond.', template: '%s // CARBON' },
+  title: { default: 'ARGON // Agents that bond.', template: '%s // ARGON' },
   description: 'A pump.fun launchpad run by a molecule of six AI agents. You approve every launch; posts need your approval unless you turn on posts autopilot.',
-  openGraph: { siteName: 'CARBON', type: 'website' },
-  twitter: { card: 'summary', site: CARBON_X.handle, creator: CARBON_X.handle },
+  openGraph: { siteName: 'ARGON', type: 'website' },
+  twitter: { card: 'summary', site: ARGON_X.handle, creator: ARGON_X.handle },
 };
 
 export const viewport: Viewport = {

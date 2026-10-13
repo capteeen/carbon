@@ -9,8 +9,8 @@
  * tokens, auth headers or token-endpoint bodies beyond X's error code.
  */
 import { createHash } from 'node:crypto';
-import type { ApprovalAction } from '@carbon/core';
-import type { XClient, XPost } from '@carbon/core/ports';
+import type { ApprovalAction } from '@argon/core';
+import type { XClient, XPost } from '@argon/core/ports';
 import { X_API_BASE, X_AUTHORIZE_URL, X_SCOPES, readXConfig, type XConfig } from './config.js';
 import { TokenCipher } from './crypto.js';
 import {
@@ -106,6 +106,7 @@ export type TrendsAvailability =
   | { status: 'unavailable'; reason: string; checkedAt: number };
 
 export const AUTH_COOKIE_NAME = 'carbon_x_oauth';
+// AAD strings keep the pre-rename 'carbon/' prefix so sealed tokens and cookies still open.
 const FLOW_AAD = 'carbon/x_oauth_flow/v1';
 const DAY_MS = 24 * 60 * 60_000;
 const REFRESH_SKEW_MS = 60_000;
@@ -133,7 +134,7 @@ interface ApiTweet {
   };
 }
 
-export class CarbonXClient implements XClient {
+export class ArgonXClient implements XClient {
   private readonly cfg: XConfig;
   private readonly tokens: TokenStore;
   private readonly ledger: PostLedger;
@@ -594,7 +595,7 @@ export class CarbonXClient implements XClient {
   }
 }
 
-/** Build from env: X_CLIENT_ID, X_CLIENT_SECRET, X_REDIRECT_URI, X_BEARER_TOKEN, CARBON_TOKEN_KEY. */
+/** Build from env: X_CLIENT_ID, X_CLIENT_SECRET, X_REDIRECT_URI, X_BEARER_TOKEN, ARGON_TOKEN_KEY. */
 export function createXClient(opts: {
   db: Queryable;
   assertApproval?: AssertApproval;
@@ -602,10 +603,10 @@ export function createXClient(opts: {
   launcherWallet?: LauncherWalletOf;
   env?: Record<string, string | undefined>;
   fetch?: typeof fetch;
-}): CarbonXClient {
+}): ArgonXClient {
   const env = opts.env ?? process.env;
   const cipher = TokenCipher.fromEnv(env);
-  return new CarbonXClient({
+  return new ArgonXClient({
     config: readXConfig(env),
     tokens: new PgTokenStore(opts.db, cipher),
     ledger: new PgPostLedger(opts.db),

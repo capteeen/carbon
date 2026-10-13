@@ -1,4 +1,4 @@
-/** Rewrites the generated blocks of docs/how.md from code. Run: pnpm --filter @carbon/web gen:how */
+/** Rewrites the generated blocks of docs/how.md from code. Run: pnpm --filter @argon/web gen:how */
 import { readFile, writeFile } from 'node:fs/promises';
 import { GENERATED_SECTIONS, spliceSection } from '../src/lib/how-doc';
 import { generatedSections } from '../src/lib/how-sections';

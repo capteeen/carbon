@@ -1,6 +1,6 @@
-# @carbon/visual
+# @argon/visual
 
-The Carbon 3D scroll story, the live launch views and the HUD (SPEC §5, §6).
+The Argon 3D scroll story, the live launch views and the HUD (SPEC §5, §6).
 It is a React 19 component library for the Next.js 15 app, built on react-three-fiber 9, three,
 postprocessing, Lenis and anime.js v4 (`onScroll`).
 
@@ -8,13 +8,13 @@ postprocessing, Lenis and anime.js v4 (`onScroll`).
 
 ```ts
 // next.config.ts
-export default { transpilePackages: ['@carbon/visual', '@carbon/core'] };
+export default { transpilePackages: ['@argon/visual', '@argon/core'] };
 
 // app/layout.tsx
-import '@carbon/visual/styles.css';
+import '@argon/visual/styles.css';
 import { Nunito, Space_Mono } from 'next/font/google';
-const display = Nunito({ weight: '900', subsets: ['latin'], variable: '--font-carbon-display' });
-const mono = Space_Mono({ weight: ['400', '700'], subsets: ['latin'], variable: '--font-carbon-mono' });
+const display = Nunito({ weight: '900', subsets: ['latin'], variable: '--font-argon-display' });
+const mono = Space_Mono({ weight: ['400', '700'], subsets: ['latin'], variable: '--font-argon-mono' });
 // <html className={`${display.variable} ${mono.variable}`}>
 ```
 
@@ -26,22 +26,22 @@ plain fog panel with one line ("3D view unavailable on this device"). The HUD, w
 real value, is unaffected. Without `ResizeObserver` or `matchMedia`, the HUD layers are driven straight
 from the progress store, and native scroll replaces Lenis.
 
-**Sound toggle.** `CarbonStory` and `LaunchScene` render their own toggle unless you pass
+**Sound toggle.** `ArgonStory` and `LaunchScene` render their own toggle unless you pass
 `soundToggle={false}`. Pass false when the app layout hosts a global `<SoundToggle />`; apps/web does this.
 
 **Fonts.** Both fonts are SIL OFL 1.1:
 - Nunito Black 900 is the heavy rounded display face. It is used for the wordmark and titles.
 - Space Mono 400/700 is used for HUD labels, metadata and hashes.
 
-They are exposed as `--font-carbon-display` and `--font-carbon-mono`, which `styles.css` wraps as
-`--carbon-font-display` and `--carbon-font-mono`. The library itself ships no font files.
+They are exposed as `--font-argon-display` and `--font-argon-mono`, which `styles.css` wraps as
+`--argon-font-display` and `--argon-font-mono`. The library itself ships no font files.
 
 ## Public API
 
 | Export | What it is |
 | --- | --- |
-| `<CarbonStory live replay launches feed receipts onOpenAgent onOpenLaunch onLaunch launchHref />` | The 10-chapter pinned scroll story (00 HERO … 09 REASSEMBLE_LIVE). Other props: `store`, `reducedMotion`, `smoothScroll` (default true; pass false if the app already runs Lenis), `quality`, `maxDpr`, `onFirstFrame`, `onFrame`. |
-| `<IsotopeChamber value onChange heavyAgent onHeavyAgentChange />` | The chapter 06 chamber as a form control: C-11/12/13/14, plus heavy-agent selection for C-13. The extra neutron can be dragged. |
+| `<ArgonStory live replay launches feed receipts onOpenAgent onOpenLaunch onLaunch launchHref />` | The 10-chapter pinned scroll story (00 HERO … 09 REASSEMBLE_LIVE). Other props: `store`, `reducedMotion`, `smoothScroll` (default true; pass false if the app already runs Lenis), `quality`, `maxDpr`, `onFirstFrame`, `onFrame`. |
+| `<IsotopeChamber value onChange heavyAgent onHeavyAgentChange />` | The chapter 06 chamber as a form control: Ar-41/12/13/14, plus heavy-agent selection for Ar-40. The extra neutron can be dragged. |
 | `<ShapePicker value onChange />` | Chain / ring / diamond molecules, with each shape's rules. |
 | `<LaunchScene events bonds sentinel decay daughter shape compact />` | The live molecule for one launch. Real hand-offs flash seams with their hash. A Sentinel check grows seams and fills the gauge input by input, then locks on pass or shows a red broken seam on block. Decay dims the molecule and sheds particles. Daughter launches bud a molecule. |
 | `<GrapheneSheet launches onOpenLaunch onLaunch launchHref />` | One crystal per real launch, with hover details and empty state. |
@@ -51,11 +51,11 @@ They are exposed as `--font-carbon-display` and `--font-carbon-mono`, which `sty
 | `createProgressStore`, `progressStore`, `useProgress`, `useChapter` | The single 0..1 progress store, written by Lenis and read by every layer. |
 | `CHAPTERS`, `CHAPTER_RANGES`, `chapterAt`, `chapterLocal`, `chapterFade`, `evalStory`, … | The pure chapter table and timeline. |
 | `QualityLadder`, `QUALITY_LEVELS`, `createQualityStore` | Adaptive quality. |
-| `deriveLive`, `buildReplay`, `launchSummaryFromEvents`, `thinkingFromEvents`, `validLaunches`, … | Pure derivations from `CarbonEvent[]` and core `Bond[]` into the props above. |
-| `PALETTE`, `BLOCK_SIGNAL`, `FONTS`, `CSS_VARS` (also `@carbon/visual/tokens`), `styles.css` | Tokens in TS and CSS. A test keeps them in sync. |
+| `deriveLive`, `buildReplay`, `launchSummaryFromEvents`, `thinkingFromEvents`, `validLaunches`, … | Pure derivations from `ArgonEvent[]` and core `Bond[]` into the props above. |
+| `PALETTE`, `BLOCK_SIGNAL`, `FONTS`, `CSS_VARS` (also `@argon/visual/tokens`), `styles.css` | Tokens in TS and CSS. A test keeps them in sync. |
 
-Shared types (`CarbonEvent`, `Bond`, `AgentId`, `IsotopeId`, `ShapeId`, `SentinelReport`, …) are
-imported from `@carbon/core/contracts`.
+Shared types (`ArgonEvent`, `Bond`, `AgentId`, `IsotopeId`, `ShapeId`, `SentinelReport`, …) are
+imported from `@argon/core/contracts`.
 
 Typical wiring:
 
@@ -63,7 +63,7 @@ Typical wiring:
 const live = deriveLive(events, handoffs.bonds(launchId, Date.now()));
 const replay = buildReplay(lastLaunchEvents, handoffs.bonds(launchId, deployedAt));
 const launches = allLaunchLogs.map(launchSummaryFromEvents).filter(Boolean);
-<CarbonStory live={live} replay={replay} launches={launches} onOpenAgent={…} onOpenLaunch={…} />
+<ArgonStory live={live} replay={replay} launches={launches} onOpenAgent={…} onOpenLaunch={…} />
 ```
 
 ## Honesty (enforced in code, tested in `test/honesty.test.tsx`)
@@ -109,8 +109,8 @@ const launches = allLaunchLogs.map(launchSummaryFromEvents).filter(Boolean);
 ### Harness and perf
 
 ```sh
-pnpm --filter @carbon/visual harness          # vite dev on :5179  (?view=story|chamber|shapes|launch|graphene|embed&fixture=1&reduced=1)
-pnpm --filter @carbon/visual harness:build
+pnpm --filter @argon/visual harness          # vite dev on :5179  (?view=story|chamber|shapes|launch|graphene|embed&fixture=1&reduced=1)
+pnpm --filter @argon/visual harness:build
 npx tsx perf/perf.ts --throttle=4 --seconds=12 --cycles=3 [--dpr=0.3] [--empty]
 npx tsx perf/perf.ts --url=http://127.0.0.1:3124/ [--dpr=0.3]   # the shipped app page (Next production build)
 npx tsx perf/shots.ts [outDir] [--url=…]      # screenshots per chapter, 390x844

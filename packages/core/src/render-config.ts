@@ -19,12 +19,12 @@ import {
 export interface ConfigRow {
   isotope: IsotopeId;
   shape: ShapeId;
-  /** The row's config. For C-13 the heavy agent is a user choice; the row is computed with
+  /** The row's config. For Ar-40 the heavy agent is a user choice; the row is computed with
    * `heavyExample` only to show the doubled value; every other agent is unaffected. */
   config: LaunchConfig;
-  /** C-13 only: the doubled LLM capacity of the chosen heavy agent. */
+  /** Ar-40 only: the doubled LLM capacity of the chosen heavy agent. */
   heavyLlmCallsPerHour: number | null;
-  /** C-13 only: posts/h with a heavy Herald, replies/h with a heavy Keeper. */
+  /** Ar-40 only: posts/h with a heavy Herald, replies/h with a heavy Keeper. */
   heavyPostsPerHour: number | null;
   heavyRepliesPerHour: number | null;
 }
@@ -123,9 +123,9 @@ export function renderConfigMarkdown(): string {
     '',
     renderConfigTable(),
     '',
-    '- C-13 (HEAVY): you choose one agent; its LLM capacity and concurrency double. If you choose Herald, posts per hour double; if Keeper, replies per hour double. No other agent changes.',
-    `- C-11 budgets are ×${ISOTOPES['C-11'].budgetMultiplier} of the shape's base budgets.`,
+    '- Ar-40 (HEAVY): you choose one agent; its LLM capacity and concurrency double. If you choose Herald, posts per hour double; if Keeper, replies per hour double. No other agent changes.',
+    `- Ar-41 budgets are ×${ISOTOPES['Ar-41'].budgetMultiplier} of the shape's base budgets.`,
     "- A buyback tick is the shape's loop period, or 10 minutes when the shape has no loop. Buybacks are funded only by the 30% fee share.",
-    '- Every agent has valence 4: at most 4 bond orders at once. Extra hand-offs queue.',
+    '- Every agent has valence 4 (a product rule, not argon chemistry): at most 4 bond orders at once. Extra hand-offs queue.',
   ].join('\n');
 }

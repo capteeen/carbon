@@ -1,4 +1,4 @@
-import type { LlmResponse } from '@carbon/core';
+import type { LlmResponse } from '@argon/core';
 
 /** Structured output: provider json, else the text parsed as JSON (code fences stripped). Throws if neither. */
 export function llmJson(res: LlmResponse): unknown {

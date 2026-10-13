@@ -1,6 +1,6 @@
-# Carbon security
+# Argon security
 
-This document covers Carbon's threat model, how keys are handled, how approvals and money
+This document covers Argon's threat model, how keys are handled, how approvals and money
 paths work, and the risks that remain. Findings use the ids from
 [audit-log.md](audit-log.md). Each one has a test in `tests/` or is marked "review".
 
@@ -11,10 +11,10 @@ AG-026 are all fixed. The fixes changed the threat model in the sections marked 
 
 | Asset | Where it lives | Who can use it |
 |---|---|---|
-| Launcher wallet keys | The user's browser wallet only | The user. Carbon receives message signatures and a user-signed launch tx, never a key. |
-| Agent signing keys (ed25519, one per agent) | Derived from `CARBON_AGENT_KEY_SEED` (env). An explicit seed argument is accepted only when `NODE_ENV=test`. | The worker, which signs hand-offs. The web app, which appends user events. |
-| Crank, buyback and per-launch fee-wallet keys | `CARBON_CRANK_KEY` and `CARBON_BUYBACK_KEY` from env. Per-launch wallets (wallet mode only) are sealed with `CARBON_VAULT_KEY`. | The worker, through `@carbon/solana`. |
-| X OAuth tokens | Postgres `x_tokens`, sealed with AES-GCM under `CARBON_TOKEN_KEY`, bound to the launcher wallet that started the flow | The worker's X client, only for a launch created by that wallet and only with a consumed approval. |
+| Launcher wallet keys | The user's browser wallet only | The user. Argon receives message signatures and a user-signed launch tx, never a key. |
+| Agent signing keys (ed25519, one per agent) | Derived from `ARGON_AGENT_KEY_SEED` (env). An explicit seed argument is accepted only when `NODE_ENV=test`. | The worker, which signs hand-offs. The web app, which appends user events. |
+| Crank, buyback and per-launch fee-wallet keys | `ARGON_CRANK_KEY` and `ARGON_BUYBACK_KEY` from env. Per-launch wallets (wallet mode only) are sealed with `ARGON_VAULT_KEY`. | The worker, through `@argon/solana`. |
+| X OAuth tokens | Postgres `x_tokens`, sealed with AES-GCM under `ARGON_TOKEN_KEY`, bound to the launcher wallet that started the flow | The worker's X client, only for a launch created by that wallet and only with a consumed approval. |
 | Event log | Postgres `events` table (append-only, hashed and signed) | Everyone can read it (SSE, pages). The worker and the web routes append. |
 | Single-use ledgers | `carbon_signed_nonces`, `carbon_x_approval_uses`, `sol_launch_approvals`, `budget_ledger.spend_key` | Postgres enforces them with primary keys and unique indexes. |
 
@@ -93,11 +93,11 @@ devnet (AG-011).
 
 **Fee split.**
 - Native mode (the default) uses pump.fun fee sharing: launcher 5000 bps, buyback 3000 bps,
-  treasury 2000 bps. The split is set once in the launch tx (`carbonShares` refuses duplicates
-  and any total other than 10,000 bps). Carbon never holds the launcher's share in this mode.
+  treasury 2000 bps. The split is set once in the launch tx (`argonShares` refuses duplicates
+  and any total other than 10,000 bps). Argon never holds the launcher's share in this mode.
   Distributions are permissionless. Ones cranked by third parties are now found on the sharing
   config and receipted.
-- Wallet mode (`CARBON_FEE_MODE=wallet`) is different: a Carbon-held per-launch wallet claims all
+- Wallet mode (`ARGON_FEE_MODE=wallet`) is different: an Argon-held per-launch wallet claims all
   fees and pays the three legs. The site now says so, and `/wallets` shows each launch's mode
   (AG-019).
 
@@ -126,8 +126,8 @@ devnet (AG-011).
   unread signatures (AG-033).
 
 **Mainnet.**
-- Mainnet runs only with `CARBON_NETWORK=mainnet-beta` and `CARBON_MAINNET_ENABLED=true` (exact
-  strings, read the same way everywhere). `CarbonChainClient` re-checks this when it is
+- Mainnet runs only with `ARGON_NETWORK=mainnet-beta` and `ARGON_MAINNET_ENABLED=true` (exact
+  strings, read the same way everywhere). `ArgonChainClient` re-checks this when it is
   constructed.
 - *(changed)* The cluster is decided by the RPC's genesis hash, checked before any build, send,
   claim, split, buy, airdrop or ledger read. A devnet-labelled client on a mainnet, testnet or
@@ -136,7 +136,7 @@ devnet (AG-011).
 
 ## Browser and visuals *(new in this pass)*
 
-- `@carbon/visual` runs entirely in the browser and receives only public log data: events,
+- `@argon/visual` runs entirely in the browser and receives only public log data: events,
   core's bonds, receipts and launch summaries. It holds no secret and makes no write request.
 - Its honesty filters accept only real 64-hex event ids for flashes, hashes, replays and
   crystals. The browser checks in `tests/e2e/honesty.ts` confirm this on the production build.
@@ -157,7 +157,7 @@ devnet (AG-011).
   in-repo doubles, not the live services. In particular, none of these has been seen working end
   to end:
   - native fee-sharing instructions, distribution, claims and the third-party distribution scan
-  - `buyCarbon` venue routing
+  - `buyArgon` venue routing
   - daughter launches
   - X OAuth and posting
   - the genesis check against a real RPC
@@ -165,7 +165,7 @@ devnet (AG-011).
   The Gemini model id (`gemini-3.8-flash`) was not checked against Google's docs, which were
   unreachable from the sandbox.
 - **LLM provider.** Production is Gemini only. The worker deploy pins `NODE_ENV=production`, and a
-  fallback provider is refused unless `CARBON_LLM_ALLOW_FALLBACK=true` outside production
+  fallback provider is refused unless `ARGON_LLM_ALLOW_FALLBACK=true` outside production
   (AG-013 fixed).
 - **Single Postgres.** The log, approvals, nonces and ledgers all live in one Postgres. Anyone
   with write access there can bypass every guard.

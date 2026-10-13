@@ -4,7 +4,7 @@
  * seq the server render ended at, so nothing is missed or duplicated; the browser
  * resumes with Last-Event-ID on reconnect.
  */
-import type { CarbonEvent, EventKind } from '@carbon/core/contracts';
+import type { ArgonEvent, EventKind } from '@argon/core/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { mergeEvents } from './launch-view';
 import { SERVER_TIME_EVENT, serverClock } from './server-clock';
@@ -48,11 +48,11 @@ export type StreamStatus = 'connecting' | 'live' | 'reconnecting';
 
 export function useEventStream(
   launchId: string | '*' | null,
-  initial: CarbonEvent[],
+  initial: ArgonEvent[],
   afterSeq: number,
   opts: { max?: number } = {},
-): { events: CarbonEvent[]; status: StreamStatus } {
-  const [events, setEvents] = useState<CarbonEvent[]>(initial);
+): { events: ArgonEvent[]; status: StreamStatus } {
+  const [events, setEvents] = useState<ArgonEvent[]>(initial);
   const [status, setStatus] = useState<StreamStatus>('connecting');
   const max = opts.max;
   const startRef = useRef(afterSeq);
@@ -62,9 +62,9 @@ export function useEventStream(
     const url = `/api/events/${launchId === '*' ? '*' : encodeURIComponent(launchId)}?after=${startRef.current}`;
     const es = new EventSource(url);
     const onEvent = (m: MessageEvent<string>) => {
-      let e: CarbonEvent;
+      let e: ArgonEvent;
       try {
-        e = JSON.parse(m.data) as CarbonEvent;
+        e = JSON.parse(m.data) as ArgonEvent;
       } catch {
         return;
       }

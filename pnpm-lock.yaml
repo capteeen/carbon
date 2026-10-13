@@ -26,16 +26,16 @@ importers:
 
   apps/web:
     dependencies:
-      '@carbon/agents':
+      '@argon/agents':
         specifier: workspace:*
         version: link:../../packages/agents
-      '@carbon/core':
+      '@argon/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@carbon/visual':
+      '@argon/visual':
         specifier: workspace:*
         version: link:../../packages/visual
-      '@carbon/x':
+      '@argon/x':
         specifier: workspace:*
         version: link:../../packages/x
       '@noble/curves':
@@ -108,16 +108,16 @@ importers:
 
   apps/worker:
     dependencies:
-      '@carbon/agents':
+      '@argon/agents':
         specifier: workspace:*
         version: link:../../packages/agents
-      '@carbon/core':
+      '@argon/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@carbon/solana':
+      '@argon/solana':
         specifier: workspace:*
         version: link:../../packages/solana
-      '@carbon/x':
+      '@argon/x':
         specifier: workspace:*
         version: link:../../packages/x
       '@solana/web3.js':
@@ -145,7 +145,7 @@ importers:
 
   packages/agents:
     dependencies:
-      '@carbon/core':
+      '@argon/core':
         specifier: workspace:*
         version: link:../core
       jpeg-js:
@@ -204,7 +204,7 @@ importers:
 
   packages/solana:
     dependencies:
-      '@carbon/core':
+      '@argon/core':
         specifier: workspace:*
         version: link:../core
       '@noble/ciphers':
@@ -259,7 +259,7 @@ importers:
 
   packages/visual:
     dependencies:
-      '@carbon/core':
+      '@argon/core':
         specifier: workspace:*
         version: link:../core
       '@react-three/fiber':
@@ -320,7 +320,7 @@ importers:
 
   packages/x:
     dependencies:
-      '@carbon/core':
+      '@argon/core':
         specifier: workspace:*
         version: link:../core
       '@noble/ciphers':
@@ -345,22 +345,22 @@ importers:
 
   tests:
     dependencies:
-      '@carbon/agents':
+      '@argon/agents':
         specifier: workspace:*
         version: link:../packages/agents
-      '@carbon/core':
+      '@argon/core':
         specifier: workspace:*
         version: link:../packages/core
-      '@carbon/solana':
+      '@argon/solana':
         specifier: workspace:*
         version: link:../packages/solana
-      '@carbon/web':
+      '@argon/web':
         specifier: workspace:*
         version: link:../apps/web
-      '@carbon/worker':
+      '@argon/worker':
         specifier: workspace:*
         version: link:../apps/worker
-      '@carbon/x':
+      '@argon/x':
         specifier: workspace:*
         version: link:../packages/x
     devDependencies:

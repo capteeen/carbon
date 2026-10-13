@@ -1,4 +1,4 @@
--- @carbon/x 0001: encrypted OAuth tokens and post dedupe ledger
+-- @argon/x 0001: encrypted OAuth tokens and post dedupe ledger
 CREATE TABLE IF NOT EXISTS x_tokens (
   launch_id          text PRIMARY KEY,
   x_user_id          text NOT NULL,

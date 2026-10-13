@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { render } from '@testing-library/react';
-import { configRows, renderConfigMarkdown } from '@carbon/core/render-config';
+import { configRows, renderConfigMarkdown } from '@argon/core/render-config';
 import { describe, expect, it } from 'vitest';
 import HowPage from '@/app/how/page';
 import { Markdown } from '@/components/Markdown';

@@ -19,10 +19,10 @@ import {
   SHAPE_IDS,
   type AgentId,
   type Bond as CoreBond,
-  type CarbonEvent,
+  type ArgonEvent,
   type SentinelReport,
   type ShapeId,
-} from '@carbon/core/contracts';
+} from '@argon/core/contracts';
 import { COPY } from '../copy.js';
 import { flashesFromEvents, latestSentinel, pairAgents, realEvents, validBonds } from '../data/derive.js';
 import { gaugeSegments, sentinelPhase } from '../data/sentinel.js';
@@ -44,12 +44,12 @@ import type { BondFlash, DaughterView, DecayView } from '../types.js';
 
 export interface LaunchSceneProps {
   /** The launch's logged events (any order; only real ids are used). */
-  events: readonly CarbonEvent[];
+  events: readonly ArgonEvent[];
   /** Core's current bonds for this launch (Handoffs.bonds). Orders are drawn exactly as given. */
   bonds: readonly CoreBond[];
   /** Override the Sentinel report (defaults to the latest sentinel.score event). */
   sentinel?: SentinelReport | null;
-  /** Decay clock (C-11 / C-14), from the config table + trade data. */
+  /** Decay clock (Ar-41 / Ar-39), from the config table + trade data. */
   decay?: DecayView | null;
   /** Daughter coin once daughter.launched exists. */
   daughter?: DaughterView | null;
@@ -75,7 +75,7 @@ interface Derived {
 
 function derive(props: LaunchSceneProps): Derived {
   const evs = realEvents(props.events);
-  const created = evs.find((e): e is CarbonEvent<'launch.created'> => e.kind === 'launch.created');
+  const created = evs.find((e): e is ArgonEvent<'launch.created'> => e.kind === 'launch.created');
   const shape = props.shape ?? (created && SHAPE_IDS.includes(created.payload.shape) ? created.payload.shape : 'ring');
   const flashes = flashesFromEvents(evs);
   const lastFlash = new Map<string, BondFlash>();
@@ -315,16 +315,16 @@ export function LaunchScene(props: LaunchSceneProps) {
   }, [bonds]);
 
   return (
-    <div ref={setFrame} className={`carbon-frame ${props.compact ? 'carbon-frame--embed' : 'carbon-frame--launch'}${props.className ? ' ' + props.className : ''}`} data-testid="launch-scene">
+    <div ref={setFrame} className={`argon-frame ${props.compact ? 'argon-frame--embed' : 'argon-frame--launch'}${props.className ? ' ' + props.className : ''}`} data-testid="launch-scene">
       <Stage quality={q} leaders={leaders} reducedMotion={still} eventSource={frame} ariaLabel="Live launch molecule: agents, bonds and Sentinel check">
         {/* the HUD stacks are taller at the top (bonds, Sentinel) than at the bottom: aim a little high so the molecule sits centre-low */}
         <CameraRig position={[0, props.compact ? 0.6 : 1.0, 9]} target={[0, props.compact ? 0 : 0.45, 0]} fit={props.compact ? 1 : 0.78} fogMargin={3} />
         <LaunchObjects d={d} bonds={bonds} decay={decay} daughter={daughter} leaders={leaders} />
       </Stage>
-      <div className="carbon-hud">
+      <div className="argon-hud">
         <HudLeaders registry={leaders} />
         <HudCorner at="tl">
-          <HudSection>{props.compact ? '////// Carbon' : '////// Live launch'}</HudSection>
+          <HudSection>{props.compact ? '////// Argon' : '////// Live launch'}</HudSection>
           <HudTag testId="launch-live-tag">{COPY.liveTag}</HudTag>
           {!d.hasEvents ? <HudMeta>no events logged yet</HudMeta> : null}
           {!props.compact ? (

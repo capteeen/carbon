@@ -1,10 +1,10 @@
 /**
- * Visual view-model types. These are local to @carbon/visual and are proposed
+ * Visual view-model types. These are local to @argon/visual and are proposed
  * for packages/core/src/contracts.ts (see README "Proposed contract changes").
- * Every field is derived from logged CarbonEvents (by id) or from core's Bond[];
+ * Every field is derived from logged ArgonEvents (by id) or from core's Bond[];
  * nothing here is ever filled with sample values.
  */
-import type { AgentId, Bond, BondOrder, CarbonEvent, IsotopeId, PairKey, SentinelReport, ShapeId, SplitReceipt } from '@carbon/core/contracts';
+import type { AgentId, Bond, BondOrder, ArgonEvent, IsotopeId, PairKey, SentinelReport, ShapeId, SplitReceipt } from '@argon/core/contracts';
 
 /** A real hand-off flash on a bond: `hash` is the hand-off event's id (sha256 hex). */
 export interface BondFlash {
@@ -65,7 +65,7 @@ export interface LaunchReplay {
   /** Final Sentinel report before deploy, if logged. */
   score: SentinelReport | null;
   /** Recorded hand-offs in seq order. */
-  handoffs: CarbonEvent<'handoff'>[];
+  handoffs: ArgonEvent<'handoff'>[];
   /**
    * Bonds at deploy time as recomputed by core (Handoffs.bonds(launchId, deployedAt)).
    * The replay draws bond orders ONLY from this; it never recomputes them.
@@ -93,7 +93,7 @@ export interface LaunchSummary {
 /** Decay status for a launch page. Supplied by the app from the config table + chain/trade data. */
 export interface DecayView {
   kind: 'quiet' | 'clock';
-  /** ms when the current clock started (deploy for C-14, last trade for C-11). */
+  /** ms when the current clock started (deploy for Ar-39, last trade for Ar-41). */
   startedAt: number;
   /** ms when collapse happens if nothing changes. */
   deadline: number;

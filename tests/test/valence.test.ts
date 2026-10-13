@@ -14,14 +14,14 @@ import {
   bondTotals,
   computeBonds,
   type AgentId,
-  type CarbonEvent,
+  type ArgonEvent,
   type Core,
-} from '@carbon/core';
+} from '@argon/core';
 import { createLaunch, makeEnv, type Env } from './support/env.js';
 
 const others = (a: AgentId) => AGENT_IDS.filter((x) => x !== a);
 
-function maxTotalsOverTime(events: CarbonEvent[], stepMs = 250): { max: number; at: number; agent: string } {
+function maxTotalsOverTime(events: ArgonEvent[], stepMs = 250): { max: number; at: number; agent: string } {
   let best = { max: 0, at: 0, agent: '' };
   if (!events.length) return best;
   const t0 = events[0]!.ts;
@@ -84,7 +84,7 @@ describe('valence 4: a fifth bond order must fail', () => {
 
   it('raw hand-off events appended straight to the bus (bypassing Handoffs) never show a 5th bond', async () => {
     const launchId = await createLaunch(env.core, 'diamond');
-    const appended: CarbonEvent[] = [];
+    const appended: ArgonEvent[] = [];
     for (let round = 0; round < 4; round++) {
       for (const to of others('scout')) {
         appended.push(await env.core.bus.append({ launchId, kind: 'handoff', actor: 'scout', payload: { from: 'scout', to, topic: 'raw', summary: 'bypass' } }));
@@ -114,7 +114,7 @@ describe('valence 4: a fifth bond order must fail', () => {
     const launchId = await createLaunch(env.core, 'diamond');
     const cores = [env.core, await env.another(), await env.another()];
     const senders = cores.map(fastHandoffs);
-    const results: { ok: CarbonEvent<'handoff'>[]; failed: number } = { ok: [], failed: 0 };
+    const results: { ok: ArgonEvent<'handoff'>[]; failed: number } = { ok: [], failed: 0 };
     const jobs: Promise<unknown>[] = [];
     for (let i = 0; i < 30; i++) {
       const from = AGENT_IDS[i % 6]!;
@@ -147,10 +147,10 @@ describe('valence 4: a fifth bond order must fail', () => {
   it('[AG-012] computeBonds stays ≤ 4 even when ts goes backwards in seq order (raw SQL insert)', () => {
     const L = 'probe-backwards';
     let seq = 0;
-    const mk = (ts: number, kind: CarbonEvent['kind'], actor: CarbonEvent['actor'], payload: unknown): CarbonEvent =>
-      ({ id: (++seq).toString(16).padStart(64, '0'), seq, launchId: L, ts, kind, actor, payload, signer: '', sig: '' }) as CarbonEvent;
+    const mk = (ts: number, kind: ArgonEvent['kind'], actor: ArgonEvent['actor'], payload: unknown): ArgonEvent =>
+      ({ id: (++seq).toString(16).padStart(64, '0'), seq, launchId: L, ts, kind, actor, payload, signer: '', sig: '' }) as ArgonEvent;
     const log = [
-      mk(0, 'launch.created', 'user', { line: 'x', isotope: 'C-12', shape: 'diamond', heavyAgent: null, launcherWallet: 'w', xConnected: false }),
+      mk(0, 'launch.created', 'user', { line: 'x', isotope: 'Ar-36', shape: 'diamond', heavyAgent: null, launcherWallet: 'w', xConnected: false }),
       ...(['forge', 'herald', 'keeper', 'treasurer'] as const).map((to) => mk(100_000, 'handoff', 'scout', { from: 'scout', to, topic: 't', summary: 's' })),
       mk(50_000, 'handoff', 'scout', { from: 'scout', to: 'sentinel', topic: 't', summary: 'backdated' }),
     ];

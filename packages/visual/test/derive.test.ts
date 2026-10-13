@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BOND_WINDOW_MS, pairKey, type Bond, type CarbonEvent } from '@carbon/core/contracts';
+import { BOND_WINDOW_MS, pairKey, type Bond, type ArgonEvent } from '@argon/core/contracts';
 import {
   buildReplay,
   deriveLive,
@@ -30,7 +30,7 @@ describe('honesty filters', () => {
 
   it('drops events, flashes, bonds and launches without real event ids', () => {
     const { events } = fixtureLaunch();
-    const forged = { ...events[1]!, id: 'not-a-hash' } as CarbonEvent;
+    const forged = { ...events[1]!, id: 'not-a-hash' } as ArgonEvent;
     expect(realEvents([forged]).length).toBe(0);
     expect(validFlashes([{ pairKey: pairKey('scout', 'forge'), hash: 'deadbeef', at: 1 }])).toEqual([]);
     expect(validFlashes([{ pairKey: 'scout|nobody' as never, hash: fakeId('x'), at: 1 }])).toEqual([]);
@@ -126,22 +126,22 @@ describe('layouts', () => {
   });
   it('the nucleus rests above the pedestal; departed neutrons sink into it', () => {
     expect(NUC_CENTER_Y - 0.86 * NUC_SCALE).toBeGreaterThan(-0.5); // nucleus bottom above the pedestal top
-    const c12 = chamberTargets('C-12', null);
-    const out = c12.filter((t) => t.alpha === 0);
-    expect(out.length).toBe(2);
+    const ar36 = chamberTargets('Ar-36', null);
+    const out = ar36.filter((t) => t.alpha === 0);
+    expect(out.length).toBe(3); // 8 neutron slots, Ar-36 shows 5
     for (const t of out) expect(t.center[1]).toBeLessThan(0.55 - 0.5); // below the nucleus, toward the pedestal
   });
   it('graphene crystals: one per launch, size grows with the isotope neutron count', () => {
-    expect(crystalSize('C-11')).toBeLessThan(crystalSize('C-12'));
-    expect(crystalSize('C-12')).toBeLessThan(crystalSize('C-13'));
-    expect(crystalSize('C-13')).toBeLessThan(crystalSize('C-14'));
+    expect(crystalSize('Ar-36')).toBeLessThan(crystalSize('Ar-39'));
+    expect(crystalSize('Ar-39')).toBeLessThan(crystalSize('Ar-40'));
+    expect(crystalSize('Ar-40')).toBeLessThan(crystalSize('Ar-41'));
     const l = fixtureLaunches(7);
     const placed = placeCrystals(l);
     expect(placed.length).toBe(7);
     expect(new Set(placed.map((p) => `${p.x.toFixed(3)},${p.z.toFixed(3)}`)).size).toBe(7); // one cell each
   });
   it('chamber targets are pure and isotope-dependent', () => {
-    expect(chamberTargets('C-12', null)).toEqual(chamberTargets('C-12', null));
-    expect(chamberTargets('C-14', null)).not.toEqual(chamberTargets('C-12', null));
+    expect(chamberTargets('Ar-36', null)).toEqual(chamberTargets('Ar-36', null));
+    expect(chamberTargets('Ar-39', null)).not.toEqual(chamberTargets('Ar-36', null));
   });
 });

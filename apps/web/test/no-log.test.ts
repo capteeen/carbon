@@ -6,7 +6,7 @@ describe('deployment with no event log', () => {
   const saved = { ...process.env };
   beforeEach(() => {
     delete process.env.DATABASE_URL;
-    delete process.env.CARBON_AGENT_KEY_SEED;
+    delete process.env.ARGON_AGENT_KEY_SEED;
   });
   afterEach(() => {
     process.env = { ...saved };

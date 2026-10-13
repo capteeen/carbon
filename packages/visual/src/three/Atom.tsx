@@ -1,6 +1,6 @@
 'use client';
 /**
- * ATOM: 12 instanced frosted nucleons (6 protons engraved with agent emblems,
+ * ATOM: a model of the agents' core, not argon's real 40-nucleon nucleus: 12 instanced frosted nucleons (6 protons engraved with agent emblems,
  * 6 plain neutrons) inside two translucent electron shells (inner 2, outer 4
  * electrons), an electron point cloud the cursor and touch disturb, and the 4 bond
  * arms the outer electrons become. Driven entirely by a mutable `drive`
@@ -30,7 +30,7 @@ import { COLORS, createCloudMaterial, createFrostMaterial } from './materials.js
 import { useKit } from './Stage.js';
 import { getEmblemAtlas } from './textures.js';
 import { inspectHandlers } from './inspect.js';
-import { AGENT_IDS } from '@carbon/core/contracts';
+import { AGENT_IDS } from '@argon/core/contracts';
 
 export interface AtomDrive {
   atom: number;

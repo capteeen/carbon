@@ -9,10 +9,10 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { EMPTY_GRAPHENE } from '@carbon/core/contracts';
+import { EMPTY_GRAPHENE } from '@argon/core/contracts';
 import { buildReplay, launchSummaryFromEvents } from '../src/data/derive.js';
 import { GrapheneHud, ProtonHud, ReplayHud } from '../src/hud/panels.js';
-import { CarbonStory } from '../src/story/CarbonStory.js';
+import { ArgonStory } from '../src/story/ArgonStory.js';
 import { StoryHud, type StoryHudProps } from '../src/story/StoryHud.js';
 import { CSS_VARS, PALETTE } from '../src/tokens.js';
 import { fixtureLaunch, fixtureLive } from './fixtures/events.js';
@@ -24,7 +24,7 @@ const base: StoryHudProps = {
   feed: [],
   receipts: [],
   recent: [],
-  isotope: 'C-12',
+  isotope: 'Ar-36',
   heavyAgent: null,
   shape: 'chain',
   proton: 0,
@@ -111,10 +111,10 @@ describe('panels refuse invalid data', () => {
     expect(renderToStaticMarkup(<GrapheneHud launches={[]} hovered={null} />)).toContain(EMPTY_GRAPHENE);
   });
 
-  it('CarbonStory server-renders with empty props and drops forged data', () => {
+  it('ArgonStory server-renders with empty props and drops forged data', () => {
     const forged = { ...fixtureLive(), agents: {}, recentHandoffs: [{ pairKey: 'scout|forge' as never, hash: 'deadbeef', at: 1 }] };
     const html = renderToStaticMarkup(
-      <CarbonStory live={forged} replay={{ ...buildReplay(fixtureLaunch().events)!, deployEventId: 'fake' }} launches={[]} smoothScroll={false} />,
+      <ArgonStory live={forged} replay={{ ...buildReplay(fixtureLaunch().events)!, deployEventId: 'fake' }} launches={[]} smoothScroll={false} />,
     );
     expect(html).toContain('data-testid="replay-empty"');
     expect(html).toContain(EMPTY_GRAPHENE);

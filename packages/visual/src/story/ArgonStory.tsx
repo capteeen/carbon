@@ -1,6 +1,6 @@
 'use client';
 /**
- * <CarbonStory>: the cinematic scroll story of the carbon atom (SPEC §5),
+ * <ArgonStory>: the cinematic scroll story of the argon atom (SPEC §5),
  * one pinned canvas, scroll progress as the only clock.
  *
  * HONESTY: chapters 00-07 are an illustrated explainer (no live values). HUD
@@ -9,7 +9,7 @@
  * `launches` (real launches) or "No molecules yet. Launch the first one."
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from 'react';
-import type { AgentId, IsotopeId, ShapeId } from '@carbon/core/contracts';
+import type { AgentId, IsotopeId, ShapeId } from '@argon/core/contracts';
 import { isValidReplay, validFlashes, validLaunches } from '../data/derive.js';
 import { AgentPanel } from '../hud/AgentPanel.js';
 import { HudLeaders } from '../hud/Hud.js';
@@ -28,7 +28,7 @@ import { StoryHud } from './StoryHud.js';
 import { StoryScene } from './StoryScene.js';
 import type { LaunchReplay, LaunchSummary, LiveStats, ReceiptItem, ThinkingItem } from '../types.js';
 
-export interface CarbonStoryProps {
+export interface ArgonStoryProps {
   /** Live agent stats derived from real events (deriveLive). Absent → "--.--". */
   live?: LiveStats | null;
   /** A real recorded launch (buildReplay). Absent → honest empty state in ch08. */
@@ -62,7 +62,7 @@ export interface CarbonStoryProps {
   soundToggle?: boolean;
 }
 
-export function CarbonStory(props: CarbonStoryProps) {
+export function ArgonStory(props: ArgonStoryProps) {
   const store = props.store ?? defaultStore;
   const reduced = useReducedMotion(props.reducedMotion);
   const track = useRef<HTMLElement | null>(null);
@@ -89,12 +89,12 @@ export function CarbonStory(props: CarbonStoryProps) {
   useBondChimes(recent);
 
   // visitor's choices in the illustrated chamber / shapes (illustration only)
-  const [isotope, setIsotope] = useState<IsotopeId>('C-12');
+  const [isotope, setIsotope] = useState<IsotopeId>('Ar-36');
   const [heavy, setHeavy] = useState<AgentId | null>(null);
   const [shape, setShape] = useState<ShapeId>('ring');
   const onIsotope = useCallback((v: IsotopeId) => {
     setIsotope(v);
-    if (v !== 'C-13') setHeavy(null);
+    if (v !== 'Ar-40') setHeavy(null);
   }, []);
   const [hovered, setHovered] = useState<LaunchSummary | null>(null);
   // the story's own sound: a bed per chapter and cues at each moment, on the scroll clock
@@ -159,16 +159,16 @@ export function CarbonStory(props: CarbonStoryProps) {
       ref={(el) => {
         track.current = el;
       }}
-      className="carbon-story"
+      className="argon-story"
       style={{ height: `${TRACK_SCREENS * 100}vh` }}
       data-reduced-motion={reduced}
-      aria-label="Carbon: the story of the atom"
+      aria-label="Argon: the story of the atom"
     >
-      <div className="carbon-story__markers" aria-hidden="true">
+      <div className="argon-story__markers" aria-hidden="true">
         {CHAPTERS.map((c, i) => (
           <div
             key={c.id}
-            className="carbon-story__marker"
+            className="argon-story__marker"
             data-marker={i}
             ref={(el) => {
               markers.current[i] = el;
@@ -176,7 +176,7 @@ export function CarbonStory(props: CarbonStoryProps) {
           />
         ))}
       </div>
-      <div ref={setPin} className="carbon-story__pin" data-testid="story-pin">
+      <div ref={setPin} className="argon-story__pin" data-testid="story-pin">
         <Stage
           quality={quality}
           leaders={leaders}
@@ -186,7 +186,7 @@ export function CarbonStory(props: CarbonStoryProps) {
           onFrame={props.onFrame}
           maxDpr={props.maxDpr}
           inspect={inspect}
-          ariaLabel="Animated carbon atom; the chapter text describes each scene"
+          ariaLabel="Animated argon atom; the chapter text describes each scene"
         >
           <StoryScene
             store={store}
@@ -204,7 +204,7 @@ export function CarbonStory(props: CarbonStoryProps) {
             hovered={hovered?.ca ?? null}
           />
         </Stage>
-        <div className="carbon-hud" data-testid="story-hud">
+        <div className="argon-hud" data-testid="story-hud">
           <HudLeaders registry={leaders} />
           <StoryHud
             live={live}

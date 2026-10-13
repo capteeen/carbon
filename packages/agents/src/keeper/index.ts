@@ -4,7 +4,7 @@
  * never posts top-level posts itself: an approved draft is handed to Herald
  * through handoffs.send with the approval.requested event as its reference.
  */
-import type { CarbonEvent, XPost } from '@carbon/core';
+import type { ArgonEvent, XPost } from '@argon/core';
 import type { ApprovalCard } from '../cards.js';
 import { type AgentContext, all, emit, emitError, errMsg, gate, handoff, latest, requestApproval, think } from '../context.js';
 import { MAX_POST, fitPost, postRate, postingWindow, publishedInLastHour } from '../herald/index.js';
@@ -23,7 +23,7 @@ export const HOLDER_MILESTONES = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 1
 
 export interface KeeperDraftResult {
   /** The hand-off to Herald (ref = approval.requested), when the user approved. */
-  handoff: CarbonEvent<'handoff'> | null;
+  handoff: ArgonEvent<'handoff'> | null;
 }
 
 export class Keeper {
@@ -47,7 +47,7 @@ export class Keeper {
   }
 
   /** Reply to new mentions since deploy. Returns the published replies. */
-  async respond(): Promise<CarbonEvent<'post.published'>[]> {
+  async respond(): Promise<ArgonEvent<'post.published'>[]> {
     const ctx = this.ctx;
     const dep = await latest(ctx, 'launch.deployed');
     const draft = await latest(ctx, 'forge.draft');
@@ -64,7 +64,7 @@ export class Keeper {
     const fresh = mentions
       .filter((m) => /^\d+$/.test(m.id) && Date.parse(m.createdAt) >= dep.ts && !this.skipped.has(m.id) && (cursor === undefined || BigInt(m.id) > BigInt(cursor)))
       .sort((a, b) => (BigInt(a.id) < BigInt(b.id) ? -1 : 1));
-    const out: CarbonEvent<'post.published'>[] = [];
+    const out: ArgonEvent<'post.published'>[] = [];
     for (const m of fresh) {
       const used = await publishedInLastHour(ctx, 'reply');
       if (used >= ctx.config.repliesPerHour) {

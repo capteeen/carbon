@@ -1,14 +1,14 @@
-/** Adapters from the web read model to @carbon/visual props: real data in, empty states otherwise. */
+/** Adapters from the web read model to @argon/visual props: real data in, empty states otherwise. */
 import { describe, expect, it } from 'vitest';
 import { deriveLaunchView } from '@/lib/launch-view';
-import { BOND_WINDOW_MS } from '@carbon/core/contracts';
-import { computeBonds } from '@carbon/core/bonds';
+import { BOND_WINDOW_MS } from '@argon/core/contracts';
+import { computeBonds } from '@argon/core/bonds';
 import { foldIntoLogs, liveFromLogs, receiptsFromEvents, toVisualDecay, toVisualLaunch, toVisualLaunches, toVisualReplay } from '@/lib/visual-data';
 import { summarize } from '@/server/readmodel';
 import { ev } from './helpers';
 
 function launchLog(id: string) {
-  const created = ev(id, 'launch.created', { line: 'l', isotope: 'C-14', shape: 'ring', heavyAgent: null, launcherWallet: 'W', xConnected: false }, 'user');
+  const created = ev(id, 'launch.created', { line: 'l', isotope: 'Ar-39', shape: 'ring', heavyAgent: null, launcherWallet: 'W', xConnected: false }, 'user');
   const h = ev(id, 'handoff', { from: 'scout', to: 'forge', topic: 't', summary: 's' }, 'scout');
   const draft = ev(id, 'forge.draft', { name: 'N', ticker: 'TKR', lore: 'x', logoUri: 'u', logoHash: 'h', bannerUri: 'b', siteUri: 's' }, 'forge');
   const dep = ev(id, 'launch.deployed', { ca: `${id}CA`, txSig: 't', creatorWallet: 'c', devBuySol: 0.1, network: 'devnet' });

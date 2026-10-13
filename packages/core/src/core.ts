@@ -1,6 +1,6 @@
 /**
  * One-call wiring for servers (worker, Next route handlers):
- *   const core = await createCore();   // reads DATABASE_URL, REDIS_URL, CARBON_AGENT_KEY_SEED
+ *   const core = await createCore();   // reads DATABASE_URL, REDIS_URL, ARGON_AGENT_KEY_SEED
  *   core.bus / core.handoffs / core.approvals / core.budgets
  */
 import { PgApprovals } from './approvals.js';

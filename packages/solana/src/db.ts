@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS sol_splits (
 
 CREATE TABLE IF NOT EXISTS split_ledger (
   claim_id      text NOT NULL REFERENCES sol_claims(claim_id),
-  leg           text NOT NULL CHECK (leg IN ('launcher','carbon-buyback','treasury')),
+  leg           text NOT NULL CHECK (leg IN ('launcher','argon-buyback','treasury')),
   launch_id     text NOT NULL,
   address       text NOT NULL,
   lamports      numeric NOT NULL CHECK (lamports >= 0),
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS sol_decay (
 );
 
 -- Additive columns (idempotent on existing databases).
-ALTER TABLE sol_claims ADD COLUMN IF NOT EXISTS origin text NOT NULL DEFAULT 'carbon';
+ALTER TABLE sol_claims ADD COLUMN IF NOT EXISTS origin text NOT NULL DEFAULT 'argon';
 ALTER TABLE sol_launches ADD COLUMN IF NOT EXISTS foreign_scan_until text;
 -- A foreign-distribution scan in progress (AG-033): the newest signature it started from,
 -- and the oldest signature it has fully processed so far (resume with before=this).

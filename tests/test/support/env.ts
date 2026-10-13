@@ -7,11 +7,11 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { ed25519 } from '@noble/curves/ed25519.js';
 import bs58 from 'bs58';
-import { createCore, type AgentId, type Core, type IsotopeId, type ShapeId } from '@carbon/core';
+import { createCore, type AgentId, type Core, type IsotopeId, type ShapeId } from '@argon/core';
 import { migrateAll } from '../../../apps/worker/src/migrate.js';
 
-export const TEST_DB = process.env.CARBON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
-export const TEST_REDIS = process.env.CARBON_TEST_REDIS_URL ?? 'redis://localhost:6379';
+export const TEST_DB = process.env.ARGON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
+export const TEST_REDIS = process.env.ARGON_TEST_REDIS_URL ?? 'redis://localhost:6379';
 
 export class Clock {
   constructor(public t = 1_900_000_000_000) {}
@@ -77,7 +77,7 @@ export function wallet() {
 export async function createLaunch(
   core: Core,
   shape: ShapeId,
-  isotope: IsotopeId = 'C-12',
+  isotope: IsotopeId = 'Ar-36',
   heavyAgent: AgentId | null = null,
   launcherWallet = wallet().address,
   launchId: string = randomUUID(),

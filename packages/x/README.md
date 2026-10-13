@@ -1,6 +1,6 @@
-# @carbon/x
+# @argon/x
 
-X API v2 client for Carbon. Implements `XClient` from `@carbon/core/ports`, plus
+X API v2 client for Argon. Implements `XClient` from `@argon/core/ports`, plus
 the OAuth 2.0 Authorization Code with PKCE flow that connects the launcher's own
 project account. This package does not create X accounts and has no signup code
 of any kind (`test/static-guards.test.ts` checks this).
@@ -13,12 +13,12 @@ of any kind (`test/static-guards.test.ts` checks this).
 | `X_CLIENT_SECRET` | confidential clients | Sent as HTTP Basic on `/2/oauth2/token` and `/2/oauth2/revoke`. If it is unset, the client acts as a public client and sends `client_id` in the body. |
 | `X_REDIRECT_URI` | yes | Must exactly match a callback URL set on the X app. Must be https, except for localhost. |
 | `X_BEARER_TOKEN` | optional | App-only token for `searchRecent` and `trends`. If it is unset, `trends()` returns `[]` with a reason. |
-| `CARBON_TOKEN_KEY` | yes | 32 bytes, as hex or base64. It is the AES-256-GCM key for stored tokens and the OAuth flow cookie. |
+| `ARGON_TOKEN_KEY` | yes | 32 bytes, as hex or base64. It is the AES-256-GCM key for stored tokens and the OAuth flow cookie. |
 
 ## Wiring (apps/web and the worker)
 
 ```ts
-import { createXClient, migrate, AUTH_COOKIE_NAME } from '@carbon/x';
+import { createXClient, migrate, AUTH_COOKIE_NAME } from '@argon/x';
 await migrate(pool);                       // or run migrations/0001_*.sql and 0002_*.sql
 // The worker's hook: consumed approval + approved text hash + one use (apps/worker/src/x.ts).
 const x = createXClient({ db: pool, assertApproval: (l, a, act, textSha256) => checkOnePost(l, a, act, textSha256) });

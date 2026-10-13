@@ -26,7 +26,7 @@ export function checkSignedLaunchTx(unsignedB64: string, signedB64: string, laun
     return { ok: false, reason: 'not a Solana transaction' };
   }
   const msg = signed.message.serialize();
-  if (!bytesEqual(msg, unsigned.message.serialize())) return { ok: false, reason: 'transaction differs from the one Carbon built' };
+  if (!bytesEqual(msg, unsigned.message.serialize())) return { ok: false, reason: 'transaction differs from the one Argon built' };
   const signers = signed.message.staticAccountKeys.slice(0, signed.message.header.numRequiredSignatures);
   const idx = signers.findIndex((k) => k.equals(new PublicKey(launcherWallet)));
   if (idx < 0) return { ok: false, reason: 'launcher wallet is not a signer of this transaction' };

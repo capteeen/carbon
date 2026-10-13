@@ -2,7 +2,7 @@
  * POST /api/launch/<launchId>/revise { scoreEventId, stop, name, ticker, note, newArt, signature }
  * Answers LaunchUser.revise after Sentinel blocks: a revision (re-draft + re-run) or stop.
  */
-import type { CarbonEvent } from '@carbon/core/contracts';
+import type { ArgonEvent } from '@argon/core/contracts';
 import { messages } from '@/lib/signing';
 import { getCore } from '@/server/core';
 import { EVENT_ID_RE, HttpError, UUID_RE, bool, handle, json, readJson, requireLauncher, str } from '@/server/http';
@@ -28,7 +28,7 @@ export function POST(req: Request, ctx: { params: Promise<{ launchId: string }> 
     const signature = str(body, 'signature', 128);
     const created = await requireLauncher(launchId, messages.revise({ launchId, scoreEventId, stop, name, ticker, note, newArt }), signature);
     const { bus } = await getCore();
-    const ev = (await bus.get(scoreEventId)) as CarbonEvent<'sentinel.score'> | null;
+    const ev = (await bus.get(scoreEventId)) as ArgonEvent<'sentinel.score'> | null;
     if (!ev || ev.launchId !== launchId || ev.kind !== 'sentinel.score') throw new HttpError(404, 'unknown score');
     if (ev.payload.passed) throw new HttpError(409, 'this score passed; nothing to revise');
     const ok = await insertUserInput({

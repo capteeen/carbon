@@ -4,7 +4,7 @@
  * queueing visibly (`handoff.queued`) until the hand-off fits.
  */
 import type pg from 'pg';
-import { SHAPES, VALENCE, pairKey, type AgentId, type Bond, type CarbonEvent } from './contracts.js';
+import { SHAPES, VALENCE, pairKey, type AgentId, type Bond, type ArgonEvent } from './contracts.js';
 import type { EventBus, Handoffs } from './ports.js';
 import { analyzeBonds, computeBonds, handoffFits } from './bonds.js';
 import { getLaunchCreated } from './launch.js';
@@ -60,7 +60,7 @@ export class EventBusHandoffs implements Handoffs {
     topic: string,
     summary: string,
     refEventId?: string,
-  ): Promise<CarbonEvent<'handoff'>> {
+  ): Promise<ArgonEvent<'handoff'>> {
     if (from === to) throw new TopologyError('an agent cannot hand off to itself');
     const created = await getLaunchCreated(this.bus, launchId);
     const shape = SHAPES[created.payload.shape];

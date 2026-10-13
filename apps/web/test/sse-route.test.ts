@@ -1,11 +1,11 @@
 /** SSE route against real Postgres (carbon_test, throwaway schema) and Redis. */
 import { randomBytes } from 'node:crypto';
 import pg from 'pg';
-import { createEventBus, migrate, type PgEventBus } from '@carbon/core';
+import { createEventBus, migrate, type PgEventBus } from '@argon/core';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
-const DB = process.env.CARBON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
-const REDIS = process.env.CARBON_TEST_REDIS_URL ?? 'redis://localhost:6379';
+const DB = process.env.ARGON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
+const REDIS = process.env.ARGON_TEST_REDIS_URL ?? 'redis://localhost:6379';
 const schema = `web_t_${randomBytes(6).toString('hex')}`;
 let bus: PgEventBus;
 

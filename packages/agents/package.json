@@ -1,5 +1,5 @@
 {
-  "name": "@carbon/agents",
+  "name": "@argon/agents",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@carbon/core": "workspace:*",
+    "@argon/core": "workspace:*",
     "jpeg-js": "0.4.4",
     "pngjs": "7.0.0"
   },

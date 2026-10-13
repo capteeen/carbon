@@ -31,7 +31,7 @@ import {
   type AgentId,
   type Bond,
   type BondOrder,
-  type CarbonEvent,
+  type ArgonEvent,
   type EventPayloads,
   type PairKey,
 } from './contracts.js';
@@ -102,7 +102,7 @@ function rawTotals(counts: Map<PairKey, { n: number }>): Record<AgentId, number>
   return totals;
 }
 
-function validateHandoff(e: CarbonEvent, topology: ReadonlySet<PairKey> | null): { pair: PairKey } | { reason: string } {
+function validateHandoff(e: ArgonEvent, topology: ReadonlySet<PairKey> | null): { pair: PairKey } | { reason: string } {
   const p = e.payload as EventPayloads['handoff'];
   if (!p || !isAgent(p.from) || !isAgent(p.to)) return { reason: 'malformed payload' };
   if (p.from === p.to) return { reason: 'self hand-off' };
@@ -113,7 +113,7 @@ function validateHandoff(e: CarbonEvent, topology: ReadonlySet<PairKey> | null):
 }
 
 /** Full analysis of one launch's log at time `at` (default: the last event's ts). */
-export function analyzeBonds(events: readonly CarbonEvent[], at?: number): BondAnalysis {
+export function analyzeBonds(events: readonly ArgonEvent[], at?: number): BondAnalysis {
   const sorted = [...events].sort((x, y) => x.seq - y.seq);
   const launchIds = new Set(sorted.map((e) => e.launchId));
   if (launchIds.size > 1) throw new Error('computeBonds expects the events of exactly one launch');
@@ -205,12 +205,12 @@ export function analyzeBonds(events: readonly CarbonEvent[], at?: number): BondA
 }
 
 /** Bonds of one launch at time `at` (default: last event's ts). THE display function. */
-export function computeBonds(events: readonly CarbonEvent[], at?: number): Bond[] {
+export function computeBonds(events: readonly ArgonEvent[], at?: number): Bond[] {
   return analyzeBonds(events, at).bonds;
 }
 
 /** Each agent's total bond order, e.g. for the HUD "BONDS 3/4". */
-export function bondTotals(events: readonly CarbonEvent[], at?: number): Record<AgentId, number> {
+export function bondTotals(events: readonly ArgonEvent[], at?: number): Record<AgentId, number> {
   return analyzeBonds(events, at).totals;
 }
 
@@ -219,14 +219,14 @@ export function bondTotals(events: readonly CarbonEvent[], at?: number): Record<
  * Simulates it against the log; used by Handoffs.send before appending.
  */
 export function handoffFits(
-  events: readonly CarbonEvent[],
+  events: readonly ArgonEvent[],
   from: AgentId,
   to: AgentId,
   ts: number,
 ): { fits: true } | { fits: false; reason: string } {
   const sorted = [...events].sort((x, y) => x.seq - y.seq);
   const last = sorted[sorted.length - 1];
-  const probe: CarbonEvent<'handoff'> = {
+  const probe: ArgonEvent<'handoff'> = {
     id: 'probe',
     seq: (last?.seq ?? 0) + 1,
     launchId: last?.launchId ?? 'probe',

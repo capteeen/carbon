@@ -18,7 +18,7 @@ import {
   Vector3,
   type Mesh,
 } from 'three';
-import { AGENT_IDS, type AgentId, type ShapeId } from '@carbon/core/contracts';
+import { AGENT_IDS, type AgentId, type ShapeId } from '@argon/core/contracts';
 import type { LeaderAnchor } from '../hud/leaders.js';
 import { moleculeLayout } from './layouts.js';
 import { COLORS, createFrostMaterial, createSeamMaterial } from './materials.js';
@@ -45,7 +45,7 @@ export function AgentAtoms({
   dim?: MutableNumber;
   /** Per-agent glow (0..1), mutable. */
   glow?: Record<AgentId, number>;
-  /** Agent drawn larger (e.g. C-13 heavy agent). */
+  /** Agent drawn larger (e.g. Ar-40 heavy agent). */
   highlight?: AgentId | null;
 }) {
   const kit = useKit();

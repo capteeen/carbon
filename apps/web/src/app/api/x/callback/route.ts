@@ -1,5 +1,5 @@
 /**
- * GET /api/x/callback: finish OAuth (@carbon/x finishAuth: state check in constant
+ * GET /api/x/callback: finish OAuth (@argon/x finishAuth: state check in constant
  * time, PKCE exchange, tokens stored encrypted and bound to the wallet that signed
  * the connect request). The flow cookie is always cleared, success or not. Tokens
  * never reach the browser.
@@ -7,7 +7,7 @@
  * If the launch was created in the meantime by a different wallet, the new
  * connection is discarded at once (AG-004); the worker would ignore it anyway.
  */
-import { AUTH_COOKIE_NAME } from '@carbon/x';
+import { AUTH_COOKIE_NAME } from '@argon/x';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { launchCreated } from '@/server/readmodel';

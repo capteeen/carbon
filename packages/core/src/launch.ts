@@ -1,4 +1,4 @@
-import { launchConfig, type CarbonEvent, type EventPayloads, type LaunchConfig } from './contracts.js';
+import { launchConfig, type ArgonEvent, type EventPayloads, type LaunchConfig } from './contracts.js';
 import type { EventBus } from './ports.js';
 
 export type LaunchCreated = EventPayloads['launch.created'];
@@ -11,10 +11,10 @@ export class UnknownLaunchError extends Error {
 }
 
 /** The launch's creation event (first launch.created in the log). */
-export async function getLaunchCreated(bus: EventBus, launchId: string): Promise<CarbonEvent<'launch.created'>> {
+export async function getLaunchCreated(bus: EventBus, launchId: string): Promise<ArgonEvent<'launch.created'>> {
   const [e] = await bus.list(launchId, { kinds: ['launch.created'], limit: 1 });
   if (!e) throw new UnknownLaunchError(launchId);
-  return e as CarbonEvent<'launch.created'>;
+  return e as ArgonEvent<'launch.created'>;
 }
 
 /** The launch's config row, derived from its launch.created event via the ONE config table. */

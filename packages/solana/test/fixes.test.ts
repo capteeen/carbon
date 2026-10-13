@@ -1,5 +1,5 @@
 /**
- * Regression tests for the audit fixes in @carbon/solana: AG-002 (one launch approval,
+ * Regression tests for the audit fixes in @argon/solana: AG-002 (one launch approval,
  * one set of launch values), AG-011 (cluster by genesis hash), AG-018 (exact flags),
  * AG-005/006/022 (buyback tranches: one receipt per buy, actual spend), AG-007 (claims
  * recoverable from the durable ledger), foreign distributions (native mode) and AG-025
@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Keypair, PublicKey, type TransactionInstruction } from '@solana/web3.js';
 import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import BN from 'bn.js';
-import { launchConfig } from '@carbon/core';
+import { launchConfig } from '@argon/core';
 import { pumpSdk } from '../src/sdk.js';
 import { decodePumpIx, PUMP_PROGRAM_ID } from '../src/programs.js';
 import { assertGenesisMatches, GENESIS_HASH, loadSolanaConfig } from '../src/config.js';
@@ -23,7 +23,7 @@ import { fixtureGlobal } from './fixtures/pump.js';
 
 const { GLOBAL_PDA, bondingCurvePda, feeSharingConfigPda } = pumpSdk;
 const URI = 'https://ipfs.io/ipfs/bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsck7e7aqa4s52zy';
-const CFG = launchConfig('C-12', 'ring');
+const CFG = launchConfig('Ar-36', 'ring');
 
 let db: Db;
 let close: () => Promise<void>;
@@ -45,7 +45,7 @@ describe('AG-002: a launch approval authorises exactly one set of launch values'
   async function setup() {
     const keys = testKeys();
     const chain = await chainWithGlobal();
-    const client = makeClient({ env: testEnv(keys, { CARBON_FEE_MODE: 'wallet' }), rpc: chain.rpc(), db, assertLaunchAllowed: async () => undefined });
+    const client = makeClient({ env: testEnv(keys, { ARGON_FEE_MODE: 'wallet' }), rpc: chain.rpc(), db, assertLaunchAllowed: async () => undefined });
     const launchId = id('L-bind');
     await client.createLaunchWallet(launchId);
     const payer = Keypair.generate().publicKey.toBase58();
@@ -109,7 +109,7 @@ describe('AG-011 / AG-018: the cluster comes from the genesis hash; flags are ex
     await expect(client.buildLaunchTx(args)).rejects.toBeInstanceOf(NetworkGuardError);
     await expect(client.claimCreatorFees(launchId)).rejects.toBeInstanceOf(NetworkGuardError);
     await expect(client.runSplit(launchId, 'c')).rejects.toBeInstanceOf(NetworkGuardError);
-    await expect(client.buyCarbon(1n, 's')).rejects.toBeInstanceOf(NetworkGuardError);
+    await expect(client.buyArgon(1n, 's')).rejects.toBeInstanceOf(NetworkGuardError);
     await expect(client.airdropUnits(launchId, Keypair.generate().publicKey.toBase58(), Keypair.generate().publicKey.toBase58(), 1n)).rejects.toBeInstanceOf(NetworkGuardError);
     await expect(client.init()).rejects.toBeInstanceOf(NetworkGuardError);
     expect(chain.sends).toBe(0);
@@ -135,21 +135,21 @@ describe('AG-011 / AG-018: the cluster comes from the genesis hash; flags are ex
 
   it('a devnet config whose RPC URL does not name devnet is refused; padded flags are refused', () => {
     const k = testKeys();
-    expect(() => loadSolanaConfig(testEnv(k, { CARBON_RPC_URL: 'https://rpc.ankr.com/solana' }))).toThrow(NetworkGuardError);
-    expect(loadSolanaConfig(testEnv(k, { CARBON_RPC_URL: 'https://rpc.ankr.com/solana_devnet' })).network).toBe('devnet');
-    expect(() => loadSolanaConfig(testEnv(k, { CARBON_NETWORK: 'mainnet-beta', CARBON_MAINNET_ENABLED: ' true' }))).toThrow(NetworkGuardError);
-    expect(() => loadSolanaConfig(testEnv(k, { CARBON_NETWORK: ' mainnet-beta', CARBON_MAINNET_ENABLED: 'true' }))).toThrow(NetworkGuardError);
-    expect(loadSolanaConfig(testEnv(k, { CARBON_NETWORK: 'mainnet-beta', CARBON_MAINNET_ENABLED: 'true' })).network).toBe('mainnet-beta');
+    expect(() => loadSolanaConfig(testEnv(k, { ARGON_RPC_URL: 'https://rpc.ankr.com/solana' }))).toThrow(NetworkGuardError);
+    expect(loadSolanaConfig(testEnv(k, { ARGON_RPC_URL: 'https://rpc.ankr.com/solana_devnet' })).network).toBe('devnet');
+    expect(() => loadSolanaConfig(testEnv(k, { ARGON_NETWORK: 'mainnet-beta', ARGON_MAINNET_ENABLED: ' true' }))).toThrow(NetworkGuardError);
+    expect(() => loadSolanaConfig(testEnv(k, { ARGON_NETWORK: ' mainnet-beta', ARGON_MAINNET_ENABLED: 'true' }))).toThrow(NetworkGuardError);
+    expect(loadSolanaConfig(testEnv(k, { ARGON_NETWORK: 'mainnet-beta', ARGON_MAINNET_ENABLED: 'true' })).network).toBe('mainnet-beta');
   });
 });
 
 describe('AG-005 / AG-006: buyback tranches, one buy per acknowledgement, actual spend', () => {
-  const LEG = 25_000_000n; // 0.025 SOL leg; RING C-12 cap is 0.01 SOL per buy
+  const LEG = 25_000_000n; // 0.025 SOL leg; RING Ar-36 cap is 0.01 SOL per buy
 
   async function setup(keys: TestKeys = testKeys()) {
     const chain = await chainWithGlobal();
     const g = fixtureGlobal();
-    chain.accounts.set(bondingCurvePda(keys.carbonMint.publicKey).toBase58(), {
+    chain.accounts.set(bondingCurvePda(keys.argonMint.publicKey).toBase58(), {
       data: await encodeAccount('pump', 'bondingCurve', {
         virtualTokenReserves: g.initialVirtualTokenReserves,
         virtualSolReserves: g.initialVirtualSolReserves,
@@ -163,7 +163,7 @@ describe('AG-005 / AG-006: buyback tranches, one buy per acknowledgement, actual
       lamports: 1,
       executable: false,
     });
-    chain.accounts.set(keys.carbonMint.publicKey.toBase58(), { data: Buffer.alloc(82), owner: TOKEN_2022_PROGRAM_ID, lamports: 1, executable: false });
+    chain.accounts.set(keys.argonMint.publicKey.toBase58(), { data: Buffer.alloc(82), owner: TOKEN_2022_PROGRAM_ID, lamports: 1, executable: false });
     const buys: bigint[] = [];
     chain.onTx = (_tx, ixs: TransactionInstruction[]): Effect | void => {
       const buy = ixs.find((ix) => decodePumpIx(ix)?.name === 'buy');
@@ -171,9 +171,9 @@ describe('AG-005 / AG-006: buyback tranches, one buy per acknowledgement, actual
       const max = BigInt(String(decodePumpIx(buy)!.data['maxSolCost']));
       buys.push(max - 200_000n + 125_000n);
       return {
-        logs: eventLogs(PUMP_PROGRAM_ID, 'pump', 'tradeEvent', { mint: keys.carbonMint.publicKey, isBuy: true, user: keys.buyback.publicKey, solAmount: new BN((max - 200_000n).toString()), fee: new BN(95_000), creatorFee: new BN(30_000) }),
+        logs: eventLogs(PUMP_PROGRAM_ID, 'pump', 'tradeEvent', { mint: keys.argonMint.publicKey, isBuy: true, user: keys.buyback.publicKey, solAmount: new BN((max - 200_000n).toString()), fee: new BN(95_000), creatorFee: new BN(30_000) }),
         preTokenBalances: [],
-        postTokenBalances: [{ accountIndex: 1, mint: keys.carbonMint.publicKey.toBase58(), owner: keys.buyback.publicKey.toBase58(), amount: 1_000n }],
+        postTokenBalances: [{ accountIndex: 1, mint: keys.argonMint.publicKey.toBase58(), owner: keys.buyback.publicKey.toBase58(), amount: 1_000n }],
       };
     };
     const client = makeClient({ env: testEnv(keys), rpc: chain.rpc(), db, config: CFG });
@@ -184,28 +184,28 @@ describe('AG-005 / AG-006: buyback tranches, one buy per acknowledgement, actual
     const splitId = `split_${claimId}`;
     await db.query(`INSERT INTO sol_claims (claim_id, launch_id, mode, state, tx_sig, lamports) VALUES ($1,$2,'native','confirmed','fixture',1)`, [claimId, launchId]);
     await db.query(`INSERT INTO sol_splits (split_id, claim_id, launch_id, mode, total) VALUES ($1,$2,$3,'native',1)`, [splitId, claimId, launchId]);
-    await db.query(`INSERT INTO split_ledger (claim_id, leg, launch_id, address, lamports, state, tx_sig) VALUES ($1,'carbon-buyback',$2,$3,$4,'confirmed','fixture')`, [claimId, launchId, keys.buyback.publicKey.toBase58(), LEG.toString()]);
+    await db.query(`INSERT INTO split_ledger (claim_id, leg, launch_id, address, lamports, state, tx_sig) VALUES ($1,'argon-buyback',$2,$3,$4,'confirmed','fixture')`, [claimId, launchId, keys.buyback.publicKey.toBase58(), LEG.toString()]);
     return { client, chain, buys, splitId };
   }
 
   it('lamportsIn is what the trade spent; the next buy waits for the acknowledgement, then draws only what is left', async () => {
     const { client, chain, buys, splitId } = await setup();
-    const a = await client.buyCarbon(LEG, splitId);
+    const a = await client.buyArgon(LEG, splitId);
     expect(a.lamportsIn).toBe(10_000_000n - 75_000n);
     expect(a.event.payload.lamportsIn).toBe(a.lamportsIn.toString());
     // Not acknowledged yet (the receipt may not be in the log): every call returns THIS buy.
     chain.height += 1;
-    expect((await client.buyCarbon(LEG, splitId)).txSig).toBe(a.txSig);
+    expect((await client.buyArgon(LEG, splitId)).txSig).toBe(a.txSig);
     expect(await client.recordedBuyback(splitId)).toMatchObject({ txSig: a.txSig, state: 'confirmed' });
     expect(buys).toHaveLength(1);
 
     await client.ackBuyback(splitId, a.txSig);
     expect(await client.recordedBuyback(splitId)).toBeNull();
-    const b = await client.buyCarbon(LEG, splitId);
+    const b = await client.buyArgon(LEG, splitId);
     expect(b.txSig).not.toBe(a.txSig);
     await client.ackBuyback(splitId, b.txSig);
     chain.height += 1;
-    const c = await client.buyCarbon(LEG, splitId);
+    const c = await client.buyArgon(LEG, splitId);
     await client.ackBuyback(splitId, c.txSig);
     // 25m leg: 10m, 10m, then what is left after what the first two ACTUALLY spent.
     const left = LEG - a.lamportsIn - b.lamportsIn;
@@ -217,13 +217,13 @@ describe('AG-005 / AG-006: buyback tranches, one buy per acknowledgement, actual
 
   it('a new tranche that would repeat an earlier transaction (same blockhash, same amount) is not broadcast', async () => {
     const { client, chain, splitId } = await setup();
-    const a = await client.buyCarbon(LEG, splitId);
+    const a = await client.buyArgon(LEG, splitId);
     await client.ackBuyback(splitId, a.txSig);
     const sends = chain.sends;
-    await expect(client.buyCarbon(LEG, splitId)).rejects.toBeInstanceOf(LedgerError);
+    await expect(client.buyArgon(LEG, splitId)).rejects.toBeInstanceOf(LedgerError);
     expect(chain.sends).toBe(sends);
     chain.height += 1; // next tick: new blockhash, the open tranche resumes
-    const b = await client.buyCarbon(LEG, splitId);
+    const b = await client.buyArgon(LEG, splitId);
     expect(b.txSig).not.toBe(a.txSig);
   });
 });
@@ -284,7 +284,7 @@ describe('AG-007 and foreign distributions: every claim is in the durable ledger
     expect(r.totalLamports).toBe('1000000');
     expect(r.legs.map((l) => [l.to, l.lamports, l.txSig, l.status])).toEqual([
       ['launcher', '500000', sig, 'confirmed'],
-      ['carbon-buyback', '300000', sig, 'confirmed'],
+      ['argon-buyback', '300000', sig, 'confirmed'],
       ['treasury', '200000', sig, 'confirmed'],
     ]);
     expect(s.chain.sends).toBe(0);
@@ -336,7 +336,7 @@ describe('AG-007 and foreign distributions: every claim is in the durable ledger
   // confirmedClaims resolves it by signature, with no new transaction (and so no approval).
   it('[AG-034] a claim left "sent" by a crash is listed once it landed, without claimCreatorFees and without a new transaction', async () => {
     const s = await nativeLaunch();
-    const sig = foreignDistribution(s, 3_000_000n); // the landed distribution (Carbon's own crank)
+    const sig = foreignDistribution(s, 3_000_000n); // the landed distribution (Argon's own crank)
     s.chain.signatures.delete(feeSharingConfigPda(s.mint).toBase58()); // not visible to the foreign scan
     const claimId = id('sent');
     await db.query(`INSERT INTO sol_claims (claim_id, launch_id, mode, state, tx_sig, raw_tx, lvbh) VALUES ($1,$2,'native','sent',$3,$4,$5)`, [
@@ -347,7 +347,7 @@ describe('AG-007 and foreign distributions: every claim is in the durable ledger
       s.chain.height + 150,
     ]);
     const sends = s.chain.sends;
-    expect(await s.client.confirmedClaims(s.launchId)).toEqual([{ claimId, lamports: 3_000_000n, txSig: sig, origin: 'carbon' }]);
+    expect(await s.client.confirmedClaims(s.launchId)).toEqual([{ claimId, lamports: 3_000_000n, txSig: sig, origin: 'argon' }]);
     expect(s.chain.sends).toBe(sends); // nothing built, signed or sent
     const r = await s.client.runSplit(s.launchId, claimId);
     expect(r.legs.every((l) => l.status === 'confirmed' && l.txSig === sig)).toBe(true);
@@ -369,12 +369,12 @@ describe('AG-007 and foreign distributions: every claim is in the durable ledger
     expect(row).toEqual({ state: 'pending', tx_sig: null });
   });
 
-  it("Carbon's own claims are never mistaken for foreign ones", async () => {
+  it("Argon's own claims are never mistaken for foreign ones", async () => {
     const s = await nativeLaunch();
     const sig = foreignDistribution(s, 777n);
     await db.query(`INSERT INTO sol_claims (claim_id, launch_id, mode, state, tx_sig, lamports) VALUES ($1,$2,'native','confirmed',$3,777)`, [id('own'), s.launchId, sig]);
     expect(await s.client.scanForeignDistributions(s.launchId)).toEqual([]);
-    expect((await s.client.confirmedClaims(s.launchId)).map((c) => c.origin)).toEqual(['carbon']);
+    expect((await s.client.confirmedClaims(s.launchId)).map((c) => c.origin)).toEqual(['argon']);
   });
 
   it('a claim that confirmed before its amount was recorded is measured from the chain and listed', async () => {
@@ -382,7 +382,7 @@ describe('AG-007 and foreign distributions: every claim is in the durable ledger
     const sig = foreignDistribution(s, 4242n);
     const claimId = id('crashed');
     await db.query(`INSERT INTO sol_claims (claim_id, launch_id, mode, state, tx_sig) VALUES ($1,$2,'native','confirmed',$3)`, [claimId, s.launchId, sig]);
-    expect(await s.client.confirmedClaims(s.launchId)).toEqual([{ claimId, lamports: 4242n, txSig: sig, origin: 'carbon' }]);
+    expect(await s.client.confirmedClaims(s.launchId)).toEqual([{ claimId, lamports: 4242n, txSig: sig, origin: 'argon' }]);
   });
 });
 
@@ -390,13 +390,13 @@ describe('AG-025: the decay clock starts at the create transaction block time', 
   it('the watcher uses the recorded block time over the caller’s event time', async () => {
     const keys = testKeys();
     const chain = await chainWithGlobal();
-    const client = makeClient({ env: testEnv(keys), rpc: chain.rpc(), db, config: launchConfig('C-14', 'chain') });
+    const client = makeClient({ env: testEnv(keys), rpc: chain.rpc(), db, config: launchConfig('Ar-39', 'chain') });
     const launchId = id('D');
     await client.createLaunchWallet(launchId);
     const born = 1_800_000_000_000;
     await db.query(`UPDATE sol_launches SET state='confirmed', born_at_ms=$2 WHERE launch_id=$1`, [launchId, born]);
     expect(await client.launchBornAtMs(launchId)).toBe(born);
-    const rule = launchConfig('C-14', 'chain').decay;
+    const rule = launchConfig('Ar-39', 'chain').decay;
     const watcher = new DecayWatcher({ client, db, now: () => born + 1000 });
     const r = await watcher.tick({ launchId, ca: Keypair.generate().publicKey.toBase58(), rule, bornAtMs: born + 90_000, name: 'M', symbol: 'M', description: 'm', imageUri: 'u', launcherWallet: Keypair.generate().publicKey.toBase58(), generation: 1, devBuySol: 0.1 });
     expect(r.readout.collapseAt).toBe(born + 7 * 24 * 3600_000);

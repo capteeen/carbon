@@ -14,28 +14,28 @@ import {
   pairKey,
   type AgentId,
   type Bond,
-  type CarbonEvent,
+  type ArgonEvent,
   type PairKey,
-} from '@carbon/core/contracts';
+} from '@argon/core/contracts';
 import { isEventId } from '../hud/format.js';
 import type { AgentLiveStats, BondFlash, LaunchReplay, LaunchSummary, LiveMolecule, LiveStats, ThinkingItem } from '../types.js';
 
-function isKind<K extends CarbonEvent['kind']>(e: CarbonEvent, k: K): e is CarbonEvent<K> {
+function isKind<K extends ArgonEvent['kind']>(e: ArgonEvent, k: K): e is ArgonEvent<K> {
   return e.kind === k;
 }
 
-function bySeq(a: CarbonEvent, b: CarbonEvent): number {
+function bySeq(a: ArgonEvent, b: ArgonEvent): number {
   return a.seq - b.seq;
 }
 
 /** Only events with real ids (sha256 hex) are ever drawn. */
-export function realEvents(events: readonly CarbonEvent[] | null | undefined): CarbonEvent[] {
+export function realEvents(events: readonly ArgonEvent[] | null | undefined): ArgonEvent[] {
   if (!events) return [];
   return events.filter((e) => e && isEventId(e.id)).sort(bySeq);
 }
 
 /** Bond flashes from logged hand-off events. */
-export function flashesFromEvents(events: readonly CarbonEvent[] | null | undefined): BondFlash[] {
+export function flashesFromEvents(events: readonly ArgonEvent[] | null | undefined): BondFlash[] {
   const out: BondFlash[] = [];
   for (const e of realEvents(events)) {
     if (!isKind(e, 'handoff')) continue;
@@ -78,7 +78,7 @@ export function pairAgents(k: PairKey): [AgentId, AgentId] {
  * Returns null when there is nothing real to show.
  */
 export function deriveLive(
-  events: readonly CarbonEvent[] | null | undefined,
+  events: readonly ArgonEvent[] | null | undefined,
   bonds: readonly Bond[] | null | undefined,
   now?: number,
   molecule?: LiveMolecule | null,
@@ -86,7 +86,7 @@ export function deriveLive(
   const evs = realEvents(events);
   const known = bonds !== null;
   const bs = validBonds(bonds);
-  const handoffs = evs.filter((e): e is CarbonEvent<'handoff'> => isKind(e, 'handoff'));
+  const handoffs = evs.filter((e): e is ArgonEvent<'handoff'> => isKind(e, 'handoff'));
   if (handoffs.length === 0 && bs.length === 0) return null;
   const t = now ?? (evs.length ? evs[evs.length - 1]!.ts : Date.now());
   const perMin = 60_000 / BOND_WINDOW_MS;
@@ -112,14 +112,14 @@ export function deriveLive(
 }
 
 /** Builds the chapter 08 replay from a launch's full event log, or null if it never deployed. */
-export function buildReplay(events: readonly CarbonEvent[] | null | undefined, bondsAtDeploy?: readonly Bond[] | null): LaunchReplay | null {
+export function buildReplay(events: readonly ArgonEvent[] | null | undefined, bondsAtDeploy?: readonly Bond[] | null): LaunchReplay | null {
   const evs = realEvents(events);
-  const created = evs.find((e): e is CarbonEvent<'launch.created'> => isKind(e, 'launch.created'));
-  const deployed = evs.find((e): e is CarbonEvent<'launch.deployed'> => isKind(e, 'launch.deployed'));
+  const created = evs.find((e): e is ArgonEvent<'launch.created'> => isKind(e, 'launch.created'));
+  const deployed = evs.find((e): e is ArgonEvent<'launch.deployed'> => isKind(e, 'launch.deployed'));
   if (!created || !deployed) return null;
-  const draft = [...evs].reverse().find((e): e is CarbonEvent<'forge.draft'> => isKind(e, 'forge.draft') && e.seq < deployed.seq);
+  const draft = [...evs].reverse().find((e): e is ArgonEvent<'forge.draft'> => isKind(e, 'forge.draft') && e.seq < deployed.seq);
   if (!draft) return null;
-  const scoreEv = [...evs].reverse().find((e): e is CarbonEvent<'sentinel.score'> => isKind(e, 'sentinel.score') && e.seq < deployed.seq);
+  const scoreEv = [...evs].reverse().find((e): e is ArgonEvent<'sentinel.score'> => isKind(e, 'sentinel.score') && e.seq < deployed.seq);
   const p = created.payload;
   if (!ISOTOPE_IDS.includes(p.isotope) || !SHAPE_IDS.includes(p.shape)) return null;
   return {
@@ -134,7 +134,7 @@ export function buildReplay(events: readonly CarbonEvent[] | null | undefined, b
     heavyAgent: p.heavyAgent,
     network: deployed.payload.network,
     score: scoreEv ? scoreEv.payload : null,
-    handoffs: evs.filter((e): e is CarbonEvent<'handoff'> => isKind(e, 'handoff') && e.seq <= deployed.seq),
+    handoffs: evs.filter((e): e is ArgonEvent<'handoff'> => isKind(e, 'handoff') && e.seq <= deployed.seq),
     bondsAtDeploy: validBonds(bondsAtDeploy),
   };
 }
@@ -157,7 +157,7 @@ export function isValidReplay(r: LaunchReplay | null | undefined): r is LaunchRe
 }
 
 /** Graphene crystal for one launch's events, or null if it has not deployed. */
-export function launchSummaryFromEvents(events: readonly CarbonEvent[] | null | undefined): LaunchSummary | null {
+export function launchSummaryFromEvents(events: readonly ArgonEvent[] | null | undefined): LaunchSummary | null {
   const r = buildReplay(events);
   if (!r) return null;
   const collapsed = realEvents(events).some((e) => e.kind === 'decay.collapsed');
@@ -193,15 +193,15 @@ export function validLaunches(launches: readonly LaunchSummary[] | null | undefi
 }
 
 /** "agent reasoning" feed items from logged reasoning events. */
-export function thinkingFromEvents(events: readonly CarbonEvent[] | null | undefined, limit = 8): ThinkingItem[] {
+export function thinkingFromEvents(events: readonly ArgonEvent[] | null | undefined, limit = 8): ThinkingItem[] {
   return realEvents(events)
-    .filter((e): e is CarbonEvent<'reasoning'> => isKind(e, 'reasoning'))
+    .filter((e): e is ArgonEvent<'reasoning'> => isKind(e, 'reasoning'))
     .slice(-limit)
     .map((e) => ({ eventId: e.id, agent: e.payload.agent, text: e.payload.text, ts: e.ts }));
 }
 
 /** Latest Sentinel report in a log. */
-export function latestSentinel(events: readonly CarbonEvent[] | null | undefined): { report: CarbonEvent<'sentinel.score'>['payload']; eventId: string } | null {
+export function latestSentinel(events: readonly ArgonEvent[] | null | undefined): { report: ArgonEvent<'sentinel.score'>['payload']; eventId: string } | null {
   const evs = realEvents(events);
   for (let i = evs.length - 1; i >= 0; i--) {
     const e = evs[i]!;

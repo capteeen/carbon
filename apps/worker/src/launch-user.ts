@@ -1,13 +1,13 @@
 /**
- * LaunchUser (@carbon/agents) answered by the launcher through the web API.
+ * LaunchUser (@argon/agents) answered by the launcher through the web API.
  * The web app verifies the launcher wallet's signature and writes the answer to
  * carbon_user_inputs; this side waits for it. The launch transaction is relayed
  * through carbon_tx_requests: the worker posts the unsigned tx, the browser's
  * wallet signs it, the web app checks it and hands it back.
  */
 import { randomUUID } from 'node:crypto';
-import type { LaunchUser, Revision } from '@carbon/agents';
-import type { CarbonEvent, EventBus, SentinelReport } from '@carbon/core';
+import type { LaunchUser, Revision } from '@argon/agents';
+import type { ArgonEvent, EventBus, SentinelReport } from '@argon/core';
 import type pg from 'pg';
 
 export class LauncherTimeoutError extends Error {
@@ -61,7 +61,7 @@ export class WebLaunchUser implements LaunchUser {
     }
   }
 
-  async chooseNarrative(proposals: CarbonEvent<'scout.proposals'>): Promise<{ narrative: number; name: number }> {
+  async chooseNarrative(proposals: ArgonEvent<'scout.proposals'>): Promise<{ narrative: number; name: number }> {
     const p = await this.waitFor('narrative', proposals.id, this.o.choiceTimeoutMs);
     const narrative = Number(p.narrative);
     const name = Number(p.name);
@@ -86,9 +86,9 @@ export class WebLaunchUser implements LaunchUser {
     }
   };
 
-  async revise(report: SentinelReport, _draft: CarbonEvent<'forge.draft'>): Promise<Revision | null> {
+  async revise(report: SentinelReport, _draft: ArgonEvent<'forge.draft'>): Promise<Revision | null> {
     // The report being answered is the latest sentinel.score in the log (the runner asks right after scoring).
-    const scores = (await this.o.bus.list(this.o.launchId, { kinds: ['sentinel.score'] })) as CarbonEvent<'sentinel.score'>[];
+    const scores = (await this.o.bus.list(this.o.launchId, { kinds: ['sentinel.score'] })) as ArgonEvent<'sentinel.score'>[];
     const ev = [...scores].reverse().find((e) => e.payload.run === report.run && e.payload.score === report.score);
     if (!ev) throw new Error('sentinel.score for this report is not in the log');
     const p = await this.waitFor('revision', ev.id, this.o.choiceTimeoutMs);

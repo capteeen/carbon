@@ -9,12 +9,12 @@ import {
   pairKey,
   type AgentId,
   type Bond,
-  type CarbonEvent,
+  type ArgonEvent,
   type EventKind,
   type EventPayloads,
   type IsotopeId,
   type ShapeId,
-} from '@carbon/core/contracts';
+} from '@argon/core/contracts';
 import type { LaunchSummary, LiveStats } from '../../src/types.js';
 
 /** 64-hex id derived from a seed string (format-compatible with sha256 ids; NOT a real hash). */
@@ -32,13 +32,13 @@ export function fakeId(seed: string): string {
 }
 
 let seq = 0;
-export function ev<K extends EventKind>(launchId: string, kind: K, actor: CarbonEvent['actor'], payload: EventPayloads[K], ts: number): CarbonEvent<K> {
+export function ev<K extends EventKind>(launchId: string, kind: K, actor: ArgonEvent['actor'], payload: EventPayloads[K], ts: number): ArgonEvent<K> {
   seq++;
   return { id: fakeId(`${launchId}:${seq}:${kind}`), seq, launchId, ts, kind, actor, payload, signer: 'fixture', sig: 'fixture' };
 }
 
 export interface FixtureLaunch {
-  events: CarbonEvent[];
+  events: ArgonEvent[];
   bonds: Bond[];
 }
 
@@ -47,10 +47,10 @@ const T0 = Date.UTC(2026, 8, 1, 12, 0, 0);
 export function fixtureLaunch(opts: { launchId?: string; isotope?: IsotopeId; shape?: ShapeId; heavy?: AgentId | null; ticker?: string; handoffs?: number; t0?: number } = {}): FixtureLaunch {
   const id = opts.launchId ?? 'fixture-launch-1';
   const shape = opts.shape ?? 'ring';
-  const isotope = opts.isotope ?? 'C-13';
-  const heavy = isotope === 'C-13' ? (opts.heavy ?? 'herald') : null;
+  const isotope = opts.isotope ?? 'Ar-40';
+  const heavy = isotope === 'Ar-40' ? (opts.heavy ?? 'herald') : null;
   const t0 = opts.t0 ?? T0;
-  const events: CarbonEvent[] = [];
+  const events: ArgonEvent[] = [];
   events.push(ev(id, 'launch.created', 'user', { line: 'fixture line', isotope, shape, heavyAgent: heavy, launcherWallet: 'FixtureWallet1111', xConnected: false }, t0));
   const topo = SHAPES[shape].topology;
   const n = opts.handoffs ?? 18;
@@ -102,7 +102,7 @@ export function fixtureLaunch(opts: { launchId?: string; isotope?: IsotopeId; sh
 }
 
 export function fixtureLaunches(n: number): LaunchSummary[] {
-  const isos: IsotopeId[] = ['C-11', 'C-12', 'C-13', 'C-14'];
+  const isos: IsotopeId[] = ['Ar-41', 'Ar-36', 'Ar-40', 'Ar-39'];
   const shapes: ShapeId[] = ['chain', 'ring', 'diamond'];
   return Array.from({ length: n }, (_, i) => ({
     launchId: `fixture-${i}`,

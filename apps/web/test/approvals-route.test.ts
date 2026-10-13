@@ -16,7 +16,7 @@ vi.mock('@/server/readmodel', () => ({
   approvalLaunchId: async (id: string) => (id === APPROVAL ? LAUNCH : null),
   launchCreated: async (id: string) =>
     id === LAUNCH
-      ? ev(LAUNCH, 'launch.created', { line: 'x', isotope: 'C-12', shape: 'chain', heavyAgent: null, launcherWallet: launcher.address, xConnected: false }, 'user')
+      ? ev(LAUNCH, 'launch.created', { line: 'x', isotope: 'Ar-36', shape: 'chain', heavyAgent: null, launcherWallet: launcher.address, xConnected: false }, 'user')
       : null,
 }));
 

@@ -3,11 +3,11 @@ import { randomBytes } from 'node:crypto';
 import pg from 'pg';
 import { createEventBus, type PgEventBus } from '../src/bus/pg-bus.js';
 import { migrate } from '../src/bus/migrate.js';
-import type { AgentId, CarbonEvent, EventKind, EventPayloads, IsotopeId, ShapeId } from '../src/contracts.js';
+import type { AgentId, ArgonEvent, EventKind, EventPayloads, IsotopeId, ShapeId } from '../src/contracts.js';
 import { KeyRing, eventId } from '../src/crypto.js';
 
-export const TEST_DB_URL = process.env.CARBON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
-export const TEST_REDIS_URL = process.env.CARBON_TEST_REDIS_URL ?? 'redis://localhost:6379';
+export const TEST_DB_URL = process.env.ARGON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
+export const TEST_REDIS_URL = process.env.ARGON_TEST_REDIS_URL ?? 'redis://localhost:6379';
 
 /** A fresh random seed per test run (test-only; never a real key). */
 export const TEST_SEED = randomBytes(32).toString('hex');
@@ -70,7 +70,7 @@ export const WALLET = 'LauncherWa11et1111111111111111111111111111111';
 export async function createLaunch(
   bus: PgEventBus,
   shape: ShapeId,
-  isotope: IsotopeId = 'C-12',
+  isotope: IsotopeId = 'Ar-36',
   heavyAgent: AgentId | null = null,
 ): Promise<string> {
   const launchId = `l_${randomBytes(4).toString('hex')}`;
@@ -85,19 +85,19 @@ export async function createLaunch(
 
 /** In-memory signed events for pure tests. */
 export class LogBuilder {
-  readonly events: CarbonEvent[] = [];
+  readonly events: ArgonEvent[] = [];
   private seq = 0;
   private readonly keys = new KeyRing(Buffer.from(TEST_SEED, 'hex'));
   constructor(readonly launchId = 'pure-launch') {}
-  add<K extends EventKind>(ts: number, kind: K, actor: CarbonEvent['actor'], payload: EventPayloads[K]): CarbonEvent<K> {
+  add<K extends EventKind>(ts: number, kind: K, actor: ArgonEvent['actor'], payload: EventPayloads[K]): ArgonEvent<K> {
     const body = { launchId: this.launchId, ts, kind, actor, payload };
     const id = eventId(body);
     const { signer, sig } = this.keys.signId(actor, id);
-    const e = { ...body, id, seq: ++this.seq, signer, sig } as CarbonEvent<K>;
-    this.events.push(e as CarbonEvent);
+    const e = { ...body, id, seq: ++this.seq, signer, sig } as ArgonEvent<K>;
+    this.events.push(e as ArgonEvent);
     return e;
   }
-  created(shape: ShapeId, ts = 0, isotope: IsotopeId = 'C-12', heavyAgent: AgentId | null = null) {
+  created(shape: ShapeId, ts = 0, isotope: IsotopeId = 'Ar-36', heavyAgent: AgentId | null = null) {
     return this.add(ts, 'launch.created', 'user', { line: 'x', isotope, shape, heavyAgent, launcherWallet: WALLET, xConnected: false });
   }
   handoff(ts: number, from: AgentId, to: AgentId, topic = 't') {

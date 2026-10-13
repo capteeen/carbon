@@ -12,9 +12,9 @@ import { fileURLToPath } from 'node:url';
 import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { describe, expect, it } from 'vitest';
-import { KeyRing, resolveSeed } from '@carbon/core';
-import { describeConfig, loadSolanaConfig, parseSecretKey, ChainUnavailableError } from '@carbon/solana';
-import { TokenCipher, parseTokenKey } from '@carbon/x';
+import { KeyRing, resolveSeed } from '@argon/core';
+import { describeConfig, loadSolanaConfig, parseSecretKey, ChainUnavailableError } from '@argon/solana';
+import { TokenCipher, parseTokenKey } from '@argon/x';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const git = (...args: string[]) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
@@ -31,7 +31,7 @@ const SECRET_PATTERNS: [string, RegExp][] = [
   ['Solana keypair JSON', /\[\s*(?:\d{1,3}\s*,\s*){63}\d{1,3}\s*\]/],
   ['base58 64-byte secret key', /(?<![A-Za-z0-9])[1-9A-HJ-NP-Za-km-z]{86,88}(?![A-Za-z0-9])/],
   ['BIP39-like seed phrase', /\b(?:abandon|zoo|legal|winner|thank|year|wave|sausage|worth|useful)(?:\s+[a-z]{3,8}){11,23}\b/],
-  ['secret env assignment with a value', /^\+?\s*(?:export\s+)?(?:CARBON_AGENT_KEY_SEED|CARBON_VAULT_KEY|CARBON_CRANK_KEY|CARBON_BUYBACK_KEY|CARBON_TOKEN_KEY|GEMINI_API_KEY|ANTHROPIC_API_KEY|X_CLIENT_SECRET|X_BEARER_TOKEN|PINATA_JWT)[ \t]*=[ \t]*[^\s#]{8,}/m],
+  ['secret env assignment with a value', /^\+?\s*(?:export\s+)?(?:ARGON_AGENT_KEY_SEED|ARGON_VAULT_KEY|ARGON_CRANK_KEY|ARGON_BUYBACK_KEY|ARGON_TOKEN_KEY|GEMINI_API_KEY|ANTHROPIC_API_KEY|X_CLIENT_SECRET|X_BEARER_TOKEN|PINATA_JWT)[ \t]*=[ \t]*[^\s#]{8,}/m],
 ];
 
 function scan(text: string): { name: string; sample: string }[] {
@@ -67,7 +67,7 @@ describe('no keys or seeds in git history, the working tree, or ignored files th
 
   it('no .env, details/ or key file was ever committed', () => {
     const everPaths = git('log', '--all', '--name-only', '--pretty=format:').split('\n').filter(Boolean);
-    const bad = everPaths.filter((p) => /(^|\/)\.env($|\.(?!example$))|(^|\/)details\/|\.pem$|id_rsa|keypair\.json$|carbon-keys\.json$/.test(p));
+    const bad = everPaths.filter((p) => /(^|\/)\.env($|\.(?!example$))|(^|\/)details\/|\.pem$|id_rsa|keypair\.json$|argon-keys\.json$/.test(p));
     expect(bad).toEqual([]);
   });
 
@@ -112,7 +112,7 @@ describe('secrets never reach logs, JSON, inspect() or error messages', () => {
     expect(all).not.toContain(seed.toString('hex'));
     const bad = 'zz' + seed.toString('hex');
     try {
-      resolveSeed(undefined, { CARBON_AGENT_KEY_SEED: bad } as unknown as NodeJS.ProcessEnv);
+      resolveSeed(undefined, { ARGON_AGENT_KEY_SEED: bad } as unknown as NodeJS.ProcessEnv);
       throw new Error('should have thrown');
     } catch (e) {
       expect(String((e as Error).message)).not.toContain(bad);
@@ -127,28 +127,28 @@ describe('secrets never reach logs, JSON, inspect() or error messages', () => {
     const b64 = (s: string) => Buffer.from(s).toString('base64url');
     const jwt = [b64('{"alg":"HS256"}'), b64(`{"sub":"${randomBytes(8).toString('hex')}"}`), b64(randomBytes(24).toString('hex'))].join('.');
     const env = {
-      CARBON_VAULT_KEY: vault,
-      CARBON_CRANK_KEY: bs58.encode(crank.secretKey),
-      CARBON_BUYBACK_KEY: bs58.encode(buyback.secretKey),
-      CARBON_BUYBACK_WALLET: buyback.publicKey.toBase58(),
-      CARBON_TREASURY_WALLET: Keypair.generate().publicKey.toBase58(),
-      CARBON_RPC_URL: 'https://devnet.helius-rpc.com/?api-key=SUPERSECRETRPCKEY123',
+      ARGON_VAULT_KEY: vault,
+      ARGON_CRANK_KEY: bs58.encode(crank.secretKey),
+      ARGON_BUYBACK_KEY: bs58.encode(buyback.secretKey),
+      ARGON_BUYBACK_WALLET: buyback.publicKey.toBase58(),
+      ARGON_TREASURY_WALLET: Keypair.generate().publicKey.toBase58(),
+      ARGON_RPC_URL: 'https://devnet.helius-rpc.com/?api-key=SUPERSECRETRPCKEY123',
       PINATA_JWT: jwt,
     };
     const cfg = loadSolanaConfig(env);
     const dumped = [JSON.stringify(cfg), JSON.stringify(describeConfig(cfg)), inspect(cfg, { depth: 10 }), inspect(describeConfig(cfg), { depth: 10 })].join('\n');
-    for (const s of [vault, env.CARBON_CRANK_KEY, env.CARBON_BUYBACK_KEY, jwt]) expect(dumped).not.toContain(s);
+    for (const s of [vault, env.ARGON_CRANK_KEY, env.ARGON_BUYBACK_KEY, jwt]) expect(dumped).not.toContain(s);
     expect(JSON.stringify(describeConfig(cfg))).not.toContain('SUPERSECRETRPCKEY123');
     // upstream error text carrying secrets is redacted
-    const err = new ChainUnavailableError(`fetch https://x/?api-key=SUPERSECRETRPCKEY123 failed; key ${env.CARBON_CRANK_KEY}; Bearer ${jwt}`);
+    const err = new ChainUnavailableError(`fetch https://x/?api-key=SUPERSECRETRPCKEY123 failed; key ${env.ARGON_CRANK_KEY}; Bearer ${jwt}`);
     expect(err.message).not.toContain('SUPERSECRETRPCKEY123');
-    expect(err.message).not.toContain(env.CARBON_CRANK_KEY);
+    expect(err.message).not.toContain(env.ARGON_CRANK_KEY);
     expect(err.message).not.toContain(jwt);
   });
 
   it('malformed secrets produce errors that name the variable, never the value', () => {
     const half = bs58.encode(Keypair.generate().secretKey).slice(0, 60);
-    for (const fn of [() => parseSecretKey(half, 'CARBON_CRANK_KEY'), () => parseTokenKey('ab' + half), () => loadSolanaConfig({ CARBON_VAULT_KEY: half })]) {
+    for (const fn of [() => parseSecretKey(half, 'ARGON_CRANK_KEY'), () => parseTokenKey('ab' + half), () => loadSolanaConfig({ ARGON_VAULT_KEY: half })]) {
       try {
         fn();
         throw new Error('should have thrown');
@@ -160,7 +160,7 @@ describe('secrets never reach logs, JSON, inspect() or error messages', () => {
 
   it('X token cipher: sealed tokens do not contain the plaintext; JSON/inspect of the cipher leaks no key', () => {
     const keyHex = randomBytes(32).toString('hex');
-    const c = TokenCipher.fromEnv({ CARBON_TOKEN_KEY: keyHex });
+    const c = TokenCipher.fromEnv({ ARGON_TOKEN_KEY: keyHex });
     const sealed = Buffer.from(c.seal('access-token-value-12345', 'aad')).toString('latin1');
     expect(sealed).not.toContain('access-token-value-12345');
     expect(JSON.stringify(c) ?? '').not.toContain(keyHex);

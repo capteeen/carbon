@@ -12,7 +12,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // HomeLive's router (resolved from apps/web, like the component's own import)
 vi.mock('../../apps/web/node_modules/next/navigation.js', () => ({ useRouter: () => ({ push: () => undefined, replace: () => undefined, refresh: () => undefined }) }));
-import { AGENT_IDS, BOND_WINDOW_MS, EventBusHandoffs, bondTotals, computeBonds, type AgentId, type CarbonEvent } from '@carbon/core';
+import { AGENT_IDS, BOND_WINDOW_MS, EventBusHandoffs, bondTotals, computeBonds, type AgentId, type ArgonEvent } from '@argon/core';
 import { deriveLaunchView } from '@/lib/launch-view';
 import { toVisualDecay } from '@/lib/visual-data';
 import { LaunchScene } from '@/visual';
@@ -30,7 +30,7 @@ const walk = (dir: string): string[] =>
   );
 
 /** Display-time bonds exactly as LaunchLive/EmbedLive compute them. */
-const displayBonds = (events: CarbonEvent[], now: number) => computeBonds(events, Math.max(now, events[events.length - 1]?.ts ?? 0));
+const displayBonds = (events: ArgonEvent[], now: number) => computeBonds(events, Math.max(now, events[events.length - 1]?.ts ?? 0));
 
 function totalsFromMarkup(html: string): Record<AgentId, number | null> {
   const out = {} as Record<AgentId, number | null>;
@@ -43,10 +43,10 @@ function totalsFromMarkup(html: string): Record<AgentId, number | null> {
 }
 
 describe('the web layer displays bonds with THE pure function', () => {
-  it('LaunchLive and EmbedLive compute display bonds with computeBonds from @carbon/core/bonds (no local re-implementation)', () => {
+  it('LaunchLive and EmbedLive compute display bonds with computeBonds from @argon/core/bonds (no local re-implementation)', () => {
     for (const f of ['apps/web/src/components/LaunchLive.tsx', 'apps/web/src/components/EmbedLive.tsx']) {
       const s = src(f);
-      expect(s).toMatch(/import \{ computeBonds \} from '@carbon\/core\/bonds'/);
+      expect(s).toMatch(/import \{ computeBonds \} from '@argon\/core\/bonds'/);
       expect(s).not.toMatch(/orderFromExchanges|exchanges\s*>=\s*\d/);
     }
     // No other bond arithmetic anywhere in the web app or the visual package that draws it.
@@ -76,7 +76,7 @@ describe('the web layer displays bonds with THE pure function', () => {
 describe('recorded log replay: server bonds == pure recomputation at many timestamps', () => {
   let env: Env;
   let launchId: string;
-  let events: CarbonEvent[];
+  let events: ArgonEvent[];
   beforeAll(async () => {
     env = await makeEnv();
     launchId = await createLaunch(env.core, 'ring');
@@ -124,7 +124,7 @@ describe('recorded log replay: server bonds == pure recomputation at many timest
   });
 
   it('[AG-010] / server render: the home readout uses the molecule full log from the real read model, not the 60-event window', async () => {
-    (globalThis as { __carbonCore?: Promise<unknown> }).__carbonCore = Promise.resolve(env.core);
+    (globalThis as { __argonCore?: Promise<unknown> }).__argonCore = Promise.resolve(env.core);
     try {
       const { activeMolecule, recentGlobalEvents } = await import('@/server/readmodel');
       const mol = (await activeMolecule())!;
@@ -137,7 +137,7 @@ describe('recorded log replay: server bonds == pure recomputation at many timest
       const m = /PROTON_01_SCOUT[\s\S]*?BONDS (\d+)\/4/.exec(html);
       expect(m?.[1]).toBe(String(bondTotals(events, at).scout));
     } finally {
-      delete (globalThis as { __carbonCore?: unknown }).__carbonCore;
+      delete (globalThis as { __argonCore?: unknown }).__argonCore;
     }
   });
 
@@ -152,12 +152,12 @@ describe('recorded log replay: server bonds == pure recomputation at many timest
 });
 
 describe('the launch HUD readouts agree with the bonds shown next to them', () => {
-  function log(): CarbonEvent[] {
+  function log(): ArgonEvent[] {
     let seq = 0;
-    const mk = (ts: number, kind: CarbonEvent['kind'], actor: CarbonEvent['actor'], payload: unknown): CarbonEvent =>
-      ({ id: (++seq).toString(16).padStart(64, 'a'), seq, launchId: 'L', ts, kind, actor, payload, signer: '', sig: '' }) as CarbonEvent;
+    const mk = (ts: number, kind: ArgonEvent['kind'], actor: ArgonEvent['actor'], payload: unknown): ArgonEvent =>
+      ({ id: (++seq).toString(16).padStart(64, 'a'), seq, launchId: 'L', ts, kind, actor, payload, signer: '', sig: '' }) as ArgonEvent;
     return [
-      mk(1_000, 'launch.created', 'user', { line: 'x', isotope: 'C-12', shape: 'diamond', heavyAgent: null, launcherWallet: 'w', xConnected: false }),
+      mk(1_000, 'launch.created', 'user', { line: 'x', isotope: 'Ar-36', shape: 'diamond', heavyAgent: null, launcherWallet: 'w', xConnected: false }),
       ...(['forge', 'herald', 'keeper', 'treasurer'] as const).map((to, i) => mk(2_000 + i, 'handoff', 'scout', { from: 'scout', to, topic: 't', summary: 's' })),
     ];
   }
@@ -199,7 +199,7 @@ describe('the launch HUD readouts agree with the bonds shown next to them', () =
       const truth = bondTotals(events, renderedAt);
       for (const a of AGENT_IDS) expect(shown[a], `${a} +${late}`).toBe(truth[a]);
       // the embed draws exactly computeBonds(log, display time): one seam per bond
-      const summary = { launchId: 'L', ca: null, name: null, ticker: null, isotope: 'C-12' as const, shape: 'diamond' as const, heavyAgent: null, score: null, threshold: null, network: null, createdAt: 1_000, deployedAt: null, state: null, logoUri: null, deployEventId: null, collapsed: false };
+      const summary = { launchId: 'L', ca: null, name: null, ticker: null, isotope: 'Ar-36' as const, shape: 'diamond' as const, heavyAgent: null, score: null, threshold: null, network: null, createdAt: 1_000, deployedAt: null, state: null, logoUri: null, deployEventId: null, collapsed: false };
       const embed = renderToStaticMarkup(<EmbedLive launch={summary} initial={events} lastSeq={events.length} site="https://x" renderedAt={renderedAt} />);
       expect(embed).toContain('data-testid="launch-scene"');
     }
@@ -211,10 +211,10 @@ describe('the launch HUD readouts agree with the bonds shown next to them', () =
   // and HomeLive names that molecule next to the readout.
   it('[AG-010] home chapter 03 BONDS n/4 equals the recomputation over the launch’s full log', () => {
     let seq = 0;
-    const mk = (ts: number, kind: CarbonEvent['kind'], actor: CarbonEvent['actor'], payload: unknown): CarbonEvent =>
-      ({ id: (++seq).toString(16).padStart(64, 'b'), seq, launchId: 'L', ts, kind, actor, payload, signer: '', sig: '' }) as CarbonEvent;
-    const full: CarbonEvent[] = [
-      mk(1_000, 'launch.created', 'user', { line: 'x', isotope: 'C-12', shape: 'diamond', heavyAgent: null, launcherWallet: 'w', xConnected: false }),
+    const mk = (ts: number, kind: ArgonEvent['kind'], actor: ArgonEvent['actor'], payload: unknown): ArgonEvent =>
+      ({ id: (++seq).toString(16).padStart(64, 'b'), seq, launchId: 'L', ts, kind, actor, payload, signer: '', sig: '' }) as ArgonEvent;
+    const full: ArgonEvent[] = [
+      mk(1_000, 'launch.created', 'user', { line: 'x', isotope: 'Ar-36', shape: 'diamond', heavyAgent: null, launcherWallet: 'w', xConnected: false }),
       ...(['forge', 'herald', 'keeper', 'treasurer'] as const).map((to, i) => mk(2_000 + i, 'handoff', 'scout', { from: 'scout', to, topic: 't', summary: 's' })),
     ];
     for (let i = 0; i < 59; i++) full.push(mk(3_000 + i, 'reasoning', 'forge', { agent: 'forge', forEventId: full[1]!.id, text: `step ${i}` }));
@@ -229,8 +229,8 @@ describe('the launch HUD readouts agree with the bonds shown next to them', () =
 
   it('[AG-010] without the full log the home readout is "--.--", never a count from the window', () => {
     let seq = 0;
-    const mk = (ts: number, kind: CarbonEvent['kind'], actor: CarbonEvent['actor'], payload: unknown): CarbonEvent =>
-      ({ id: (++seq).toString(16).padStart(64, 'c'), seq, launchId: 'M', ts, kind, actor, payload, signer: '', sig: '' }) as CarbonEvent;
+    const mk = (ts: number, kind: ArgonEvent['kind'], actor: ArgonEvent['actor'], payload: unknown): ArgonEvent =>
+      ({ id: (++seq).toString(16).padStart(64, 'c'), seq, launchId: 'M', ts, kind, actor, payload, signer: '', sig: '' }) as ArgonEvent;
     const window = [mk(5_000, 'handoff', 'scout', { from: 'scout', to: 'sentinel', topic: 't', summary: 's' })];
     const html = renderToStaticMarkup(<HomeLive launches={[]} replay={null} live={{ events: window, lastSeq: seq }} molecule={null} renderedAt={5_000} />);
     expect(/PROTON_01_SCOUT[\s\S]*?BONDS (\d+\/4|--\.--)/.exec(html)?.[1]).toBe('--.--');
@@ -240,12 +240,12 @@ describe('the launch HUD readouts agree with the bonds shown next to them', () =
 // ───────────────────────── AG-032: display time is server time, not the device clock ─────────────────────────
 
 describe('[AG-032] display bonds use server time even when the device clock is skewed', () => {
-  function log(): CarbonEvent[] {
+  function log(): ArgonEvent[] {
     let seq = 0;
-    const mk = (ts: number, kind: CarbonEvent['kind'], actor: CarbonEvent['actor'], payload: unknown): CarbonEvent =>
-      ({ id: (++seq).toString(16).padStart(64, 'd'), seq, launchId: 'S', ts, kind, actor, payload, signer: '', sig: '' }) as CarbonEvent;
+    const mk = (ts: number, kind: ArgonEvent['kind'], actor: ArgonEvent['actor'], payload: unknown): ArgonEvent =>
+      ({ id: (++seq).toString(16).padStart(64, 'd'), seq, launchId: 'S', ts, kind, actor, payload, signer: '', sig: '' }) as ArgonEvent;
     return [
-      mk(1_000_000, 'launch.created', 'user', { line: 'x', isotope: 'C-12', shape: 'ring', heavyAgent: null, launcherWallet: 'w', xConnected: false }),
+      mk(1_000_000, 'launch.created', 'user', { line: 'x', isotope: 'Ar-36', shape: 'ring', heavyAgent: null, launcherWallet: 'w', xConnected: false }),
       mk(1_001_000, 'handoff', 'scout', { from: 'scout', to: 'forge', topic: 't', summary: 's' }),
     ];
   }
@@ -283,7 +283,7 @@ describe('[AG-032] display bonds use server time even when the device clock is s
   });
 
   it('the web SSE route sends the server clock (event server-time, no id) and the client applies it in useNow', async () => {
-    const { sseStream, SERVER_TIME_EVENT } = await import('@carbon/core/sse');
+    const { sseStream, SERVER_TIME_EVENT } = await import('@argon/core/sse');
     const web = await import('@/lib/server-clock');
     expect(web.SERVER_TIME_EVENT).toBe(SERVER_TIME_EVENT);
     const fakeBus = { subscribe: () => () => undefined } as unknown as Parameters<typeof sseStream>[0];

@@ -3,7 +3,7 @@
  * from here, i.e. from logged events. Nothing is seeded; an empty log gives
  * empty lists.
  */
-import { ISOTOPES, type CarbonEvent, type EventKind, type EventPayloads } from '@carbon/core/contracts';
+import { ISOTOPES, type ArgonEvent, type EventKind, type EventPayloads } from '@argon/core/contracts';
 import type { LaunchSummary, Network, ReceiptRow, ReplayData, WalletRow } from '@/lib/types';
 import { getCore } from './core';
 
@@ -20,8 +20,8 @@ async function coreOrNull(): Promise<Awaited<ReturnType<typeof getCore>> | null>
 const SUMMARY_KINDS: EventKind[] = ['launch.created', 'forge.draft', 'sentinel.score', 'launch.deployed', 'holders.snapshot', 'decay.collapsed'];
 
 /** Builds summaries from the summary-relevant events of any number of launches. */
-export function summarize(events: readonly CarbonEvent[]): LaunchSummary[] {
-  const byLaunch = new Map<string, CarbonEvent[]>();
+export function summarize(events: readonly ArgonEvent[]): LaunchSummary[] {
+  const byLaunch = new Map<string, ArgonEvent[]>();
   for (const e of events) {
     const l = byLaunch.get(e.launchId);
     if (l) l.push(e);
@@ -30,14 +30,14 @@ export function summarize(events: readonly CarbonEvent[]): LaunchSummary[] {
   const out: LaunchSummary[] = [];
   for (const [launchId, evs] of byLaunch) {
     evs.sort((a, b) => a.seq - b.seq);
-    const created = evs.find((e) => e.kind === 'launch.created') as CarbonEvent<'launch.created'> | undefined;
+    const created = evs.find((e) => e.kind === 'launch.created') as ArgonEvent<'launch.created'> | undefined;
     if (!created) continue;
     const p = created.payload;
-    const drafts = evs.filter((e) => e.kind === 'forge.draft') as CarbonEvent<'forge.draft'>[];
+    const drafts = evs.filter((e) => e.kind === 'forge.draft') as ArgonEvent<'forge.draft'>[];
     const draft = drafts[drafts.length - 1];
-    const scores = evs.filter((e) => e.kind === 'sentinel.score') as CarbonEvent<'sentinel.score'>[];
+    const scores = evs.filter((e) => e.kind === 'sentinel.score') as ArgonEvent<'sentinel.score'>[];
     const score = scores[scores.length - 1];
-    const deployed = evs.find((e) => e.kind === 'launch.deployed') as CarbonEvent<'launch.deployed'> | undefined;
+    const deployed = evs.find((e) => e.kind === 'launch.deployed') as ArgonEvent<'launch.deployed'> | undefined;
     const unstable = !ISOTOPES[p.isotope]?.stable;
     let state: string | null = null;
     if (deployed) {
@@ -98,14 +98,14 @@ export async function approvalLaunchId(approvalId: string): Promise<string | nul
   return r.rows[0]?.launch_id ?? null;
 }
 
-export async function getLaunchEvents(launchId: string): Promise<CarbonEvent[]> {
+export async function getLaunchEvents(launchId: string): Promise<ArgonEvent[]> {
   const core = await coreOrNull();
   if (!core) return [];
   const { bus } = core;
   return bus.list(launchId);
 }
 
-export async function getLaunchByCa(ca: string): Promise<{ summary: LaunchSummary; events: CarbonEvent[] } | null> {
+export async function getLaunchByCa(ca: string): Promise<{ summary: LaunchSummary; events: ArgonEvent[] } | null> {
   const launchId = await findLaunchIdByCa(ca);
   if (!launchId) return null;
   const events = await getLaunchEvents(launchId);
@@ -113,15 +113,15 @@ export async function getLaunchByCa(ca: string): Promise<{ summary: LaunchSummar
   return summary ? { summary, events } : null;
 }
 
-export async function launchCreated(launchId: string): Promise<CarbonEvent<'launch.created'> | null> {
+export async function launchCreated(launchId: string): Promise<ArgonEvent<'launch.created'> | null> {
   const core = await coreOrNull();
   if (!core) return null;
   const { bus } = core;
   const [e] = await bus.list(launchId, { kinds: ['launch.created'], limit: 1 });
-  return (e as CarbonEvent<'launch.created'> | undefined) ?? null;
+  return (e as ArgonEvent<'launch.created'> | undefined) ?? null;
 }
 
-function launchIndex(events: readonly CarbonEvent[]): Map<string, { ca: string | null; ticker: string | null; network: Network | null }> {
+function launchIndex(events: readonly ArgonEvent[]): Map<string, { ca: string | null; ticker: string | null; network: Network | null }> {
   const m = new Map<string, { ca: string | null; ticker: string | null; network: Network | null }>();
   for (const e of events) {
     const cur = m.get(e.launchId) ?? { ca: null, ticker: null, network: null };
@@ -144,7 +144,7 @@ export async function listReceipts(): Promise<ReceiptRow[]> {
   const evs = await bus.list('*', { kinds: ['split.receipt', 'launch.deployed', 'forge.draft'] });
   const idx = launchIndex(evs);
   return evs
-    .filter((e): e is CarbonEvent<'split.receipt'> => e.kind === 'split.receipt')
+    .filter((e): e is ArgonEvent<'split.receipt'> => e.kind === 'split.receipt')
     .map((e) => ({ launchId: e.launchId, eventId: e.id, receipt: e.payload, ...(idx.get(e.launchId) ?? { ca: null, ticker: null, network: null }) }))
     .reverse();
 }
@@ -181,8 +181,8 @@ export async function latestReplay(): Promise<ReplayData | null> {
   const launchId = r.rows[0]?.launch_id;
   if (!launchId) return null;
   const events = await bus.list(launchId);
-  const dep = events.find((e) => e.kind === 'launch.deployed') as CarbonEvent<'launch.deployed'> | undefined;
-  const drafts = events.filter((e) => e.kind === 'forge.draft') as CarbonEvent<'forge.draft'>[];
+  const dep = events.find((e) => e.kind === 'launch.deployed') as ArgonEvent<'launch.deployed'> | undefined;
+  const drafts = events.filter((e) => e.kind === 'forge.draft') as ArgonEvent<'forge.draft'>[];
   const ticker = drafts[drafts.length - 1]?.payload.ticker;
   if (!dep || !ticker) return null;
   return { launchId, ca: dep.payload.ca, ticker, date: new Date(dep.ts).toISOString().slice(0, 10), events: events.filter((e) => e.seq <= dep.seq) };
@@ -194,7 +194,7 @@ export async function latestReplay(): Promise<ReplayData | null> {
  * never over the global window). Call after recentGlobalEvents() so the log
  * covers every event up to that window's lastSeq. null when nothing handed off.
  */
-export async function activeMolecule(): Promise<{ launchId: string; events: CarbonEvent[] } | null> {
+export async function activeMolecule(): Promise<{ launchId: string; events: ArgonEvent[] } | null> {
   const core = await coreOrNull();
   if (!core) return null;
   const { bus } = core;
@@ -205,7 +205,7 @@ export async function activeMolecule(): Promise<{ launchId: string; events: Carb
 }
 
 /** The latest global events (thinking feed + receipts panels) and the resume point for SSE. */
-export async function recentGlobalEvents(limit = 60): Promise<{ events: CarbonEvent[]; lastSeq: number }> {
+export async function recentGlobalEvents(limit = 60): Promise<{ events: ArgonEvent[]; lastSeq: number }> {
   const core = await coreOrNull();
   if (!core) return { events: [], lastSeq: 0 };
   const { bus } = core;

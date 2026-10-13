@@ -1,7 +1,7 @@
 /** Test-only helpers. Never imported from src/. */
 import { ed25519 } from '@noble/curves/ed25519.js';
 import bs58 from 'bs58';
-import type { CarbonEvent, EventKind, EventPayloads } from '@carbon/core/contracts';
+import type { ArgonEvent, EventKind, EventPayloads } from '@argon/core/contracts';
 
 export function testWallet() {
   const sk = ed25519.utils.randomSecretKey();
@@ -13,7 +13,7 @@ export function testWallet() {
 }
 
 let seq = 0;
-export function ev<K extends EventKind>(launchId: string, kind: K, payload: EventPayloads[K], actor: CarbonEvent['actor'] = 'system'): CarbonEvent<K> {
+export function ev<K extends EventKind>(launchId: string, kind: K, payload: EventPayloads[K], actor: ArgonEvent['actor'] = 'system'): ArgonEvent<K> {
   seq += 1;
   return { id: seq.toString(16).padStart(64, '0'), seq, launchId, ts: 1_800_000_000_000 + seq, kind, actor, payload, signer: 'test', sig: 'test' };
 }

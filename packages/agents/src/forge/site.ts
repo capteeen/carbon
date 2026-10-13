@@ -1,4 +1,4 @@
-import { FOOTER_TEXT } from '@carbon/core';
+import { FOOTER_TEXT } from '@argon/core';
 
 /** SPEC §5 palette. Colour only as iridescence; the page itself stays near-monochrome. */
 export const PALETTE = {

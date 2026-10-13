@@ -1,5 +1,5 @@
 {
-  "name": "@carbon/visual",
+  "name": "@argon/visual",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -19,7 +19,7 @@
     "perf": "vite build --config harness/vite.config.ts && tsx perf/perf.ts"
   },
   "dependencies": {
-    "@carbon/core": "workspace:*",
+    "@argon/core": "workspace:*",
     "@react-three/fiber": "9.7.0",
     "@react-three/postprocessing": "3.0.5",
     "animejs": "4.5.0",

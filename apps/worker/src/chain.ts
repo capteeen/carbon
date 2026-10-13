@@ -1,16 +1,16 @@
 /**
- * THE one seam that constructs the ChainClient: @carbon/solana's createChainClient.
+ * THE one seam that constructs the ChainClient: @argon/solana's createChainClient.
  *
  * - assertLaunchAllowed only CHECKS (a consumed 'launch' approval for the launch,
- *   a passing latest Sentinel score, and @carbon/agents' assertLaunchCleared: the
+ *   a passing latest Sentinel score, and @argon/agents' assertLaunchCleared: the
  *   score is for the current forge.draft). It never consumes: Treasurer already did.
  * - The chain client never writes events; agents (and the decay loop here) append them.
  * - If the chain config is missing (env not set), the worker still boots, and every
  *   chain call refuses with ChainUnavailableError naming the reason. Nothing is faked.
  */
-import { assertLaunchCleared, type AgentContext } from '@carbon/agents';
-import { getLaunchConfig, type ChainClient, type EventBus, type PumpCoinInfo, type SplitReceipt } from '@carbon/core';
-import { ChainUnavailableError, createChainClient as createSolana, ensureSchema, loadSolanaConfig, type CarbonChainClient } from '@carbon/solana';
+import { assertLaunchCleared, type AgentContext } from '@argon/agents';
+import { getLaunchConfig, type ChainClient, type EventBus, type PumpCoinInfo, type SplitReceipt } from '@argon/core';
+import { ChainUnavailableError, createChainClient as createSolana, ensureSchema, loadSolanaConfig, type ArgonChainClient } from '@argon/solana';
 import { Connection } from '@solana/web3.js';
 import type pg from 'pg';
 
@@ -76,15 +76,15 @@ class UnavailableChainClient implements ChainClient {
   runSplit(): Promise<SplitReceipt> {
     return this.no('runSplit');
   }
-  buyCarbon(): Promise<{ txSig: string; carbonOut: bigint }> {
-    return this.no('buyCarbon');
+  buyArgon(): Promise<{ txSig: string; argonOut: bigint }> {
+    return this.no('buyArgon');
   }
   lastTradeAt(): Promise<number | null> {
     return this.no('lastTradeAt');
   }
 }
 
-export type WorkerChain = { kind: 'solana'; client: CarbonChainClient } | { kind: 'unavailable'; client: ChainClient; reason: string };
+export type WorkerChain = { kind: 'solana'; client: ArgonChainClient } | { kind: 'unavailable'; client: ChainClient; reason: string };
 
 export function createChainClient(deps: ChainDeps): WorkerChain {
   const env = deps.env ?? process.env;
@@ -102,7 +102,7 @@ export function createChainClient(deps: ChainDeps): WorkerChain {
   } catch (err) {
     // Config errors name the missing variable, never a value.
     const reason = err instanceof Error ? err.message : 'chain configuration failed';
-    const network = env.CARBON_NETWORK === 'mainnet-beta' && env.CARBON_MAINNET_ENABLED === 'true' ? 'mainnet-beta' : 'devnet';
+    const network = env.ARGON_NETWORK === 'mainnet-beta' && env.ARGON_MAINNET_ENABLED === 'true' ? 'mainnet-beta' : 'devnet';
     return { kind: 'unavailable', client: new UnavailableChainClient(network, reason), reason };
   }
 }

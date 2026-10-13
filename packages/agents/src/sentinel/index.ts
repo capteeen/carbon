@@ -9,7 +9,7 @@
  * generated logo and banner images (vision through the LLM provider).
  */
 import { createHash } from 'node:crypto';
-import { canonicalJson, hasVision, type CarbonEvent, type EventPayloads, type PumpCoinInfo, type SentinelInput, type SentinelReport } from '@carbon/core';
+import { canonicalJson, hasVision, type ArgonEvent, type EventPayloads, type PumpCoinInfo, type SentinelInput, type SentinelReport } from '@argon/core';
 import { type AgentContext, AgentRefusal, all, emit, errMsg, gate, think } from '../context.js';
 import { hamming, hashImageBytes } from '../image/phash.js';
 import { arr, llmJson, obj, optStr, str } from '../json.js';
@@ -61,11 +61,11 @@ export function draftContentHash(d: EventPayloads['forge.draft']): string {
   return createHash('sha256').update(canonicalJson(content)).digest('hex');
 }
 
-export function scoreBinding(draft: CarbonEvent<'forge.draft'>): ScoreBinding {
+export function scoreBinding(draft: ArgonEvent<'forge.draft'>): ScoreBinding {
   return { draftEventId: draft.id, contentHash: draftContentHash(draft.payload) };
 }
 
-/** Visible text of the generated coin site (its <main>; the footer is the fixed Carbon disclaimer). */
+/** Visible text of the generated coin site (its <main>; the footer is the fixed Argon disclaimer). */
 export function siteText(html: string): string {
   const main = /<main[^>]*>([\s\S]*?)<\/main>/i.exec(html)?.[1] ?? html.replace(/<head[\s\S]*?<\/head>|<footer[\s\S]*?<\/footer>|<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ');
   const alts = [...main.matchAll(/\balt="([^"]*)"/gi)].map((m) => m[1]!);
@@ -83,7 +83,7 @@ export function siteText(html: string): string {
 export class Sentinel {
   constructor(private readonly ctx: AgentContext) {}
 
-  async score(args: { draft: CarbonEvent<'forge.draft'>; narrative: Narrative; launcherWallet: string }): Promise<CarbonEvent<'sentinel.score'>> {
+  async score(args: { draft: ArgonEvent<'forge.draft'>; narrative: Narrative; launcherWallet: string }): Promise<ArgonEvent<'sentinel.score'>> {
     const ctx = this.ctx;
     const d = args.draft.payload;
     await gate(ctx, 'sentinel', 'run the stability check', { name: d.name, ticker: d.ticker });
@@ -260,7 +260,7 @@ export class SentinelBlockError extends AgentRefusal {
  * since the scored one carries exactly that content (AG-001, AG-035).
  * Returns the latest draft (the one to deploy) and the score.
  */
-export async function assertLaunchCleared(ctx: AgentContext): Promise<{ score: CarbonEvent<'sentinel.score'>; draft: CarbonEvent<'forge.draft'> }> {
+export async function assertLaunchCleared(ctx: AgentContext): Promise<{ score: ArgonEvent<'sentinel.score'>; draft: ArgonEvent<'forge.draft'> }> {
   const scores = await all(ctx, 'sentinel.score');
   const score = scores[scores.length - 1];
   if (!score) throw new SentinelBlockError('No Sentinel score yet; launch locked');

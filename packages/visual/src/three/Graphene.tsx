@@ -4,7 +4,7 @@
  * of the sheet: a hexagonal socket plate aligned with the lattice cell, the
  * crystal standing in it (no spin). Crystal form = shape (CHAIN: hex column
  * with a point, RING: faceted hex ring, DIAMOND: octahedron on its tip);
- * size = neutron count (C-11 smallest … C-14 largest); unstable isotopes
+ * size = neutron count (Ar-36 smallest … Ar-41 largest); unstable isotopes
  * shimmer; collapsed launches are dimmed. Clicking a crystal or its socket
  * calls onSelect. With zero launches nothing is drawn here; the HUD shows
  * the empty state.
@@ -24,7 +24,7 @@ import {
   Vector3,
   type BufferGeometry,
 } from 'three';
-import { ISOTOPES, SHAPE_IDS, type ShapeId } from '@carbon/core/contracts';
+import { ISOTOPES, SHAPE_IDS, type ShapeId } from '@argon/core/contracts';
 import type { LaunchSummary } from '../types.js';
 import { hexCellWorld, hexSpiral } from './layouts.js';
 import { COLORS, createFrostMaterial, type FrostMaterial } from './materials.js';
@@ -48,9 +48,9 @@ export function placeCrystals(launches: readonly LaunchSummary[]): CrystalPlacem
   });
 }
 
-/** Crystal size by isotope: proportional to the neutron count (C-11 5 … C-14 8). */
+/** Crystal size by isotope: proportional to the neutron count (Ar-36 smallest … Ar-41 largest). */
 export function crystalSize(isotope: LaunchSummary['isotope']): number {
-  return ISOTOPES[isotope].neutrons / 7;
+  return ISOTOPES[isotope].shownNeutrons / 7;
 }
 
 /** Socket circumradius: inset inside the lattice cell (cell circumradius = 0.577 / GRAPHENE_SCALE). */

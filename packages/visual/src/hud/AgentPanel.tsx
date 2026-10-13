@@ -18,7 +18,7 @@ import {
   type AgentId,
   type IsotopeId,
   type ShapeId,
-} from '@carbon/core/contracts';
+} from '@argon/core/contracts';
 import type { InspectTarget } from '../three/inspect.js';
 
 const cap = (s: string) => s.toUpperCase();
@@ -61,41 +61,41 @@ function AgentBody({ agent, onOpenLog }: { agent: AgentId; onOpenLog?: (a: Agent
   const d = AGENT_DETAILS[agent];
   return (
     <>
-      <div className="carbon-hud__meta">{protonLabel(agent)}</div>
-      <h2 className="carbon-title" id="carbon-agent-title">
+      <div className="argon-hud__meta">{protonLabel(agent)}</div>
+      <h2 className="argon-title" id="argon-agent-title">
         {cap(agent)}
       </h2>
-      <p className="carbon-hud__note">{AGENT_ROLES[agent]}</p>
+      <p className="argon-hud__note">{AGENT_ROLES[agent]}</p>
 
-      <div className="carbon-agent__head">WHAT_IT_DOES</div>
-      <ol className="carbon-agent__list">
+      <div className="argon-agent__head">WHAT_IT_DOES</div>
+      <ol className="argon-agent__list">
         {d.does.map((x) => (
           <li key={x}>{x}</li>
         ))}
       </ol>
-      <div className="carbon-agent__head">INPUTS</div>
-      <ul className="carbon-agent__list">
+      <div className="argon-agent__head">INPUTS</div>
+      <ul className="argon-agent__list">
         {d.inputs.map((x) => (
           <li key={x}>{x}</li>
         ))}
       </ul>
-      <div className="carbon-agent__head">OUTPUTS</div>
-      <ul className="carbon-agent__list">
+      <div className="argon-agent__head">OUTPUTS</div>
+      <ul className="argon-agent__list">
         {d.outputs.map((x) => (
           <li key={x}>{x}</li>
         ))}
       </ul>
-      <div className="carbon-agent__head">APPROVAL</div>
-      <p className="carbon-agent__p">{d.approval}</p>
-      <div className="carbon-agent__head">NEVER</div>
-      <ul className="carbon-agent__list">
+      <div className="argon-agent__head">APPROVAL</div>
+      <p className="argon-agent__p">{d.approval}</p>
+      <div className="argon-agent__head">NEVER</div>
+      <ul className="argon-agent__list">
         {d.never.map((x) => (
           <li key={x}>{x}</li>
         ))}
       </ul>
 
-      <div className="carbon-agent__head">BONDS_WITH</div>
-      <ul className="carbon-agent__list">
+      <div className="argon-agent__head">BONDS_WITH</div>
+      <ul className="argon-agent__list">
         {SHAPE_IDS.map((sh) => (
           <li key={sh}>
             {SHAPES[sh].label}: {bondsWith(agent, sh)}
@@ -103,16 +103,16 @@ function AgentBody({ agent, onOpenLog }: { agent: AgentId; onOpenLog?: (a: Agent
         ))}
       </ul>
 
-      <div className="carbon-agent__head">BY_ISOTOPE</div>
-      <ul className="carbon-agent__list">
+      <div className="argon-agent__head">BY_ISOTOPE</div>
+      <ul className="argon-agent__list">
         {ISOTOPE_IDS.map((iso) => (
           <li key={iso}>
-            <span className="carbon-agent__key">{iso}</span> {isotopeEffect(agent, iso)}
+            <span className="argon-agent__key">{iso}</span> {isotopeEffect(agent, iso)}
           </li>
         ))}
       </ul>
-      <div className="carbon-agent__scroll">
-        <table className="carbon-agent__table">
+      <div className="argon-agent__scroll">
+        <table className="argon-agent__table">
           <thead>
             <tr>
               <th scope="col">LIMITS</th>
@@ -135,9 +135,9 @@ function AgentBody({ agent, onOpenLog }: { agent: AgentId; onOpenLog?: (a: Agent
           </tbody>
         </table>
       </div>
-      <p className="carbon-hud__meta">{'// * when this agent is the C-13 heavy agent'}</p>
+      <p className="argon-hud__meta">{'// * when this agent is the Ar-40 heavy agent'}</p>
       {onOpenLog ? (
-        <button type="button" className="carbon-hud__btn" onClick={() => onOpenLog(agent)} data-testid="agent-panel-log">
+        <button type="button" className="argon-hud__btn" onClick={() => onOpenLog(agent)} data-testid="agent-panel-log">
           [ LIVE LOG ]
         </button>
       ) : null}
@@ -148,17 +148,17 @@ function AgentBody({ agent, onOpenLog }: { agent: AgentId; onOpenLog?: (a: Agent
 function NeutronBody() {
   return (
     <>
-      <div className="carbon-hud__meta">NEUTRON</div>
-      <h2 className="carbon-title" id="carbon-agent-title">
+      <div className="argon-hud__meta">NEUTRON</div>
+      <h2 className="argon-title" id="argon-agent-title">
         NEUTRONS
       </h2>
-      <p className="carbon-hud__note">
+      <p className="argon-hud__note">
         The six protons are the agents. Neutrons are not agents: their count is the launch&apos;s isotope, which sets how the coin behaves.
       </p>
-      <ul className="carbon-agent__list">
+      <ul className="argon-agent__list">
         {ISOTOPE_IDS.map((iso) => (
           <li key={iso}>
-            <span className="carbon-agent__key">
+            <span className="argon-agent__key">
               {iso} · {ISOTOPES[iso].neutrons} neutrons · {ISOTOPES[iso].name}
             </span>{' '}
             {ISOTOPES[iso].behaviour}
@@ -193,15 +193,15 @@ export function AgentPanel({ target, onClose, onOpenLog }: { target: InspectTarg
   return (
     <div
       ref={ref}
-      className="carbon-agent"
+      className="argon-agent"
       role="dialog"
       aria-modal="false"
-      aria-labelledby="carbon-agent-title"
+      aria-labelledby="argon-agent-title"
       data-testid="agent-panel"
       data-agent={target.kind === 'agent' ? target.agent : 'neutron'}
       data-lenis-prevent
     >
-      <button ref={closeRef} type="button" className="carbon-hud__btn carbon-agent__close" onClick={onClose} aria-label="Close" data-testid="agent-panel-close">
+      <button ref={closeRef} type="button" className="argon-hud__btn argon-agent__close" onClick={onClose} aria-label="Close" data-testid="agent-panel-close">
         [ CLOSE ]
       </button>
       {target.kind === 'agent' ? <AgentBody agent={target.agent} onOpenLog={onOpenLog} /> : <NeutronBody />}

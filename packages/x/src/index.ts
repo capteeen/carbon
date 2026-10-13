@@ -1,5 +1,5 @@
 export {
-  CarbonXClient,
+  ArgonXClient,
   createXClient,
   launcherWalletFromEvents,
   textHash,

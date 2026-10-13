@@ -1,5 +1,5 @@
 /**
- * Source guards: no account creation anywhere in @carbon/x, no logging that
+ * Source guards: no account creation anywhere in @argon/x, no logging that
  * could leak tokens, no test doubles reachable from src/.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';

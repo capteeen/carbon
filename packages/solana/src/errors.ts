@@ -1,5 +1,5 @@
 /**
- * Error types for @carbon/solana. Every message is safe to log: nothing here
+ * Error types for @argon/solana. Every message is safe to log: nothing here
  * puts a key, seed or token into an error, and upstream text passes through
  * `redactSecrets()` as a second line of defence.
  */
@@ -29,7 +29,7 @@ export class NetworkGuardError extends ChainError {
   override readonly name: string = 'NetworkGuardError';
 }
 
-/** An instruction outside the Treasurer allowlist (any trade except $CARBON buybacks and the launch's own dev buy). */
+/** An instruction outside the Treasurer allowlist (any trade except $ARGON buybacks and the launch's own dev buy). */
 export class TradeNotAllowedError extends ChainError {
   override readonly name: string = 'TradeNotAllowedError';
 }
@@ -48,7 +48,7 @@ export class LedgerError extends ChainError {
   override readonly name: string = 'LedgerError';
 }
 
-/** The launch transaction does not fit one packet; configure CARBON_LOOKUP_TABLE. */
+/** The launch transaction does not fit one packet; configure ARGON_LOOKUP_TABLE. */
 export class TxTooLargeError extends ChainError {
   override readonly name: string = 'TxTooLargeError';
 }

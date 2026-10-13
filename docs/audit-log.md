@@ -1,5 +1,7 @@
 # Audit log
 
+> Historical record, written when the project was called Carbon (renamed Argon on 2026-10-13). Names, isotopes (C-11 to C-14) and figures below are as they were then; SPEC.md and docs/how.md are current.
+
 Adversarial verification by Agent G against SPEC.md §7.
 
 - **First pass** (2026-10-11, `main` at `20b1d03`): AG-001 to AG-026. `@carbon/visual` was out of

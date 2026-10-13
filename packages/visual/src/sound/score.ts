@@ -16,7 +16,7 @@
  * chapter 08 cues only play over a real recorded launch.
  */
 import { useEffect, useRef } from 'react';
-import { ISOTOPES, type IsotopeId, type ShapeId } from '@carbon/core/contracts';
+import { ISOTOPES, type IsotopeId, type ShapeId } from '@argon/core/contracts';
 import { bondStageAt, clamp01, locate, protonAt, replayedCountAt, smoothstep } from '../story/chapters.js';
 import type { ProgressStore } from '../story/progress.js';
 import { sound } from './sound.js';
@@ -286,7 +286,7 @@ class ScrollScore {
   private ctx: AudioContext | null = null;
   private last = { chapter: -1, stage: 0, p: 0, at: 0, cueAt: 0 };
   private geiger = 0;
-  inputs: ScoreInputs = { isotope: 'C-12', shape: 'ring', replayHandoffs: 0 };
+  inputs: ScoreInputs = { isotope: 'Ar-36', shape: 'ring', replayHandoffs: 0 };
 
   private ensure(g: Graph): void {
     if (this.ctx === g.ctx && this.out) return;
@@ -355,7 +355,7 @@ class ScrollScore {
     this.inputs.isotope = iso;
     const g = sound.graph();
     if (!g || this.last.chapter !== 6) return;
-    const n = ISOTOPES[iso].neutrons;
+    const n = ISOTOPES[iso].shownNeutrons;
     glass(g, g.ctx.currentTime + 0.01, note(196, (n - 5) * 3), 1);
   }
 
@@ -367,7 +367,7 @@ class ScrollScore {
     SHAPE_NOTES[shape].forEach((s, k) => pluck(g, at + k * 0.08, note(246.94, s), 0.9));
   }
 
-  /** Unstable isotopes tick while the chamber is on screen: C-11 fast, C-14 slow. */
+  /** Unstable isotopes tick while the chamber is on screen: Ar-41 fast, Ar-39 slow. */
   private syncGeiger(chapter: number): void {
     const iso = ISOTOPES[this.inputs.isotope];
     const want = chapter === 6 && !iso.stable && !!sound.graph();
@@ -385,7 +385,7 @@ class ScrollScore {
         return;
       }
       tick(g, g.ctx.currentTime + 0.005, 0.8 + Math.random() * 0.4);
-      const mean = cur.decay.kind === 'quiet' ? 160 : 520; // C-11 decays fast, C-14 slowly
+      const mean = cur.decay.kind === 'quiet' ? 160 : 520; // Ar-41 decays fast, Ar-39 slowly
       this.geiger = window.setTimeout(loop, -Math.log(1 - Math.random()) * mean + 30);
     };
     this.geiger = window.setTimeout(loop, 60);

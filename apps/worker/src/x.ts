@@ -9,8 +9,8 @@
  * X tokens are used only when bound to the launch's launcher wallet (createXClient
  * reads launch.created from the event log): see AG-004.
  */
-import type { ApprovalAction, XClient, XPost } from '@carbon/core';
-import { createXClient, textHash } from '@carbon/x';
+import type { ApprovalAction, XClient, XPost } from '@argon/core';
+import { createXClient, textHash } from '@argon/x';
 import type pg from 'pg';
 
 export class ApprovalNotConsumedError extends Error {

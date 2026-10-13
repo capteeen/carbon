@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type { LlmProvider, LlmSelection } from '@carbon/core';
+import type { LlmProvider, LlmSelection } from '@argon/core';
 import { describe, expect, it } from 'vitest';
 import { chooseWorkerLlm, describeLlm, fallbackAllowed, LlmFallbackRefusedError } from '../src/llm.js';
 
@@ -17,11 +17,11 @@ describe('worker LLM choice (AG-013)', () => {
 
   it('a fallback is refused by default, and always in production', async () => {
     expect(fallbackAllowed({})).toBe(false);
-    expect(fallbackAllowed({ CARBON_LLM_ALLOW_FALLBACK: 'true' })).toBe(true);
-    expect(fallbackAllowed({ NODE_ENV: 'production', CARBON_LLM_ALLOW_FALLBACK: 'true' })).toBe(false);
+    expect(fallbackAllowed({ ARGON_LLM_ALLOW_FALLBACK: 'true' })).toBe(true);
+    expect(fallbackAllowed({ NODE_ENV: 'production', ARGON_LLM_ALLOW_FALLBACK: 'true' })).toBe(false);
     await expect(chooseWorkerLlm({}, async () => claude)).rejects.toBeInstanceOf(LlmFallbackRefusedError);
-    await expect(chooseWorkerLlm({ NODE_ENV: 'production', CARBON_LLM_ALLOW_FALLBACK: 'true' }, async () => claude)).rejects.toBeInstanceOf(LlmFallbackRefusedError);
-    const dev = await chooseWorkerLlm({ CARBON_LLM_ALLOW_FALLBACK: 'true' }, async () => claude);
+    await expect(chooseWorkerLlm({ NODE_ENV: 'production', ARGON_LLM_ALLOW_FALLBACK: 'true' }, async () => claude)).rejects.toBeInstanceOf(LlmFallbackRefusedError);
+    const dev = await chooseWorkerLlm({ ARGON_LLM_ALLOW_FALLBACK: 'true' }, async () => claude);
     expect(dev.line).toMatch(/FALLBACK \(not Gemini\): GEMINI_API_KEY is not set/);
   });
 

@@ -17,7 +17,7 @@ import {
   type IsotopeId,
   type SentinelReport,
   type ShapeId,
-} from '@carbon/core/contracts';
+} from '@argon/core/contracts';
 import type { Ref } from 'react';
 import { COPY } from '../copy.js';
 import type { LaunchReplay, LaunchSummary, LiveMolecule, LiveStats, ReceiptItem, ThinkingItem } from '../types.js';
@@ -57,10 +57,10 @@ export function ProtonHud({
   const orders = stats && mol ? stats.bondOrders : null;
   return (
     <div data-testid="proton-hud" data-agent={agent}>
-      <span className="carbon-sr-only">{protonLabel(agent)}</span>
+      <span className="argon-sr-only">{protonLabel(agent)}</span>
       <HudLabel leaderRef={leaderRef('focus')} testId="proton-label">{`PROTON_${String(i).padStart(2, '0')}`}</HudLabel>
-      <div className="carbon-title">{agent.toUpperCase()}</div>
-      <div className="carbon-hud__note" style={{ marginBottom: 6 }}>
+      <div className="argon-title">{agent.toUpperCase()}</div>
+      <div className="argon-hud__note" style={{ marginBottom: 6 }}>
         {AGENT_ROLES[agent]}
       </div>
       <HudReadout value={fmtBonds(orders)} testId="proton-bonds" />
@@ -68,7 +68,7 @@ export function ProtonHud({
       <HudReadout value={fmtLoad(stats ? stats.load : null, stats ? stats.loadDelta : null)} testId="proton-load" />
       <HudMeta>{live && stats ? `load across all launches · live · ${fmtClock(live.asOf)}` : 'no live data yet'}</HudMeta>
       {onOpenAgent ? (
-        <button type="button" className="carbon-hud__btn" style={{ marginTop: 8 }} onClick={() => onOpenAgent(agent)} data-testid="proton-explore">
+        <button type="button" className="argon-hud__btn" style={{ marginTop: 8 }} onClick={() => onOpenAgent(agent)} data-testid="proton-explore">
           {COPY.protons.explore}
         </button>
       ) : null}
@@ -100,7 +100,7 @@ export function ChamberHud({
   const iso = ISOTOPES[value];
   return (
     <div data-testid="chamber-hud">
-      <div className="carbon-carousel" role="radiogroup" aria-label="Isotope">
+      <div className="argon-carousel" role="radiogroup" aria-label="Isotope">
         {ISOTOPE_IDS.map((id) => (
           <button
             key={id}
@@ -108,7 +108,7 @@ export function ChamberHud({
             role="radio"
             aria-checked={id === value}
             aria-pressed={id === value}
-            className="carbon-hud__btn"
+            className="argon-hud__btn"
             onClick={() => onChange?.(id)}
             data-testid={`isotope-${id}`}
           >
@@ -121,7 +121,7 @@ export function ChamberHud({
       <HudReadout label="NEUTRONS" value={String(iso.neutrons)} testId="chamber-neutrons" />
       <HudReadout label="STABILITY" value={fmtStability(value)} testId="chamber-stability" />
       <HudReadout label="DECAY_RULE" value={fmtDecayRule(value)} testId="chamber-decay-rule" />
-      <div className="carbon-hud__readout" style={{ whiteSpace: 'normal' }} data-testid="chamber-behaviour">
+      <div className="argon-hud__readout" style={{ whiteSpace: 'normal' }} data-testid="chamber-behaviour">
         BEHAVIOUR {iso.name} · {iso.behaviour}
       </div>
       {!iso.stable ? <HudMeta>{`decay · ${fmtDecayRule(value).toLowerCase()}`}</HudMeta> : null}
@@ -130,7 +130,7 @@ export function ChamberHud({
         <div style={{ marginTop: 6 }} data-testid="heavy-picker">
           <HudMeta>{COPY.chamber.heavyHint}</HudMeta>
           <HudMeta>{COPY.chamber.heavyPick}</HudMeta>
-          <div className="carbon-carousel" style={{ justifyContent: 'flex-start', marginTop: 4 }} role="radiogroup" aria-label="Heavy agent">
+          <div className="argon-carousel" style={{ justifyContent: 'flex-start', marginTop: 4 }} role="radiogroup" aria-label="Heavy agent">
             {AGENT_IDS.map((a) => (
               <button
                 key={a}
@@ -138,7 +138,7 @@ export function ChamberHud({
                 role="radio"
                 aria-checked={heavyAgent === a}
                 aria-pressed={heavyAgent === a}
-                className="carbon-hud__btn"
+                className="argon-hud__btn"
                 onClick={() => onHeavyAgentChange?.(a)}
                 data-testid={`heavy-${a}`}
               >
@@ -160,10 +160,10 @@ export function ShapeLabel({ shape, leaderRef = noRef, selected, onSelect }: { s
   return (
     <div data-testid={`shape-${shape}`} style={{ marginBottom: 10 }}>
       <HudLabel leaderRef={leaderRef(`shape:${shape}`)}>{s.label}</HudLabel>
-      <div className="carbon-hud__note">{s.description}</div>
+      <div className="argon-hud__note">{s.description}</div>
       <HudReadout label={COPY.shapes.threshold} value={String(s.sentinelThreshold)} />
       {onSelect ? (
-        <button type="button" className="carbon-hud__btn" aria-pressed={!!selected} onClick={() => onSelect(shape)} style={{ marginTop: 4 }}>
+        <button type="button" className="argon-hud__btn" aria-pressed={!!selected} onClick={() => onSelect(shape)} style={{ marginTop: 4 }}>
           {selected ? `${shape.toUpperCase()} · SELECTED` : `PICK ${shape.toUpperCase()}`}
         </button>
       ) : null}
@@ -200,7 +200,7 @@ export function ReplayHud({
     return (
       <div data-testid="replay-empty" data-honesty="empty">
         <HudLabel leaderRef={leaderRef('coin')}>{COPY.launch.emptyTitle}</HudLabel>
-        <div className="carbon-hud__note">{COPY.launch.empty}</div>
+        <div className="argon-hud__note">{COPY.launch.empty}</div>
         <HudReadout label={COPY.launch.ca} value={EMPTY_READOUT} />
       </div>
     );
@@ -209,7 +209,7 @@ export function ReplayHud({
   const last = shown.slice(-4);
   return (
     <div data-testid="replay-hud" data-honesty="replay">
-      <span className="carbon-hud__tag" style={{ textTransform: 'none' }} data-testid="replay-label">
+      <span className="argon-hud__tag" style={{ textTransform: 'none' }} data-testid="replay-label">
         {replayLabel(replay.ticker, replay.deployedAt)}
       </span>
       <div style={{ height: 6 }} />
@@ -219,11 +219,11 @@ export function ReplayHud({
       <HudReadout label={COPY.launch.score} value={replay.score ? `${replay.score.score}/100 · ${replay.score.passed ? 'PASSED' : 'BLOCKED'}` : EMPTY_READOUT} />
       <HudReadout label={COPY.launch.handoffs} value={`${shown.length}/${replay.handoffs.length}`} testId="replay-count" />
       {last.map((h) => (
-        <div key={h.id} className="carbon-hud__readout carbon-hud__meta" style={{ whiteSpace: 'normal' }}>
+        <div key={h.id} className="argon-hud__readout argon-hud__meta" style={{ whiteSpace: 'normal' }}>
           {`// ${shortHash(h.id)} ${h.payload.from.toUpperCase()}→${h.payload.to.toUpperCase()}`}
         </div>
       ))}
-      <div className="carbon-hud__readout" data-testid="replay-ca" style={{ marginTop: 6 }}>
+      <div className="argon-hud__readout" data-testid="replay-ca" style={{ marginTop: 6 }}>
         {`${COPY.launch.ca} `}
         <span data-ca-typing>{caTyped ?? ''}</span>
       </div>
@@ -248,7 +248,7 @@ export function GrapheneHud({
   return (
     <div data-testid="graphene-hud" data-honesty="live">
       {launches.length === 0 ? (
-        <div className="carbon-hud__empty" data-testid="graphene-empty">
+        <div className="argon-hud__empty" data-testid="graphene-empty">
           {EMPTY_GRAPHENE}
         </div>
       ) : (
@@ -269,11 +269,11 @@ export function GrapheneHud({
       )}
       <div style={{ marginTop: 8 }}>
         {launchHref ? (
-          <a className="carbon-hud__btn" href={launchHref} data-testid="launch-cta" style={{ display: 'inline-block', textDecoration: 'none' }}>
+          <a className="argon-hud__btn" href={launchHref} data-testid="launch-cta" style={{ display: 'inline-block', textDecoration: 'none' }}>
             [ {COPY.live.launch} ]
           </a>
         ) : onLaunch ? (
-          <button type="button" className="carbon-hud__btn" onClick={onLaunch} data-testid="launch-cta">
+          <button type="button" className="argon-hud__btn" onClick={onLaunch} data-testid="launch-cta">
             [ {COPY.live.launch} ]
           </button>
         ) : null}
@@ -286,12 +286,12 @@ export function ThinkingPanel({ items }: { items: readonly ThinkingItem[] }) {
   return (
     <HudPanel title={COPY.live.feedHead} testId="thinking-panel">
       {items.length === 0 ? (
-        <div className="carbon-hud__empty">{COPY.live.feedEmpty}</div>
+        <div className="argon-hud__empty">{COPY.live.feedEmpty}</div>
       ) : (
         <ul>
           {items.map((t) => (
             <li key={t.eventId}>
-              <span className="carbon-hud__meta">{`${fmtClock(t.ts)} ${t.agent.toUpperCase()} ${shortHash(t.eventId)} `}</span>
+              <span className="argon-hud__meta">{`${fmtClock(t.ts)} ${t.agent.toUpperCase()} ${shortHash(t.eventId)} `}</span>
               {t.text}
             </li>
           ))}
@@ -305,12 +305,12 @@ export function ReceiptsPanel({ items }: { items: readonly ReceiptItem[] }) {
   return (
     <HudPanel title={COPY.live.receiptsHead} testId="receipts-panel">
       {items.length === 0 ? (
-        <div className="carbon-hud__empty">{COPY.live.receiptsEmpty}</div>
+        <div className="argon-hud__empty">{COPY.live.receiptsEmpty}</div>
       ) : (
         <ul>
           {items.map((r) => (
             <li key={r.splitId}>
-              <span className="carbon-hud__meta">{`${fmtClock(r.at)} `}</span>
+              <span className="argon-hud__meta">{`${fmtClock(r.at)} `}</span>
               {`SPLIT ${fmtLamports(r.totalLamports)} · ${r.legs.filter((l) => l.status === 'confirmed').length}/${r.legs.length} confirmed`}
             </li>
           ))}
@@ -337,9 +337,9 @@ export function SentinelHud({ report }: { report: SentinelReport | null }) {
       <HudReadout label="STABILITY" value={`${report.score}/100 · ≥${report.threshold}`} testId="sentinel-score" />
       <HudReadout value={report.passed ? 'PASSED · LOCKED' : report.hardFail ? 'BLOCKED · HARD FAIL' : 'BLOCKED · BELOW THRESHOLD'} testId="sentinel-verdict" />
       {report.inputs.map((i) => (
-        <div key={i.key} className="carbon-hud__readout" style={{ whiteSpace: 'normal' }}>
+        <div key={i.key} className="argon-hud__readout" style={{ whiteSpace: 'normal' }}>
           {`${i.key.toUpperCase()} ${i.points}/${i.max}${i.hardFail ? ' HARD_FAIL' : ''} `}
-          <span className="carbon-hud__meta">{`// ${i.reason}`}</span>
+          <span className="argon-hud__meta">{`// ${i.reason}`}</span>
         </div>
       ))}
       <HudMeta>{`run ${report.run}`}</HudMeta>

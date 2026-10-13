@@ -5,7 +5,7 @@
  * LRU so hash churn never grows memory.
  */
 import { CanvasTexture, LinearFilter, SRGBColorSpace, type Texture } from 'three';
-import { AGENT_IDS, type AgentId } from '@carbon/core/contracts';
+import { AGENT_IDS, type AgentId } from '@argon/core/contracts';
 import { FONTS } from '../tokens.js';
 
 const CELL = 128;

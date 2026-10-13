@@ -2,7 +2,7 @@
  * POST /api/launch/<launchId>/choice { proposalsEventId, narrative, name, signature }
  * The launcher picks one of Scout's real proposals (LaunchUser.chooseNarrative).
  */
-import type { CarbonEvent } from '@carbon/core/contracts';
+import type { ArgonEvent } from '@argon/core/contracts';
 import { messages } from '@/lib/signing';
 import { getCore } from '@/server/core';
 import { EVENT_ID_RE, HttpError, UUID_RE, handle, int, json, readJson, requireLauncher, str } from '@/server/http';
@@ -23,7 +23,7 @@ export function POST(req: Request, ctx: { params: Promise<{ launchId: string }> 
     const signature = str(body, 'signature', 128);
     const created = await requireLauncher(launchId, messages.chooseNarrative({ launchId, proposalsEventId, narrative, name }), signature);
     const { bus } = await getCore();
-    const ev = (await bus.get(proposalsEventId)) as CarbonEvent<'scout.proposals'> | null;
+    const ev = (await bus.get(proposalsEventId)) as ArgonEvent<'scout.proposals'> | null;
     if (!ev || ev.launchId !== launchId || ev.kind !== 'scout.proposals') throw new HttpError(404, 'unknown proposals');
     const pick = ev.payload.narratives[narrative]?.names[name];
     if (!pick) throw new HttpError(400, 'choice out of range');

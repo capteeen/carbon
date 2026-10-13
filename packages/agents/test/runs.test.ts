@@ -1,4 +1,4 @@
-import { SHAPES, launchConfig, pairKey } from '@carbon/core';
+import { SHAPES, launchConfig, pairKey } from '@argon/core';
 import { describe, expect, it } from 'vitest';
 import { MoleculeRunner } from '../src/molecule-runner.js';
 import { GROUNDED, created, expectReasoningForEveryAction, makeHarness, user } from './script.js';
@@ -11,7 +11,7 @@ function handoffsWithinTopology(h: ReturnType<typeof makeHarness>, shape: keyof 
 
 describe('CHAIN full run', () => {
   it('routes Scout→Forge→Sentinel→Herald with Treasurer off Sentinel and Keeper off Herald', async () => {
-    const cfg = launchConfig('C-12', 'chain');
+    const cfg = launchConfig('Ar-36', 'chain');
     const h = makeHarness(cfg);
     await created(h, cfg);
     h.x.mentionList = [];
@@ -77,7 +77,7 @@ describe('CHAIN full run', () => {
 
 describe('RING full run', () => {
   it('deploys, then each loop claims, splits, buys back from the 30% leg, posts and lets Keeper reply', async () => {
-    const cfg = launchConfig('C-13', 'ring', 'herald');
+    const cfg = launchConfig('Ar-40', 'ring', 'herald');
     const h = makeHarness(cfg);
     await created(h, cfg);
     const runner = new MoleculeRunner(h.ctx, user);
@@ -137,7 +137,7 @@ describe('RING full run', () => {
 
 describe('DIAMOND', () => {
   it('gates every action behind an approval and stops when one is rejected', async () => {
-    const cfg = launchConfig('C-12', 'diamond');
+    const cfg = launchConfig('Ar-36', 'diamond');
     const h = makeHarness(cfg);
     await created(h, cfg);
     const out = await new MoleculeRunner(h.ctx, user).run();
@@ -169,7 +169,7 @@ describe('DIAMOND', () => {
 
 describe('Sentinel block and revision', () => {
   it('blocks, lets the user revise, re-runs (run 2) and only then deploys', async () => {
-    const cfg = launchConfig('C-12', 'chain');
+    const cfg = launchConfig('Ar-36', 'chain');
     const h = makeHarness(cfg, { name: 'Elon Cat', ticker: 'ECAT' });
     await created(h, cfg);
     const revisions: number[] = [];
@@ -188,7 +188,7 @@ describe('Sentinel block and revision', () => {
   });
 
   it('without a revision the launch stays blocked and nothing is uploaded or built', async () => {
-    const cfg = launchConfig('C-12', 'chain');
+    const cfg = launchConfig('Ar-36', 'chain');
     const h = makeHarness(cfg, { name: 'Elon Cat', ticker: 'ECAT' });
     await created(h, cfg);
     const out = await new MoleculeRunner(h.ctx, user).run();

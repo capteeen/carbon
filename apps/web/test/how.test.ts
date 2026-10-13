@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { renderConfigMarkdown } from '@carbon/core/render-config';
-import { renderFormulaMarkdown } from '@carbon/agents/sentinel/formula';
+import { renderConfigMarkdown } from '@argon/core/render-config';
+import { renderFormulaMarkdown } from '@argon/agents/sentinel/formula';
 import { describe, expect, it } from 'vitest';
 import { GENERATED_SECTIONS, extractSection, renderFeeSplitMarkdown, renderShapesMarkdown } from '@/lib/how-doc';
 import { howDocPath } from '@/lib/how-path';

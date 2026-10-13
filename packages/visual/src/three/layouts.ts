@@ -2,7 +2,7 @@
  * Pure geometry layouts: molecule shapes and the graphene hex spiral.
  * Plain tuples so they are testable without three.
  */
-import { AGENT_IDS, SHAPES, pairKey, type AgentId, type PairKey, type ShapeId } from '@carbon/core/contracts';
+import { AGENT_IDS, SHAPES, pairKey, type AgentId, type PairKey, type ShapeId } from '@argon/core/contracts';
 
 export type V3 = [number, number, number];
 

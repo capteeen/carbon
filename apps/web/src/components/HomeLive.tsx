@@ -1,5 +1,5 @@
 'use client';
-import { EMPTY_READOUT, protonLabel, type AgentId, type CarbonEvent } from '@carbon/core/contracts';
+import { EMPTY_READOUT, protonLabel, type AgentId, type ArgonEvent } from '@argon/core/contracts';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -15,7 +15,7 @@ import {
   toVisualLaunches,
   toVisualReplay,
 } from '@/lib/visual-data';
-import { CarbonStory } from '@/visual';
+import { ArgonStory } from '@/visual';
 
 const REFRESH_KINDS = new Set(['launch.deployed', 'sentinel.score', 'holders.snapshot', 'decay.collapsed']);
 /** Complete logs kept in memory: the active molecule plus a few recent ones. */
@@ -25,9 +25,9 @@ export interface HomeLiveProps {
   launches: LaunchSummary[];
   replay: ReplayData | null;
   /** The latest global events (feed, receipts, LOAD) and the SSE resume point. */
-  live: { events: CarbonEvent[]; lastSeq: number };
+  live: { events: ArgonEvent[]; lastSeq: number };
   /** The launch that most recently handed off, with its COMPLETE log (BONDS readout). */
-  molecule: { launchId: string; events: CarbonEvent[] } | null;
+  molecule: { launchId: string; events: ArgonEvent[] } | null;
   /** Server render time: the display time of the first render. */
   renderedAt: number;
 }
@@ -42,7 +42,7 @@ export function HomeLive(props: HomeLiveProps) {
   // Complete per-launch logs: seeded with the server's full log of the active
   // molecule, extended by the global stream, and fetched in full for a launch
   // that starts handing off while the page is open.
-  const [logs, setLogs] = useState<ReadonlyMap<string, CarbonEvent[]>>(
+  const [logs, setLogs] = useState<ReadonlyMap<string, ArgonEvent[]>>(
     () => new Map(props.molecule ? [[props.molecule.launchId, props.molecule.events]] : []),
   );
   useEffect(() => setLogs((prev) => foldIntoLogs(prev, events)), [events]);
@@ -52,7 +52,7 @@ export function HomeLive(props: HomeLiveProps) {
     if (!active || logs.has(active) || fetching.current.has(active)) return;
     fetching.current.add(active);
     fetch(`/api/launch/${encodeURIComponent(active)}/events`, { cache: 'no-store' })
-      .then((r) => (r.ok ? (r.json() as Promise<{ events: CarbonEvent[] }>) : null))
+      .then((r) => (r.ok ? (r.json() as Promise<{ events: ArgonEvent[] }>) : null))
       .then((j) => {
         if (!j) return;
         setLogs((prev) => {
@@ -101,7 +101,7 @@ export function HomeLive(props: HomeLiveProps) {
         </Link>
       </div>
       <div className="story-bleed">
-        <CarbonStory
+        <ArgonStory
           live={live}
           replay={replay}
           launches={crystals}
@@ -128,7 +128,7 @@ export function HomeLive(props: HomeLiveProps) {
               {agentEvents.map((e) => (
                 <li key={e.id}>
                   <code>{shortId(e.id)}</code> {e.kind}
-                  {e.kind === 'reasoning' ? ` · agent reasoning: ${(e as CarbonEvent<'reasoning'>).payload.text}` : ''}
+                  {e.kind === 'reasoning' ? ` · agent reasoning: ${(e as ArgonEvent<'reasoning'>).payload.text}` : ''}
                 </li>
               ))}
             </ul>

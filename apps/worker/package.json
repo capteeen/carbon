@@ -1,5 +1,5 @@
 {
-  "name": "@carbon/worker",
+  "name": "@argon/worker",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,10 +11,10 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@carbon/agents": "workspace:*",
-    "@carbon/core": "workspace:*",
-    "@carbon/solana": "workspace:*",
-    "@carbon/x": "workspace:*",
+    "@argon/agents": "workspace:*",
+    "@argon/core": "workspace:*",
+    "@argon/solana": "workspace:*",
+    "@argon/x": "workspace:*",
     "@solana/web3.js": "1.98.4",
     "pg": "8.23.0",
     "tsx": "4.20.6"

@@ -11,7 +11,7 @@
  */
 import pg from 'pg';
 import { Redis } from 'ioredis';
-import type { CarbonEvent, EventKind } from '../contracts.js';
+import type { ArgonEvent, EventKind } from '../contracts.js';
 import type { AppendInput, EventBus } from '../ports.js';
 import { KeyRing, canonicalJson, eventId } from '../crypto.js';
 
@@ -24,7 +24,7 @@ export interface SubscribeOptions {
 
 /** An EventBus whose subscribe() can resume from a seq (used by sseStream). */
 export interface ResumableEventBus extends EventBus {
-  subscribe(launchId: string | '*', cb: (e: CarbonEvent) => void, opts?: SubscribeOptions): () => void;
+  subscribe(launchId: string | '*', cb: (e: ArgonEvent) => void, opts?: SubscribeOptions): () => void;
 }
 
 export interface PgEventBusOptions {
@@ -60,26 +60,26 @@ interface Row {
 
 interface WireMessage {
   prevSeq: number;
-  e: CarbonEvent;
+  e: ArgonEvent;
 }
 
 interface Sub {
   launchId: string | '*';
-  cb: (e: CarbonEvent) => void;
+  cb: (e: ArgonEvent) => void;
   last: number | null;
   chain: Promise<void>;
   closed: boolean;
 }
 
-function rowToEvent(r: Row): CarbonEvent {
+function rowToEvent(r: Row): ArgonEvent {
   return {
     id: r.id,
     seq: Number(r.seq),
     launchId: r.launch_id,
     ts: Number(r.ts),
     kind: r.kind as EventKind,
-    actor: r.actor as CarbonEvent['actor'],
-    payload: r.payload as CarbonEvent['payload'],
+    actor: r.actor as ArgonEvent['actor'],
+    payload: r.payload as ArgonEvent['payload'],
     signer: r.signer,
     sig: r.sig,
   };
@@ -159,13 +159,13 @@ export class PgEventBus implements ResumableEventBus {
     return this.keys.publicKeys();
   }
 
-  async append<K extends EventKind>(input: AppendInput<K>): Promise<CarbonEvent<K>> {
+  async append<K extends EventKind>(input: AppendInput<K>): Promise<ArgonEvent<K>> {
     if (this.closed) throw new Error('event bus is closed');
     if (!input.launchId) throw new Error('launchId required');
     // Fail before touching the DB if the payload is not canonically encodable.
     canonicalJson(input.payload);
     const client = await this.pool.connect();
-    let event: CarbonEvent<K>;
+    let event: ArgonEvent<K>;
     let prevSeq: number;
     try {
       await client.query('BEGIN');
@@ -179,7 +179,7 @@ export class PgEventBus implements ResumableEventBus {
           );
           if (existing.rows[0]) {
             await client.query('COMMIT');
-            return rowToEvent(existing.rows[0]) as CarbonEvent<K>;
+            return rowToEvent(existing.rows[0]) as ArgonEvent<K>;
           }
         }
         const last = await client.query<{ seq: string; ts: string }>('SELECT seq, ts FROM events ORDER BY seq DESC LIMIT 1');
@@ -218,7 +218,7 @@ export class PgEventBus implements ResumableEventBus {
     } finally {
       client.release();
     }
-    const wire: WireMessage = { prevSeq, e: event as CarbonEvent };
+    const wire: WireMessage = { prevSeq, e: event as ArgonEvent };
     // Publish failures are not fatal: subscribers backfill from Postgres.
     await this.redis.publish(this.channel, JSON.stringify(wire)).catch(() => 0);
     return event;
@@ -227,7 +227,7 @@ export class PgEventBus implements ResumableEventBus {
   async list(
     launchId: string | '*',
     opts: { afterSeq?: number; kinds?: EventKind[]; limit?: number; upToSeq?: number } = {},
-  ): Promise<CarbonEvent[]> {
+  ): Promise<ArgonEvent[]> {
     const where: string[] = [];
     const params: unknown[] = [];
     if (launchId !== '*') {
@@ -255,7 +255,7 @@ export class PgEventBus implements ResumableEventBus {
     return res.rows.map(rowToEvent);
   }
 
-  async get(id: string): Promise<CarbonEvent | null> {
+  async get(id: string): Promise<ArgonEvent | null> {
     const res = await this.pool.query<Row>(`SELECT ${COLS} FROM events WHERE id = $1`, [id]);
     return res.rows[0] ? rowToEvent(res.rows[0]) : null;
   }
@@ -265,11 +265,11 @@ export class PgEventBus implements ResumableEventBus {
     return res.rows[0]?.m ? Number(res.rows[0].m) : 0;
   }
 
-  verify(e: CarbonEvent): boolean {
+  verify(e: ArgonEvent): boolean {
     return this.keys.verify(e);
   }
 
-  subscribe(launchId: string | '*', cb: (e: CarbonEvent) => void, opts: SubscribeOptions = {}): () => void {
+  subscribe(launchId: string | '*', cb: (e: ArgonEvent) => void, opts: SubscribeOptions = {}): () => void {
     if (this.closed) throw new Error('event bus is closed');
     const s: Sub = { launchId, cb, last: null, chain: Promise.resolve(), closed: false };
     this.subs.add(s);
@@ -339,7 +339,7 @@ export class PgEventBus implements ResumableEventBus {
     for (const s of this.subs) this.enqueue(s, () => this.catchUp(s));
   }
 
-  private deliver(s: Sub, e: CarbonEvent): void {
+  private deliver(s: Sub, e: ArgonEvent): void {
     if (s.closed) return;
     if (s.launchId !== '*' && e.launchId !== s.launchId) return;
     try {
@@ -375,7 +375,7 @@ export class PgEventBus implements ResumableEventBus {
 export interface CreateEventBusOptions {
   databaseUrl?: string;
   redisUrl?: string;
-  /** Only honoured when NODE_ENV=test; production reads CARBON_AGENT_KEY_SEED. */
+  /** Only honoured when NODE_ENV=test; production reads ARGON_AGENT_KEY_SEED. */
   seed?: string;
   /** Postgres schema (search_path) — tests use a throwaway schema. */
   schema?: string;
@@ -385,7 +385,7 @@ export interface CreateEventBusOptions {
 }
 
 /**
- * Builds a PgEventBus from env (DATABASE_URL, REDIS_URL, CARBON_AGENT_KEY_SEED).
+ * Builds a PgEventBus from env (DATABASE_URL, REDIS_URL, ARGON_AGENT_KEY_SEED).
  * Throws immediately if the key seed is missing.
  */
 export function createEventBus(opts: CreateEventBusOptions = {}): PgEventBus {

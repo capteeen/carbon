@@ -3,22 +3,22 @@
  * never posts: it builds the client WITHOUT an assertApproval hook, so post()
  * and reply() refuse here by construction. The worker posts, after approvals.
  */
-import { createXClient, type CarbonXClient } from '@carbon/x';
+import { createXClient, type ArgonXClient } from '@argon/x';
 import { getCore } from './core';
 import { xConfigured } from './env';
 
-const g = globalThis as typeof globalThis & { __carbonX?: Promise<CarbonXClient> };
+const g = globalThis as typeof globalThis & { __argonX?: Promise<ArgonXClient> };
 
-export function getX(): Promise<CarbonXClient> {
-  if (!g.__carbonX) {
-    g.__carbonX = getCore()
+export function getX(): Promise<ArgonXClient> {
+  if (!g.__argonX) {
+    g.__argonX = getCore()
       .then(({ bus }) => createXClient({ db: bus.pool }))
       .catch((err: unknown) => {
-        g.__carbonX = undefined;
+        g.__argonX = undefined;
         throw err;
       });
   }
-  return g.__carbonX;
+  return g.__argonX;
 }
 
 /**

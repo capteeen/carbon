@@ -14,10 +14,10 @@ import {
   bondTotals,
   computeBonds,
   type AgentId,
-  type CarbonEvent,
+  type ArgonEvent,
   type EventBus,
-} from '@carbon/core';
-import { CarbonChainClient, ChainUnavailableError, GENESIS_HASH, NetworkGuardError, loadSolanaConfig } from '@carbon/solana';
+} from '@argon/core';
+import { ArgonChainClient, ChainUnavailableError, GENESIS_HASH, NetworkGuardError, loadSolanaConfig } from '@argon/solana';
 import { createLaunch, makeEnv, wallet, type Env } from './support/env.js';
 
 // ───────────────────────── AG-012: valence under arbitrary logs ─────────────────────────
@@ -34,13 +34,13 @@ function prng(seed: number) {
 }
 const hex64 = (r: () => number) => Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(r() * 16)]).join('');
 
-function randomLog(r: () => number, n: number): CarbonEvent[] {
+function randomLog(r: () => number, n: number): ArgonEvent[] {
   const launchId = 'prop';
   const t0 = 1_900_000_000_000;
-  const evs: CarbonEvent[] = [];
+  const evs: ArgonEvent[] = [];
   const shapes = ['chain', 'ring', 'diamond'] as const;
   const base = { launchId, signer: 'x', sig: 'x' };
-  if (r() < 0.8) evs.push({ ...base, id: hex64(r), seq: 1, ts: t0, kind: 'launch.created', actor: 'user', payload: { line: 'p', isotope: 'C-12', shape: shapes[Math.floor(r() * 3)]!, heavyAgent: null, launcherWallet: 'w', xConnected: false } } as CarbonEvent);
+  if (r() < 0.8) evs.push({ ...base, id: hex64(r), seq: 1, ts: t0, kind: 'launch.created', actor: 'user', payload: { line: 'p', isotope: 'Ar-36', shape: shapes[Math.floor(r() * 3)]!, heavyAgent: null, launcherWallet: 'w', xConnected: false } } as ArgonEvent);
   let ts = t0;
   for (let i = 0; i < n; i++) {
     // mostly forward in time, sometimes far backwards or far forwards (raw SQL writers)
@@ -57,7 +57,7 @@ function randomLog(r: () => number, n: number): CarbonEvent[] {
         : k < 0.92
           ? { kind: 'agent.blocked', actor: a, payload: { agent: a, on: b, reason: 'r' } }
           : { kind: 'agent.unblocked', actor: a, payload: { agent: a, on: b } };
-    evs.push({ ...base, id: hex64(r), seq: evs.length + 1, ts, ...ev } as CarbonEvent);
+    evs.push({ ...base, id: hex64(r), seq: evs.length + 1, ts, ...ev } as ArgonEvent);
   }
   return evs;
 }
@@ -86,12 +86,12 @@ describe('[AG-012] valence holds for ANY log, including raw rows that break ts o
 function solEnv(extra: Record<string, string> = {}): Record<string, string> {
   const buyback = Keypair.generate();
   return {
-    CARBON_VAULT_KEY: randomBytes(32).toString('hex'),
-    CARBON_BUYBACK_WALLET: buyback.publicKey.toBase58(),
-    CARBON_TREASURY_WALLET: Keypair.generate().publicKey.toBase58(),
-    CARBON_CRANK_KEY: bs58.encode(Keypair.generate().secretKey),
-    CARBON_BUYBACK_KEY: bs58.encode(buyback.secretKey),
-    CARBON_MINT: Keypair.generate().publicKey.toBase58(),
+    ARGON_VAULT_KEY: randomBytes(32).toString('hex'),
+    ARGON_BUYBACK_WALLET: buyback.publicKey.toBase58(),
+    ARGON_TREASURY_WALLET: Keypair.generate().publicKey.toBase58(),
+    ARGON_CRANK_KEY: bs58.encode(Keypair.generate().secretKey),
+    ARGON_BUYBACK_KEY: bs58.encode(buyback.secretKey),
+    ARGON_MINT: Keypair.generate().publicKey.toBase58(),
     ...extra,
   };
 }
@@ -110,11 +110,11 @@ function stubs(genesis: () => Promise<string>) {
   return { rpc, db, rpcCalls, dbCalls };
 }
 
-function moneyCalls(c: CarbonChainClient): [string, () => Promise<unknown>][] {
+function moneyCalls(c: ArgonChainClient): [string, () => Promise<unknown>][] {
   return [
     ['claimCreatorFees', () => c.claimCreatorFees(randomUUID())],
     ['runSplit', () => c.runSplit(randomUUID(), randomUUID())],
-    ['buyCarbon', () => c.buyCarbon(1000n, 'split_x')],
+    ['buyArgon', () => c.buyArgon(1000n, 'split_x')],
     ['submitLaunchTx', () => c.submitLaunchTx(randomUUID(), 'AAAA')],
     ['airdropUnits', () => c.airdropUnits(randomUUID(), Keypair.generate().publicKey.toBase58(), Keypair.generate().publicKey.toBase58(), 5n)],
     ['confirmedClaims', () => c.confirmedClaims(randomUUID())],
@@ -129,9 +129,9 @@ describe('[AG-011] a devnet-labelled client never moves value on a cluster whose
     ['an unknown cluster', '11111111111111111111111111111111'],
   ] as const) {
     it(`URL says devnet, genesis is ${label}: every money path refuses before touching the DB or sending`, async () => {
-      const e = solEnv({ CARBON_RPC_URL: 'https://my-devnet-node.example.org' });
+      const e = solEnv({ ARGON_RPC_URL: 'https://my-devnet-node.example.org' });
       const s = stubs(async () => hash);
-      const c = new CarbonChainClient({ config: loadSolanaConfig(e), rpc: s.rpc as never, db: s.db as never, env: e, launchConfig: async () => ({}) as never, assertLaunchAllowed: async () => undefined });
+      const c = new ArgonChainClient({ config: loadSolanaConfig(e), rpc: s.rpc as never, db: s.db as never, env: e, launchConfig: async () => ({}) as never, assertLaunchAllowed: async () => undefined });
       for (const [name, call] of moneyCalls(c)) await expect(call(), name).rejects.toBeInstanceOf(NetworkGuardError);
       expect(s.rpcCalls).toEqual([]);
       expect(s.dbCalls).toEqual([]);
@@ -139,21 +139,21 @@ describe('[AG-011] a devnet-labelled client never moves value on a cluster whose
   }
 
   it('mainnet config (both flags) on an RPC whose genesis is devnet is refused too', async () => {
-    const e = solEnv({ CARBON_NETWORK: 'mainnet-beta', CARBON_MAINNET_ENABLED: 'true', CARBON_RPC_URL: 'https://rpc.example.org' });
+    const e = solEnv({ ARGON_NETWORK: 'mainnet-beta', ARGON_MAINNET_ENABLED: 'true', ARGON_RPC_URL: 'https://rpc.example.org' });
     const s = stubs(async () => GENESIS_HASH.devnet);
-    const c = new CarbonChainClient({ config: loadSolanaConfig(e), rpc: s.rpc as never, db: s.db as never, env: e });
+    const c = new ArgonChainClient({ config: loadSolanaConfig(e), rpc: s.rpc as never, db: s.db as never, env: e });
     await expect(c.claimCreatorFees(randomUUID())).rejects.toBeInstanceOf(NetworkGuardError);
     expect(s.dbCalls).toEqual([]);
   });
 
   it('an RPC that cannot answer getGenesisHash blocks every money path (fail closed) and is retried, not cached as "ok"', async () => {
-    const e = solEnv({ CARBON_RPC_URL: 'https://api.devnet.solana.com' });
+    const e = solEnv({ ARGON_RPC_URL: 'https://api.devnet.solana.com' });
     let up = false;
     const s = stubs(async () => {
       if (!up) throw new Error('fetch failed');
       return GENESIS_HASH.devnet;
     });
-    const c = new CarbonChainClient({ config: loadSolanaConfig(e), rpc: s.rpc as never, db: s.db as never, env: e });
+    const c = new ArgonChainClient({ config: loadSolanaConfig(e), rpc: s.rpc as never, db: s.db as never, env: e });
     await expect(c.claimCreatorFees(randomUUID())).rejects.toBeInstanceOf(ChainUnavailableError);
     expect(s.dbCalls).toEqual([]);
     up = true;
@@ -177,7 +177,7 @@ describe('[AG-005][AG-017] once-only receipts hold across processes appending at
     const other = await env.another();
     const txSig = bs58.encode(randomBytes(64));
     const claimId = randomUUID();
-    const buy = { lamportsIn: '9925000', carbonOut: '123', txSig, funding: 'fee-split' as const, splitId: `split_${claimId}` };
+    const buy = { lamportsIn: '9925000', argonOut: '123', txSig, funding: 'fee-split' as const, splitId: `split_${claimId}` };
     await Promise.all(
       [env.core, other, env.core, other].flatMap((c) => [
         c.bus.append({ launchId, kind: 'buyback.executed', actor: 'treasurer', payload: buy }),
@@ -213,7 +213,7 @@ describe('[AG-027] approval consumption is public even when the event append fai
   // and the caller sees an error for an approval it can no longer use ("already used").
   it('[AG-027] if approval.consumed cannot be appended, the approval is not consumed either (or the event is guaranteed)', async () => {
     const w = wallet();
-    const launchId = await createLaunch(env.core, 'ring', 'C-12', null, w.address);
+    const launchId = await createLaunch(env.core, 'ring', 'Ar-36', null, w.address);
     const { approvalId } = await env.core.approvals.open(launchId, 'post', { text: 'gm' }, 'herald');
     await env.core.approvals.decide(approvalId, true, w.address);
     const failing: EventBus = new Proxy(env.core.bus, {
@@ -229,7 +229,7 @@ describe('[AG-027] approval consumption is public even when the event append fai
 
   it('[AG-027] a crash after the append but before the commit is repaired: table follows the log, no second use', async () => {
     const w = wallet();
-    const launchId = await createLaunch(env.core, 'ring', 'C-12', null, w.address);
+    const launchId = await createLaunch(env.core, 'ring', 'Ar-36', null, w.address);
     const { approvalId } = await env.core.approvals.open(launchId, 'post', { text: 'gm' }, 'herald');
     await env.core.approvals.decide(approvalId, true, w.address);
     // the state a crash leaves: the event is in the log, the row still says granted

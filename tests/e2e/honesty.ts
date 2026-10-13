@@ -20,7 +20,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { chromium, type Page } from 'playwright-core';
-import { createCore } from '@carbon/core';
+import { createCore } from '@argon/core';
 import { CHAPTER_RANGES } from '../../packages/visual/src/story/chapters.js';
 import { startServer } from '../../packages/visual/perf/shared.js';
 
@@ -46,13 +46,13 @@ async function openStory(url: string): Promise<Page> {
 }
 async function scrollTo(page: Page, p: number) {
   await page.evaluate((p) => {
-    const el = document.querySelector('.carbon-story') as HTMLElement;
+    const el = document.querySelector('.argon-story') as HTMLElement;
     window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY + p * (el.offsetHeight - window.innerHeight));
   }, p);
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
   await page.waitForTimeout(150);
 }
-const layerText = (page: Page, i: number) => page.evaluate((i) => (document.querySelector(`.carbon-chapter[data-chapter="${i}"]`) as HTMLElement).textContent ?? '', i);
+const layerText = (page: Page, i: number) => page.evaluate((i) => (document.querySelector(`.argon-chapter[data-chapter="${i}"]`) as HTMLElement).textContent ?? '', i);
 const mid = (i: number, l = 0.5) => CHAPTER_RANGES[i]!.start + (CHAPTER_RANGES[i]!.end - CHAPTER_RANGES[i]!.start) * l;
 
 try {

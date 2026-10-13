@@ -26,7 +26,7 @@ const sweep = () =>
   page.evaluate(
     () =>
       new Promise<void>((resolve) => {
-        const el = document.querySelector('.carbon-story') as HTMLElement;
+        const el = document.querySelector('.argon-story') as HTMLElement;
         const top = el.getBoundingClientRect().top + window.scrollY;
         const dist = el.offsetHeight - window.innerHeight;
         const t0 = performance.now();

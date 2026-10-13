@@ -11,7 +11,7 @@ export type Corner = 'tl' | 'tr' | 'bl' | 'br' | 'ml' | 'mr' | 'bc';
 
 export function HudCorner({ at, children, style, className, testId }: { at: Corner; children: ReactNode; style?: CSSProperties; className?: string; testId?: string }) {
   return (
-    <div className={`carbon-hud__corner carbon-hud__corner--${at}${className ? ' ' + className : ''}`} style={style} data-testid={testId}>
+    <div className={`argon-hud__corner argon-hud__corner--${at}${className ? ' ' + className : ''}`} style={style} data-testid={testId}>
       {children}
     </div>
   );
@@ -20,7 +20,7 @@ export function HudCorner({ at, children, style, className, testId }: { at: Corn
 /** UPPERCASE_SNAKE label; optional leader line target. */
 export function HudLabel({ children, leaderRef, testId }: { children: string; leaderRef?: Ref<HTMLDivElement>; testId?: string }) {
   return (
-    <div className="carbon-hud__label" ref={leaderRef} data-testid={testId}>
+    <div className="argon-hud__label" ref={leaderRef} data-testid={testId}>
       {snake(children)}
     </div>
   );
@@ -28,14 +28,14 @@ export function HudLabel({ children, leaderRef, testId }: { children: string; le
 
 export function HudMeta({ children, testId }: { children: string; testId?: string }) {
   return (
-    <div className="carbon-hud__meta" data-testid={testId}>
+    <div className="argon-hud__meta" data-testid={testId}>
       {children.startsWith('//') ? children : meta(children)}
     </div>
   );
 }
 
 export function HudSection({ children }: { children: string }) {
-  return <div className="carbon-hud__section">{children.startsWith('//////') ? children : sectionHead(children)}</div>;
+  return <div className="argon-hud__section">{children.startsWith('//////') ? children : sectionHead(children)}</div>;
 }
 
 /** A readout line. `value` null/undefined/"--.--" renders the honest empty state. */
@@ -43,7 +43,7 @@ export function HudReadout({ label, value, testId }: { label?: string; value: st
   const empty = value == null || value === '' || value.endsWith(EMPTY_READOUT);
   const v = value == null || value === '' ? EMPTY_READOUT : value;
   return (
-    <div className="carbon-hud__readout" data-empty={empty} data-testid={testId}>
+    <div className="argon-hud__readout" data-empty={empty} data-testid={testId}>
       {label ? `${label} ` : ''}
       {v}
     </div>
@@ -52,7 +52,7 @@ export function HudReadout({ label, value, testId }: { label?: string; value: st
 
 export function HudTag({ children, testId }: { children: string; testId?: string }) {
   return (
-    <span className="carbon-hud__tag" data-testid={testId}>
+    <span className="argon-hud__tag" data-testid={testId}>
       {children}
     </span>
   );
@@ -60,8 +60,8 @@ export function HudTag({ children, testId }: { children: string; testId?: string
 
 export function HudPanel({ title, children, testId }: { title: string; children: ReactNode; testId?: string }) {
   return (
-    <div className="carbon-hud__panel" data-testid={testId}>
-      <div className="carbon-hud__meta">{title}</div>
+    <div className="argon-hud__panel" data-testid={testId}>
+      <div className="argon-hud__meta">{title}</div>
       {children}
     </div>
   );
@@ -69,5 +69,5 @@ export function HudPanel({ title, children, testId }: { title: string; children:
 
 /** SVG layer the LeaderRegistry draws 1px frost lines into. */
 export function HudLeaders({ registry }: { registry: LeaderRegistry }) {
-  return <svg className="carbon-leaders" ref={registry.setSvg} aria-hidden="true" />;
+  return <svg className="argon-leaders" ref={registry.setSvg} aria-hidden="true" />;
 }

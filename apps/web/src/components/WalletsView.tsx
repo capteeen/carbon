@@ -1,4 +1,4 @@
-import { EMPTY_READOUT } from '@carbon/core/contracts';
+import { EMPTY_READOUT } from '@argon/core/contracts';
 import Link from 'next/link';
 import { explorerUrl, shortId } from '@/lib/launch-view';
 import type { Network, WalletRow } from '@/lib/types';
@@ -18,24 +18,24 @@ function Addr({ address, network }: { address: string | null; network: Network |
 /** The fee mode the log recorded for the launch (wallet.created.mode); never assumed. */
 export function feeModeLabel(mode: WalletRow['mode']): string {
   if (mode === 'native') return 'NATIVE · sharing-config PDA';
-  if (mode === 'wallet') return "WALLET · Carbon's per-launch wallet receives the fees and splits them";
+  if (mode === 'wallet') return "WALLET · Argon's per-launch wallet receives the fees and splits them";
   return `fee mode not logged ${EMPTY_READOUT}`;
 }
 
-export function WalletsView({ rows, carbon, network }: { rows: WalletRow[]; carbon: { buyback: string | null; treasury: string | null }; network: Network }) {
+export function WalletsView({ rows, argon, network }: { rows: WalletRow[]; argon: { buyback: string | null; treasury: string | null }; network: Network }) {
   return (
     <>
       <h1 className="section-title">Wallets</h1>
-      <p className="meta">// Carbon never holds YOUR keys. Every per-launch fee address is public here.</p>
-      <h2>Carbon</h2>
-      <ul className="plain" data-testid="carbon-wallets">
+      <p className="meta">// Argon never holds YOUR keys. Every per-launch fee address is public here.</p>
+      <h2>Argon</h2>
+      <ul className="plain" data-testid="argon-wallets">
         <li>
-          <span className="hud-label">$CARBON BUYBACK (30%)</span>
-          <Addr address={carbon.buyback} network={network} />
+          <span className="hud-label">$ARGON BUYBACK (30%)</span>
+          <Addr address={argon.buyback} network={network} />
         </li>
         <li>
-          <span className="hud-label">CARBON TREASURY (20%)</span>
-          <Addr address={carbon.treasury} network={network} />
+          <span className="hud-label">ARGON TREASURY (20%)</span>
+          <Addr address={argon.treasury} network={network} />
         </li>
       </ul>
       <h2>Per launch</h2>
@@ -43,10 +43,10 @@ export function WalletsView({ rows, carbon, network }: { rows: WalletRow[]; carb
         // Every claimed creator fee is split 50% to the launcher, 30% to the buyback wallet and 20% to the treasury. How depends on the launch&apos;s fee mode, shown on each row from its wallet.created event:
       </p>
       <p className="meta">
-        // NATIVE: pump.fun fee sharing. The address is the coin&apos;s sharing-config PDA, which pays the three shares directly. Carbon never holds your 50%.
+        // NATIVE: pump.fun fee sharing. The address is the coin&apos;s sharing-config PDA, which pays the three shares directly. Argon never holds your 50%.
       </p>
       <p className="meta">
-        // WALLET: Carbon&apos;s per-launch wallet receives all of the launch&apos;s fees. Treasurer claims and splits them, paying your 50% to your wallet with a public receipt.
+        // WALLET: Argon&apos;s per-launch wallet receives all of the launch&apos;s fees. Treasurer claims and splits them, paying your 50% to your wallet with a public receipt.
       </p>
       {rows.length === 0 ? (
         <p className="empty" data-testid="wallets-empty">

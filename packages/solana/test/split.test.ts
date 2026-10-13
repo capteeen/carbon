@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Keypair, PublicKey } from '@solana/web3.js';
-import { CarbonChainClient } from '../src/client.js';
+import { ArgonChainClient } from '../src/client.js';
 import type { Db } from '../src/db.js';
 import { FakeChain } from './helpers/fakeChain.js';
 import { makeClient, testDb, testEnv, testKeys, type TestKeys } from './helpers/env.js';
@@ -23,12 +23,12 @@ describe('wallet-mode split ledger (real Postgres)', () => {
 
   beforeEach(() => {
     keys = testKeys();
-    env = testEnv(keys, { CARBON_FEE_MODE: 'wallet' });
+    env = testEnv(keys, { ARGON_FEE_MODE: 'wallet' });
     chain = new FakeChain();
     launcher = Keypair.generate().publicKey;
   });
 
-  async function seed(client: CarbonChainClient): Promise<{ launchId: string; claimId: string; creator: PublicKey }> {
+  async function seed(client: ArgonChainClient): Promise<{ launchId: string; claimId: string; creator: PublicKey }> {
     const launchId = `L-split-${++n}`;
     const { address } = await client.createLaunchWallet(launchId);
     const creator = new PublicKey(address);
@@ -42,11 +42,11 @@ describe('wallet-mode split ledger (real Postgres)', () => {
   }
 
   function expectPaidExactlyOnce(): void {
-    const expected = CarbonChainClient.splitAmounts(TOTAL);
+    const expected = ArgonChainClient.splitAmounts(TOTAL);
     const byTo = (addr: PublicKey) => chain.transfers.filter((t) => t.to === addr.toBase58());
     for (const [addr, amount] of [
       [launcher, expected.launcher],
-      [keys.buyback.publicKey, expected['carbon-buyback']],
+      [keys.buyback.publicKey, expected['argon-buyback']],
       [keys.treasury.publicKey, expected.treasury],
     ] as const) {
       const paid = byTo(addr);
@@ -54,7 +54,7 @@ describe('wallet-mode split ledger (real Postgres)', () => {
       expect(paid[0]!.lamports).toBe(amount);
     }
     expect(chain.transfers.length).toBe(3);
-    expect(expected.launcher + expected['carbon-buyback'] + expected.treasury).toBe(TOTAL);
+    expect(expected.launcher + expected['argon-buyback'] + expected.treasury).toBe(TOTAL);
   }
 
   it('splits 50/30/20 with floors, remainder to treasury, and returns a receipt matching the chain', async () => {
@@ -63,7 +63,7 @@ describe('wallet-mode split ledger (real Postgres)', () => {
     const r = await client.runSplit(launchId, claimId);
     expectPaidExactlyOnce();
     expect(r.totalLamports).toBe(TOTAL.toString());
-    expect(r.legs.map((l) => l.to)).toEqual(['launcher', 'carbon-buyback', 'treasury']);
+    expect(r.legs.map((l) => l.to)).toEqual(['launcher', 'argon-buyback', 'treasury']);
     expect(r.legs.map((l) => l.lamports)).toEqual(['617283945', '370370367', '246913579']);
     for (const l of r.legs) {
       expect(l.status).toBe('confirmed');

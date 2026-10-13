@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 const FOOTER =
-  'Carbon does not run on a quantum computer. Agents are powered by Google Gemini; Carbon is not affiliated with or endorsed by Google. Coins launch on pump.fun (Solana). A meme, not an investment.';
+  'Argon does not run on a quantum computer. Agents are powered by Google Gemini; Argon is not affiliated with or endorsed by Google. Coins launch on pump.fun (Solana). A meme, not an investment.';
 
 const PAGES = ['/', '/launch', '/receipts', '/wallets', '/how'];
 const UNKNOWN_CA = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';

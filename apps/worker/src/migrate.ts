@@ -1,8 +1,8 @@
 /** Boot migrations: core (events, approvals, budgets), x (tokens, dedupe), worker tables, then chain. */
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { migrate as migrateCore } from '@carbon/core';
-import { migrate as migrateX } from '@carbon/x';
+import { migrate as migrateCore } from '@argon/core';
+import { migrate as migrateX } from '@argon/x';
 import type pg from 'pg';
 import { chainMigrations } from './chain.js';
 

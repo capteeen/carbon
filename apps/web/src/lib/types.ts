@@ -1,9 +1,9 @@
 /**
- * View types shared by server pages, client views and the @carbon/visual seam.
+ * View types shared by server pages, client views and the @argon/visual seam.
  * Every field is read from logged events; null means "no data" and renders as
  * EMPTY_READOUT ("--.--"), never as a guess.
  */
-import type { AgentId, IsotopeId, ShapeId } from '@carbon/core/contracts';
+import type { AgentId, IsotopeId, ShapeId } from '@argon/core/contracts';
 
 export type Network = 'devnet' | 'mainnet-beta';
 
@@ -40,7 +40,7 @@ export interface ReplayData {
   /** ISO date of launch.deployed. */
   date: string;
   /** The launch's real events, in seq order. */
-  events: import('@carbon/core/contracts').CarbonEvent[];
+  events: import('@argon/core/contracts').ArgonEvent[];
 }
 
 export interface WalletRow {
@@ -60,5 +60,5 @@ export interface ReceiptRow {
   ticker: string | null;
   network: Network | null;
   eventId: string;
-  receipt: import('@carbon/core/contracts').SplitReceipt;
+  receipt: import('@argon/core/contracts').SplitReceipt;
 }

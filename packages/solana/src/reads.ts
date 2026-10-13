@@ -9,7 +9,7 @@
  *   GET {api}/coins/user-created-coins/{address}?offset=0&limit=1000&includeNsfw=true
  * Rows are validated field by field; a response of any other shape throws.
  */
-import type { PumpCoinInfo } from '@carbon/core';
+import type { PumpCoinInfo } from '@argon/core';
 import { PublicKey, type ConfirmedSignatureInfo, type VersionedTransactionResponse } from '@solana/web3.js';
 import { ChainUnavailableError, errorMessage } from './errors.js';
 import { decodeTxEvents } from './events.js';

@@ -1,5 +1,5 @@
 {
-  "name": "@carbon/tests",
+  "name": "@argon/tests",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,12 +9,12 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@carbon/agents": "workspace:*",
-    "@carbon/core": "workspace:*",
-    "@carbon/solana": "workspace:*",
-    "@carbon/web": "workspace:*",
-    "@carbon/worker": "workspace:*",
-    "@carbon/x": "workspace:*"
+    "@argon/agents": "workspace:*",
+    "@argon/core": "workspace:*",
+    "@argon/solana": "workspace:*",
+    "@argon/web": "workspace:*",
+    "@argon/worker": "workspace:*",
+    "@argon/x": "workspace:*"
   },
   "devDependencies": {
     "@noble/curves": "2.3.0",

@@ -1,5 +1,5 @@
 /**
- * Harness for @carbon/visual (dev + Playwright perf/sync). Not shipped.
+ * Harness for @argon/visual (dev + Playwright perf/sync). Not shipped.
  *   ?view=story|chamber|shapes|launch|graphene|embed
  *   &fixture=1  load TEST FIXTURE data from test/fixtures (banner shown)
  *   &reduced=1  force reduced motion
@@ -11,9 +11,9 @@ import '@fontsource/space-mono/700.css';
 import '../src/styles.css';
 import { StrictMode, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { AgentId, IsotopeId, ShapeId } from '@carbon/core/contracts';
+import type { AgentId, IsotopeId, ShapeId } from '@argon/core/contracts';
 import {
-  CarbonStory,
+  ArgonStory,
   EmbedPlayer,
   GrapheneSheet,
   IsotopeChamber,
@@ -37,8 +37,8 @@ const maxDpr = q.get('dpr') ? Number(q.get('dpr')) : undefined;
 
 declare global {
   interface Window {
-    __carbonBoot: number;
-    __carbon: {
+    __argonBoot: number;
+    __argon: {
       store: typeof progressStore;
       quality: ReturnType<typeof createQualityStore>;
       frames: number[];
@@ -49,12 +49,12 @@ declare global {
 }
 
 const quality = createQualityStore(lockQuality !== null ? { start: Number(lockQuality), floor: Number(lockQuality) } : {});
-window.__carbon = { store: progressStore, quality, frames: [], firstFrameAt: null, recording: false };
+window.__argon = { store: progressStore, quality, frames: [], firstFrameAt: null, recording: false };
 const onFirstFrame = () => {
-  if (window.__carbon.firstFrameAt === null) window.__carbon.firstFrameAt = performance.now();
+  if (window.__argon.firstFrameAt === null) window.__argon.firstFrameAt = performance.now();
 };
 const onFrame = (dt: number) => {
-  if (window.__carbon.recording) window.__carbon.frames.push(dt);
+  if (window.__argon.recording) window.__argon.frames.push(dt);
 };
 
 function Banner() {
@@ -70,7 +70,7 @@ function App() {
   const fx = useMemo(() => (fixture ? fixtureLaunch() : null), []);
   const replay = useMemo(() => (fx ? buildReplay(fx.events, fx.bonds) : null), [fx]);
   const launches = useMemo(() => (fixture ? [launchSummaryFromEvents(fx!.events)!, ...fixtureLaunches(40)] : []), [fx]);
-  const [iso, setIso] = useState<IsotopeId>('C-13');
+  const [iso, setIso] = useState<IsotopeId>('Ar-40');
   const [heavy, setHeavy] = useState<AgentId | null>(null);
   const [shape, setShape] = useState<ShapeId | null>(null);
 
@@ -100,7 +100,7 @@ function App() {
     default:
       return (
         <>
-          <CarbonStory
+          <ArgonStory
             live={fixture ? fixtureLive() : null}
             replay={replay}
             launches={launches}

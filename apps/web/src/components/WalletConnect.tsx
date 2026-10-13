@@ -1,7 +1,7 @@
 'use client';
 /**
  * Connect a Solana wallet (Wallet Standard: Phantom, Solflare, Backpack, ...).
- * Lists only wallets the browser really has; Carbon never holds the user's keys.
+ * Lists only wallets the browser really has; Argon never holds the user's keys.
  */
 import { WalletReadyState } from '@solana/wallet-adapter-base';
 import { useWallet } from '@solana/wallet-adapter-react';

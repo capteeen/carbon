@@ -9,7 +9,7 @@ import type {
   ApprovalAction,
   AutopilotClass,
   Bond,
-  CarbonEvent,
+  ArgonEvent,
   EventKind,
   EventPayloads,
   LaunchConfig,
@@ -22,24 +22,24 @@ import type {
 export interface AppendInput<K extends EventKind = EventKind> {
   launchId: string;
   kind: K;
-  actor: CarbonEvent['actor'];
+  actor: ArgonEvent['actor'];
   payload: EventPayloads[K];
 }
 
 export interface EventBus {
   /** Hash, sign (actor's key), append to Postgres, publish to Redis. Returns the stored event. */
-  append<K extends EventKind>(input: AppendInput<K>): Promise<CarbonEvent<K>>;
+  append<K extends EventKind>(input: AppendInput<K>): Promise<ArgonEvent<K>>;
   /** Ordered by seq. */
-  list(launchId: string | '*', opts?: { afterSeq?: number; kinds?: EventKind[]; limit?: number }): Promise<CarbonEvent[]>;
+  list(launchId: string | '*', opts?: { afterSeq?: number; kinds?: EventKind[]; limit?: number }): Promise<ArgonEvent[]>;
   /** Live tail. Returns an unsubscribe function. */
-  subscribe(launchId: string | '*', cb: (e: CarbonEvent) => void, opts?: { afterSeq?: number }): () => void;
+  subscribe(launchId: string | '*', cb: (e: ArgonEvent) => void, opts?: { afterSeq?: number }): () => void;
   /** Verify hash and signature of a stored event. */
-  verify(e: CarbonEvent): boolean;
+  verify(e: ArgonEvent): boolean;
 }
 
 /** Sends a hand-off through valence enforcement: appends `handoff`, or `handoff.queued` and waits. */
 export interface Handoffs {
-  send(launchId: string, from: AgentId, to: AgentId, topic: string, summary: string, refEventId?: string): Promise<CarbonEvent<'handoff'>>;
+  send(launchId: string, from: AgentId, to: AgentId, topic: string, summary: string, refEventId?: string): Promise<ArgonEvent<'handoff'>>;
   /** Bonds recomputed from the log at time `at` (ms). Pure w.r.t. the log. */
   bonds(launchId: string, at?: number): Promise<Bond[]>;
 }
@@ -143,7 +143,7 @@ export interface ChainClient {
    */
   buildLaunchTx(args: { launchId: string; payer: string; name: string; symbol: string; metadataUri: string; devBuySol: number; approvalId: string }): Promise<{ txBase64: string; mint: string }>;
   /** Submit the user-signed tx; confirms; returns signature. */
-  /** bornAtMs = the deploy tx's block time (C-14 clock origin). */
+  /** bornAtMs = the deploy tx's block time (Ar-39 clock origin). */
   submitLaunchTx(launchId: string, signedTxBase64: string): Promise<{ txSig: string; ca: string; bornAtMs?: number | null }>;
   uploadMetadata(args: { name: string; symbol: string; description: string; image: Uint8Array; twitter?: string; website?: string }): Promise<{ metadataUri: string; imageUri: string }>;
   /** Existing coins matching name/ticker, for Sentinel. Throws ChainUnavailableError when the source is unreachable. */
@@ -153,9 +153,9 @@ export interface ChainClient {
   /** Idempotent: resumes a split by splitId without double-paying. */
   runSplit(launchId: string, claimId: string): Promise<SplitReceipt>;
   /** lamportsIn = what the trade actually spent, from the on-chain event. */
-  buyCarbon(lamports: bigint, splitId: string): Promise<{ txSig: string; carbonOut: bigint; lamportsIn?: bigint }>;
+  buyArgon(lamports: bigint, splitId: string): Promise<{ txSig: string; argonOut: bigint; lamportsIn?: bigint }>;
   // Ledger reconciliation methods (confirmedClaims, scanForeignDistributions, recordedBuyback, ackBuyback)
-  // are typed in @carbon/agents as ChainLedger and implemented by @carbon/solana.
+  // are typed in @argon/agents as ChainLedger and implemented by @argon/solana.
   lastTradeAt(ca: string): Promise<number | null>;
 }
 

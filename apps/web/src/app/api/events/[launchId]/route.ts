@@ -4,7 +4,7 @@
  * Last-Event-ID; a first connection may pass ?after=<seq> (the seq the server
  * render ended at). Last-Event-ID wins over ?after.
  */
-import { SSE_HEADERS, sseStream } from '@carbon/core/sse';
+import { SSE_HEADERS, sseStream } from '@argon/core/sse';
 import { getCore } from '@/server/core';
 
 export const runtime = 'nodejs';

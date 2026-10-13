@@ -1,4 +1,4 @@
-import { type LaunchConfig, launchConfig } from '@carbon/core';
+import { type LaunchConfig, launchConfig } from '@argon/core';
 import { describe, expect, it } from 'vitest';
 import { Forge } from '../src/forge/index.js';
 import { Herald } from '../src/herald/index.js';
@@ -24,7 +24,7 @@ const sign = user.signLaunchTx;
 
 describe('Treasurer', () => {
   it('refuses to build a launch tx without a passing Sentinel score', async () => {
-    const { h, c, forge, draft } = await scored(launchConfig('C-12', 'chain'), { name: 'Nude Cat', ticker: 'NCAT' });
+    const { h, c, forge, draft } = await scored(launchConfig('Ar-36', 'chain'), { name: 'Nude Cat', ticker: 'NCAT' });
     await forge.prepareDeploy(draft).catch(() => undefined);
     await expect(new Treasurer(h.ctx).deploy({ launcherWallet: c.payload.launcherWallet, sign })).rejects.toBeInstanceOf(SentinelBlockError);
     expect(h.chain.built).toHaveLength(0);
@@ -32,13 +32,13 @@ describe('Treasurer', () => {
   });
 
   it('refuses with no score at all', async () => {
-    const cfg = launchConfig('C-12', 'chain');
+    const cfg = launchConfig('Ar-36', 'chain');
     const h = makeHarness(cfg);
     await expect(new Treasurer(h.ctx).deploy({ launcherWallet: 'W', sign })).rejects.toThrow(/No Sentinel score/);
   });
 
   it('refuses without a granted launch approval', async () => {
-    const { h, c, forge, draft } = await scored(launchConfig('C-12', 'chain'));
+    const { h, c, forge, draft } = await scored(launchConfig('Ar-36', 'chain'));
     await forge.prepareDeploy(draft);
     h.approvals.policy = (a) => a !== 'launch';
     expect(await new Treasurer(h.ctx).deploy({ launcherWallet: c.payload.launcherWallet, sign })).toBeNull();
@@ -48,7 +48,7 @@ describe('Treasurer', () => {
   });
 
   it('creates the launch wallet at most once per launch, reading it back from the log after a restart', async () => {
-    const { h, c, forge, draft } = await scored(launchConfig('C-12', 'chain'));
+    const { h, c, forge, draft } = await scored(launchConfig('Ar-36', 'chain'));
     await forge.prepareDeploy(draft);
     h.approvals.policy = (a) => a !== 'launch';
     expect(await new Treasurer(h.ctx).deploy({ launcherWallet: c.payload.launcherWallet, sign })).toBeNull();
@@ -60,7 +60,7 @@ describe('Treasurer', () => {
   });
 
   it('refuses when the draft changed after the score', async () => {
-    const { h, c, forge, draft, narrative } = await scored(launchConfig('C-12', 'chain'));
+    const { h, c, forge, draft, narrative } = await scored(launchConfig('Ar-36', 'chain'));
     const changed = await forge.draft(narrative, narrative.names[0]!, { revision: { name: 'Other Cat', ticker: 'OCAT' }, previous: draft });
     await forge.prepareDeploy(changed);
     await expect(new Treasurer(h.ctx).deploy({ launcherWallet: c.payload.launcherWallet, sign })).rejects.toThrow(/Draft changed/);
@@ -68,7 +68,7 @@ describe('Treasurer', () => {
   });
 
   it('a resumed split never pays twice; buybacks only spend the 30% leg', async () => {
-    const cfg = launchConfig('C-12', 'ring');
+    const cfg = launchConfig('Ar-36', 'ring');
     const { h, c, forge, draft } = await scored(cfg);
     await forge.prepareDeploy(draft);
     const t = new Treasurer(h.ctx);
@@ -93,7 +93,7 @@ describe('Treasurer', () => {
   });
 
   it('[AG-006/AG-005] the buyback receipt carries what the chain says the trade spent, once per buy', async () => {
-    const cfg = launchConfig('C-12', 'ring');
+    const cfg = launchConfig('Ar-36', 'ring');
     const { h, c, forge, draft } = await scored(cfg);
     await forge.prepareDeploy(draft);
     const t = new Treasurer(h.ctx);
@@ -109,14 +109,14 @@ describe('Treasurer', () => {
   });
 
   it('[AG-007] claims in the chain ledger without a receipt (crash, or a third-party crank) get fee.claimed and a split receipt', async () => {
-    const cfg = launchConfig('C-12', 'chain');
+    const cfg = launchConfig('Ar-36', 'chain');
     const { h, c, forge, draft } = await scored(cfg);
     await forge.prepareDeploy(draft);
     const t = new Treasurer(h.ctx);
     await t.deploy({ launcherWallet: c.payload.launcherWallet, sign });
     let scans = 0;
     const ledger = [
-      { claimId: 'crashed', lamports: 5n, txSig: 'sigA', origin: 'carbon' as const },
+      { claimId: 'crashed', lamports: 5n, txSig: 'sigA', origin: 'argon' as const },
       { claimId: 'foreign_sigB', lamports: 7n, txSig: 'sigB', origin: 'foreign' as const },
     ];
     Object.assign(h.chain, { scanForeignDistributions: async () => (scans++, []), confirmedClaims: async () => ledger });
@@ -129,8 +129,8 @@ describe('Treasurer', () => {
     expectReasoningForEveryAction(h.bus);
   });
 
-  it('[AG-025] a C-14 clock starts at the create transaction block time, recorded in decay.started', async () => {
-    const cfg = launchConfig('C-14', 'chain');
+  it('[AG-025] a Ar-39 clock starts at the create transaction block time, recorded in decay.started', async () => {
+    const cfg = launchConfig('Ar-39', 'chain');
     const { h, c, forge, draft } = await scored(cfg);
     await forge.prepareDeploy(draft);
     const born = h.clock.now() - 42_000; // the block landed 42 s before the event is appended
@@ -152,7 +152,7 @@ describe('Herald', () => {
   }
 
   it('refuses to post without an approval', async () => {
-    const { h, herald } = await deployed(launchConfig('C-12', 'ring'));
+    const { h, herald } = await deployed(launchConfig('Ar-36', 'ring'));
     const n = h.x.posts.length;
     h.approvals.policy = () => false;
     expect(await herald.loopPost(['x'])).toBeNull();
@@ -162,7 +162,7 @@ describe('Herald', () => {
   });
 
   it('refuses outside the CHAIN posting window', async () => {
-    const cfg = launchConfig('C-12', 'chain');
+    const cfg = launchConfig('Ar-36', 'chain');
     const { h, herald } = await deployed(cfg);
     const n = h.x.posts.length;
     const requests = h.approvals.requests.length;
@@ -178,7 +178,7 @@ describe('Herald', () => {
   });
 
   it('Keeper mention cursor survives a restart (read from the log)', async () => {
-    const { h } = await deployed(launchConfig('C-12', 'ring'));
+    const { h } = await deployed(launchConfig('Ar-36', 'ring'));
     const dep = h.bus.ofKind('launch.deployed')[0]!;
     h.x.mentionList = [
       { id: '1000', text: 'gm', authorId: 'a', createdAt: new Date(dep.ts + 1).toISOString() },
@@ -191,21 +191,21 @@ describe('Herald', () => {
     expect(h.x.replies.map((r) => r.inReplyTo)).toEqual(['1000', '1001']);
   });
 
-  it('C-13 heavy Herald doubles only Herald post capacity', async () => {
-    const base = launchConfig('C-13', 'ring', 'keeper');
-    const heavy = launchConfig('C-13', 'ring', 'herald');
+  it('Ar-40 heavy Herald doubles only Herald post capacity', async () => {
+    const base = launchConfig('Ar-40', 'ring', 'keeper');
+    const heavy = launchConfig('Ar-40', 'ring', 'herald');
     expect(heavy.postsPerHour).toBe(2 * base.postsPerHour);
     expect(heavy.repliesPerHour).toBe(base.repliesPerHour / 2);
-    expect(heavy.capacity.keeper).toEqual(launchConfig('C-12', 'ring').capacity.keeper);
+    expect(heavy.capacity.keeper).toEqual(launchConfig('Ar-36', 'ring').capacity.keeper);
 
     const count = async (cfg: LaunchConfig) => {
       const { h, herald } = await deployed(cfg);
       for (let i = 0; i < 30; i++) await herald.loopPost([`tick ${i}`]);
       return h.bus.ofKind('post.published').filter((p) => p.payload.kind === 'post').length;
     };
-    const plain = await count(launchConfig('C-12', 'ring'));
+    const plain = await count(launchConfig('Ar-36', 'ring'));
     const doubled = await count(heavy);
-    expect(plain).toBe(launchConfig('C-12', 'ring').postsPerHour);
+    expect(plain).toBe(launchConfig('Ar-36', 'ring').postsPerHour);
     expect(doubled).toBe(2 * plain);
   });
 });

@@ -3,7 +3,7 @@
  * ISOTOPE CHAMBER object: circular frosted pedestal with a glowing base ring;
  * the nucleus as a point cloud (6 proton clusters on a hexagon, 5-8 neutron
  * clusters inside). Switching isotope flows neutrons in/out through the
- * pedestal. Unstable isotopes shimmer. On C-13 the extra neutron hovers and
+ * pedestal. Unstable isotopes shimmer. On Ar-40 the extra neutron hovers and
  * can be dragged onto a proton.
  */
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
@@ -20,7 +20,7 @@ import {
   Vector3,
   type Points,
 } from 'three';
-import { AGENT_IDS, ISOTOPES, type AgentId, type IsotopeId } from '@carbon/core/contracts';
+import { AGENT_IDS, ISOTOPES, type AgentId, type IsotopeId } from '@argon/core/contracts';
 import type { LeaderAnchor } from '../hud/leaders.js';
 import { COLORS, MAX_CLUSTERS, createClusterMaterial, createFrostMaterial } from './materials.js';
 import type { MutableNumber } from './Molecule.js';
@@ -45,7 +45,7 @@ export const NUC_CENTER_Y = PED_TOP + (PROTON_R + 0.2) * NUC_SCALE + 0.12;
 const NUC_LIFT = NUC_CENTER_Y - NUC_Y * NUC_SCALE;
 /** Where neutrons flow to when they leave: inside the pedestal, below its top (nucleus space). */
 const OUT_Y = (PED_TOP - 0.35 - NUC_LIFT) / NUC_SCALE;
-const EXTRA = 12; // cluster index of the 7th neutron (C-13's extra / C-14's first extra)
+const EXTRA = 12; // cluster index of the 7th shown neutron (Ar-40's heavy neutron)
 
 const noRaycast = () => undefined;
 
@@ -56,7 +56,7 @@ function seeded(i: number): number {
 
 /** Pure: target centre, alpha and scale of each cluster for an isotope. Exported for tests. */
 export function chamberTargets(isotope: IsotopeId, heavyAgent: AgentId | null): { center: [number, number, number]; alpha: number; scale: number }[] {
-  const n = ISOTOPES[isotope].neutrons;
+  const n = ISOTOPES[isotope].shownNeutrons;
   const out: { center: [number, number, number]; alpha: number; scale: number }[] = [];
   for (let i = 0; i < 6; i++) {
     const a = Math.PI / 6 + (i * Math.PI) / 3;
@@ -69,7 +69,7 @@ export function chamberTargets(isotope: IsotopeId, heavyAgent: AgentId | null): 
     if (k < 6) {
       const a = (k * Math.PI) / 3;
       c = [Math.cos(a) * 0.3, NUC_Y + (k % 2 ? 0.14 : -0.14), Math.sin(a) * 0.3];
-    } else if (k === 6 && isotope === 'C-13') {
+    } else if (k === 6 && isotope === 'Ar-40') {
       if (heavyAgent) {
         const i = AGENT_IDS.indexOf(heavyAgent);
         const a = Math.PI / 6 + (i * Math.PI) / 3;
@@ -96,7 +96,7 @@ export function ChamberObject({
   isotope: IsotopeId;
   heavyAgent: AgentId | null;
   visibility?: MutableNumber;
-  /** When set (C-13), the extra neutron is draggable onto a proton. */
+  /** When set (Ar-40), the extra neutron is draggable onto a proton. */
   onHeavyDrop?: (agent: AgentId) => void;
   anchors?: Partial<Record<AgentId | 'pedestal' | 'extra', LeaderAnchor>>;
   anchorFade?: MutableNumber;
@@ -151,7 +151,7 @@ export function ChamberObject({
     const handleGeo = new SphereGeometry(0.38, 12, 8);
     const hitGeo = new SphereGeometry(0.3, 10, 6);
     const handleMat = createFrostMaterial(kit.shared, { opacity: 0, transparent: true });
-    const targets = chamberTargets('C-12', null).map((t) => ({ ...t, center: new Vector3(...t.center) }));
+    const targets = chamberTargets('Ar-36', null).map((t) => ({ ...t, center: new Vector3(...t.center) }));
     return { geo, mat, pedestalGeo, pedestalMat, ringGeo, ringMat, haloGeo, haloMat, handleGeo, handleMat, hitGeo, targets };
   }, [kit.shared, pointsPerCluster]);
 
@@ -191,7 +191,7 @@ export function ChamberObject({
   }, [isotope, heavyAgent, res]);
 
   const drag = useRef({ active: false, moved: 0, pos: new Vector3(), plane: new Plane(new Vector3(0, 0, 1), 0), hit: new Vector3() });
-  const canDrag = isotope === 'C-13' && !!onHeavyDrop;
+  const canDrag = isotope === 'Ar-40' && !!onHeavyDrop;
 
   // Touch: while the neutron is held, the finger drags it instead of scrolling the page.
   useEffect(() => {
@@ -252,7 +252,7 @@ export function ChamberObject({
     if (!canDrag) return protonHandlers[i]!.onClick(e);
     e.stopPropagation();
     onHeavyDrop?.(agent);
-    // C-13: the tap gives this agent the extra neutron, then shows what that means for it
+    // Ar-40: the tap gives this agent the extra neutron, then shows what that means for it
     kit.inspect?.open({ kind: 'agent', agent });
   };
 
@@ -274,10 +274,10 @@ export function ChamberObject({
       const c = u.uCenters.value[i]!;
       if (i === EXTRA && drag.current.active) c.lerp(drag.current.pos, 0.5);
       else c.lerp(tg.center, k);
-      if (i === EXTRA && isotope === 'C-13' && !heavyAgent && !drag.current.active) c.y = tg.center.y + 0.06 * Math.sin(t * 1.4);
+      if (i === EXTRA && isotope === 'Ar-40' && !heavyAgent && !drag.current.active) c.y = tg.center.y + 0.06 * Math.sin(t * 1.4);
       u.uAlphas.value[i] = u.uAlphas.value[i]! + (tg.alpha * vis - u.uAlphas.value[i]!) * k;
       u.uScales.value[i] = u.uScales.value[i]! + (tg.scale - u.uScales.value[i]!) * k;
-      u.uShimmer.value[i] = unstable ? 0.7 : i === EXTRA && isotope === 'C-13' ? 0.25 : 0;
+      u.uShimmer.value[i] = unstable ? 0.7 : i === EXTRA && isotope === 'Ar-40' ? 0.25 : 0;
     }
     res.pedestalMat.uniforms.uOpacity.value = 1;
     res.ringMat.uniforms.uGlow.value = 0.9 + 0.1 * Math.sin(t * 1.3);
@@ -312,7 +312,7 @@ export function ChamberObject({
       }
       if (anchors.extra) {
         anchors.extra.world.copy(u.uCenters.value[EXTRA]!).applyMatrix4(nm);
-        anchors.extra.opacity = isotope === 'C-13' ? f : 0;
+        anchors.extra.opacity = isotope === 'Ar-40' ? f : 0;
       }
     }
   });

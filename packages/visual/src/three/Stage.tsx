@@ -1,6 +1,6 @@
 'use client';
 /**
- * The canvas every Carbon 3D view renders through: one WebGL renderer per
+ * The canvas every Argon 3D view renders through: one WebGL renderer per
  * page (the story uses exactly one for all ten chapters), the merged post
  * pass, the frame driver (shared time, quality ladder sampling) and the HUD
  * leader projector.
@@ -13,7 +13,7 @@ import { PALETTE, hexToRgb01 } from '../tokens.js';
 import type { LeaderRegistry } from '../hud/leaders.js';
 import { settingsFor, useQualityLevel, type QualityStore } from '../quality/store.js';
 import { createSharedUniforms, type SharedUniforms } from './materials.js';
-import { CarbonPostEffect, createPostParams, type PostParams } from './post.js';
+import { ArgonPostEffect, createPostParams, type PostParams } from './post.js';
 import type { InspectApi } from './inspect.js';
 
 export interface Kit {
@@ -30,7 +30,7 @@ const KitContext = createContext<Kit | null>(null);
 
 export function useKit(): Kit {
   const k = useContext(KitContext);
-  if (!k) throw new Error('Carbon 3D objects must render inside <Stage>');
+  if (!k) throw new Error('Argon 3D objects must render inside <Stage>');
   return k;
 }
 
@@ -78,8 +78,8 @@ function useWebGL(): boolean | null {
  */
 function NoWebGL({ className, ariaLabel }: { className?: string; ariaLabel?: string }) {
   return (
-    <div className={`${className ?? 'carbon-canvas'} carbon-canvas--nogl`} role="img" aria-label={ariaLabel} data-testid="no-webgl">
-      <span className="carbon-hud__meta carbon-nogl__note">{'// 3D view unavailable on this device. Readouts are unaffected.'}</span>
+    <div className={`${className ?? 'argon-canvas'} argon-canvas--nogl`} role="img" aria-label={ariaLabel} data-testid="no-webgl">
+      <span className="argon-hud__meta argon-nogl__note">{'// 3D view unavailable on this device. Readouts are unaffected.'}</span>
     </div>
   );
 }
@@ -91,7 +91,7 @@ class CanvasBoundary extends Component<{ fallback: ReactNode; children: ReactNod
   }
   override componentDidCatch(error: unknown, _info: ErrorInfo): void {
     // WebGL context creation can still fail after the probe (GPU blocklist, lost context).
-    if (typeof console !== 'undefined') console.warn('[carbon/visual] 3D disabled:', error instanceof Error ? error.message : error);
+    if (typeof console !== 'undefined') console.warn('[argon/visual] 3D disabled:', error instanceof Error ? error.message : error);
   }
   override render(): ReactNode {
     return this.state.failed ? this.props.fallback : this.props.children;
@@ -133,12 +133,12 @@ export function Stage({
   shared.uMotion.value = reducedMotion ? 0 : 1;
 
   const webgl = useWebGL();
-  if (webgl === null) return <div className={className ?? 'carbon-canvas'} role="img" aria-label={ariaLabel} />;
+  if (webgl === null) return <div className={className ?? 'argon-canvas'} role="img" aria-label={ariaLabel} />;
   if (!webgl) return <NoWebGL className={className} ariaLabel={ariaLabel} />;
 
   return (
     <CanvasBoundary fallback={<NoWebGL className={className} ariaLabel={ariaLabel} />}>
-    <div className={className ?? 'carbon-canvas'} role="img" aria-label={ariaLabel}>
+    <div className={className ?? 'argon-canvas'} role="img" aria-label={ariaLabel}>
       <Canvas
         dpr={dpr}
         linear
@@ -325,7 +325,7 @@ function easePointer(kit: Kit, t: { x: number; y: number; active: boolean; moved
  * and leak passes on every chapter change).
  */
 const Post = memo(function Post({ kit }: { kit: Kit }) {
-  const effect = useMemo(() => new CarbonPostEffect(kit.post, () => kit.quality.settings), [kit.post, kit.quality]);
+  const effect = useMemo(() => new ArgonPostEffect(kit.post, () => kit.quality.settings), [kit.post, kit.quality]);
   useEffect(() => () => effect.dispose(), [effect]);
   // Half-float buffers band less in the fog gradients; fall back to bytes where unsupported.
   const gl = useThree((s) => s.gl);

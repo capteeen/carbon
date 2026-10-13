@@ -9,7 +9,7 @@
  * The SSE `id:` is the event's seq, so a reconnecting EventSource sends it back as
  * Last-Event-ID and the stream resumes from Postgres with no gaps or duplicates.
  */
-import type { CarbonEvent } from '../contracts.js';
+import type { ArgonEvent } from '../contracts.js';
 import type { ResumableEventBus } from './pg-bus.js';
 
 export const SSE_HEADERS: Record<string, string> = {
@@ -34,7 +34,7 @@ export interface SseOptions {
   signal?: AbortSignal;
 }
 
-export function formatSse(e: CarbonEvent): string {
+export function formatSse(e: ArgonEvent): string {
   // JSON.stringify never emits raw newlines, so one data line is always valid.
   return `id: ${e.seq}\nevent: ${e.kind}\ndata: ${JSON.stringify(e)}\n\n`;
 }

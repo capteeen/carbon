@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Keypair, PublicKey, type AccountInfo } from '@solana/web3.js';
 import { AccountLayout, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import BN from 'bn.js';
-import { launchConfig, type DecayRule } from '@carbon/core';
+import { launchConfig, type DecayRule } from '@argon/core';
 import { daughterName, verifyAllocationProof } from '@qsd/protocol';
 import { pumpSdk } from '../src/sdk.js';
 import { decodePumpIx, PUMP_PROGRAM_ID } from '../src/programs.js';
@@ -20,22 +20,22 @@ import { fixtureGlobal } from './fixtures/pump.js';
 const { GLOBAL_PDA, bondingCurvePda } = pumpSdk;
 const MIN = 60_000;
 const DAY = 24 * 60 * MIN;
-const QUIET = launchConfig('C-11', 'ring').decay;
-const CLOCK = launchConfig('C-14', 'ring').decay;
+const QUIET = launchConfig('Ar-41', 'ring').decay;
+const CLOCK = launchConfig('Ar-39', 'ring').decay;
 
 describe('decay timing (deterministic)', () => {
   const born = 1_800_000_000_000;
-  it('C-11 collapses 20 minutes after the last trade; a new trade resets it', () => {
+  it('Ar-41 collapses 20 minutes after the last trade; a new trade resets it', () => {
     expect(QUIET).toEqual({ kind: 'quiet', quietSec: 1200 });
     expect(collapseAtMs(QUIET, born, null)).toBe(born + 20 * MIN);
     expect(collapseAtMs(QUIET, born, born + 5 * MIN)).toBe(born + 25 * MIN);
     const r = decayReadout(QUIET, born, born + 5 * MIN, born + 15 * MIN);
     expect(r.remainingMs).toBe(10 * MIN);
     expect(r.progress).toBeCloseTo(0.5);
-    expect(r.halfLifeCurve).toBeCloseTo(1 - 2 ** (-600 / 1224), 6);
+    expect(r.halfLifeCurve).toBeCloseTo(1 - 2 ** (-600 / 6577), 6);
     expect(decayReadout(QUIET, born, born + 5 * MIN, born + 26 * MIN)).toMatchObject({ remainingMs: 0, progress: 1 });
   });
-  it('C-14 collapses exactly 7 days after birth, whatever the trading', () => {
+  it('Ar-39 collapses exactly 7 days after birth, whatever the trading', () => {
     expect(CLOCK).toEqual({ kind: 'clock', clockSec: 604_800 });
     expect(collapseAtMs(CLOCK, born, born + 6 * DAY)).toBe(born + 7 * DAY);
     const r = decayReadout(CLOCK, born, null, born + 3.5 * DAY);
@@ -105,12 +105,12 @@ describe('chain reads', () => {
     const mint = Keypair.generate().publicKey.toBase58();
     await expect(lastTradeAt(unreachableRpc(), mint)).rejects.toBeInstanceOf(ChainUnavailableError);
     await expect(takeHolderSnapshot(unreachableRpc(), { mint, collapseAt: 1, quietPeriodStart: 1 })).rejects.toBeInstanceOf(ChainUnavailableError);
-    await expect(searchCoins(down, 'https://api', 'carbon')).rejects.toBeInstanceOf(ChainUnavailableError);
+    await expect(searchCoins(down, 'https://api', 'argon')).rejects.toBeInstanceOf(ChainUnavailableError);
     await expect(walletHistory(unreachableRpc(), down, 'https://api', mint)).rejects.toBeInstanceOf(ChainUnavailableError);
     const http500 = async () => new Response('x', { status: 500 });
-    await expect(searchCoins(http500, 'https://api', 'carbon')).rejects.toThrow(/HTTP 500/);
+    await expect(searchCoins(http500, 'https://api', 'argon')).rejects.toThrow(/HTTP 500/);
     const badShape = async () => Response.json({ nope: 1 });
-    await expect(searchCoins(badShape, 'https://api', 'carbon')).rejects.toThrow(/unexpected response shape/);
+    await expect(searchCoins(badShape, 'https://api', 'argon')).rejects.toThrow(/unexpected response shape/);
   });
 
   it('parses coin search rows and wallet history from fixture responses', async () => {
@@ -118,10 +118,10 @@ describe('chain reads', () => {
     const urls: string[] = [];
     const api = async (url: string) => {
       urls.push(url);
-      return url.includes('/coins/search') ? Response.json([{ mint: m, name: 'Carbon', symbol: 'C', created_timestamp: 5 }]) : Response.json([{ mint: m }, { mint: m }]);
+      return url.includes('/coins/search') ? Response.json([{ mint: m, name: 'Argon', symbol: 'C', created_timestamp: 5 }]) : Response.json([{ mint: m }, { mint: m }]);
     };
-    expect(await searchCoins(api, 'https://api', ' carbon ')).toEqual([{ mint: m, name: 'Carbon', symbol: 'C', createdAt: 5 }]);
-    expect(urls[0]).toContain('searchTerm=carbon');
+    expect(await searchCoins(api, 'https://api', ' argon ')).toEqual([{ mint: m, name: 'Argon', symbol: 'C', createdAt: 5 }]);
+    expect(urls[0]).toContain('searchTerm=argon');
     const chain = new FakeChain();
     const w = Keypair.generate().publicKey;
     chain.signatures.set(w.toBase58(), [
@@ -143,7 +143,7 @@ describe('metadata upload (Pinata)', () => {
       return Response.json({ data: { cid: cids[i++] } });
     };
     const up = new PinataUploader(() => 'jwt', 'https://ipfs.io/ipfs', f);
-    const r = await up.uploadMetadata({ name: 'Carbon·2', symbol: 'C', description: 'd', image: png });
+    const r = await up.uploadMetadata({ name: 'Argon·2', symbol: 'C', description: 'd', image: png });
     expect(r).toEqual({ imageUri: `https://ipfs.io/ipfs/${cids[0]}`, metadataUri: `https://ipfs.io/ipfs/${cids[1]}` });
     expect(seen.map((s) => s.name)).toEqual(['image.png', 'metadata.json']);
     expect(seen[0]!.auth).toBe('Bearer jwt');
@@ -176,13 +176,13 @@ describe('DecayWatcher: collapse → snapshot → daughter → allocation → ai
     chain.onTx = (_tx, ixs) => {
       const create = ixs.map((ix) => decodePumpIx(ix)).find((d) => d?.name === 'createV2');
       if (create) {
-        expect(create.data['name']).toBe(daughterName('Carbon', 2));
+        expect(create.data['name']).toBe(daughterName('Argon', 2));
         return { postTokenBalances: [{ accountIndex: 0, mint: create.account('mint').toBase58(), owner: keys.crank.publicKey.toBase58(), amount: DAUGHTER_UNITS }] };
       }
       if (ixs.some((ix) => ix.programId.equals(TOKEN_2022_PROGRAM_ID)) && ++airdropSends === 2) chain.faults.throwAfterSend = 1; // kill right after the 2nd airdrop lands
     };
     const pinata = async () => Response.json({ data: { cid: 'bafkreidaughterdaughterdaughterdaughterdaughterdaugh' } });
-    const client = makeClient({ env: testEnv(keys, { CARBON_FEE_MODE: 'wallet' }), rpc: chain.rpc(), db, fetch: pinata, config: launchConfig('C-11', 'ring') });
+    const client = makeClient({ env: testEnv(keys, { ARGON_FEE_MODE: 'wallet' }), rpc: chain.rpc(), db, fetch: pinata, config: launchConfig('Ar-41', 'ring') });
 
     const mother = Keypair.generate().publicKey;
     const bornAtMs = 1_800_000_000_000;
@@ -191,11 +191,11 @@ describe('DecayWatcher: collapse → snapshot → daughter → allocation → ai
     holder(chain, mother, holders[0]!, 600n, 1_800_000_050);
     holder(chain, mother, holders[1]!, 300n, 1_800_000_100);
     holder(chain, mother, holders[2]!, 100n, 1_800_000_400); // acquired after the last trade: not held through the quiet period
-    holder(chain, mother, keys.crank.publicKey, 5n, 1_800_000_010); // Carbon's own wallet: excluded
+    holder(chain, mother, keys.crank.publicKey, 5n, 1_800_000_010); // Argon's own wallet: excluded
 
     let now = bornAtMs + 24 * MIN; // 19 minutes after the last trade
     const watcher = new DecayWatcher({ client, db, now: () => now });
-    const target: DecayTarget = { launchId: 'M1', ca: mother.toBase58(), rule: QUIET, bornAtMs, name: 'Carbon', symbol: 'CBN', description: 'mother', imageUri: 'https://ipfs.io/ipfs/img', launcherWallet: Keypair.generate().publicKey.toBase58(), generation: 1, devBuySol: 0.25 };
+    const target: DecayTarget = { launchId: 'M1', ca: mother.toBase58(), rule: QUIET, bornAtMs, name: 'Argon', symbol: 'CBN', description: 'mother', imageUri: 'https://ipfs.io/ipfs/img', launcherWallet: Keypair.generate().publicKey.toBase58(), generation: 1, devBuySol: 0.25 };
 
     let r = await watcher.tick(target);
     expect(r.state).toBe('watching');

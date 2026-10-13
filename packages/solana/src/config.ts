@@ -1,6 +1,6 @@
 /**
- * Environment for @carbon/solana, read once. Devnet by default; mainnet only
- * when CARBON_NETWORK=mainnet-beta AND CARBON_MAINNET_ENABLED=true.
+ * Environment for @argon/solana, read once. Devnet by default; mainnet only
+ * when ARGON_NETWORK=mainnet-beta AND ARGON_MAINNET_ENABLED=true.
  *
  * Secrets (vault key, crank key, buyback key, Pinata JWT) are stored as
  * non-enumerable properties, so JSON.stringify / util.inspect / spreads of the
@@ -16,21 +16,21 @@ export type FeeMode = 'native' | 'wallet';
 export type EnvLike = Record<string, string | undefined>;
 
 export const ENV = {
-  NETWORK: 'CARBON_NETWORK',
-  MAINNET_ENABLED: 'CARBON_MAINNET_ENABLED',
-  RPC_URL: 'CARBON_RPC_URL',
-  FEE_MODE: 'CARBON_FEE_MODE',
-  VAULT_KEY: 'CARBON_VAULT_KEY',
-  BUYBACK_WALLET: 'CARBON_BUYBACK_WALLET',
-  TREASURY_WALLET: 'CARBON_TREASURY_WALLET',
-  CRANK_KEY: 'CARBON_CRANK_KEY',
-  BUYBACK_KEY: 'CARBON_BUYBACK_KEY',
-  CARBON_MINT: 'CARBON_MINT',
+  NETWORK: 'ARGON_NETWORK',
+  MAINNET_ENABLED: 'ARGON_MAINNET_ENABLED',
+  RPC_URL: 'ARGON_RPC_URL',
+  FEE_MODE: 'ARGON_FEE_MODE',
+  VAULT_KEY: 'ARGON_VAULT_KEY',
+  BUYBACK_WALLET: 'ARGON_BUYBACK_WALLET',
+  TREASURY_WALLET: 'ARGON_TREASURY_WALLET',
+  CRANK_KEY: 'ARGON_CRANK_KEY',
+  BUYBACK_KEY: 'ARGON_BUYBACK_KEY',
+  ARGON_MINT: 'ARGON_MINT',
   PINATA_JWT: 'PINATA_JWT',
-  LOOKUP_TABLE: 'CARBON_LOOKUP_TABLE',
+  LOOKUP_TABLE: 'ARGON_LOOKUP_TABLE',
   PUMP_API_URL: 'PUMP_FRONTEND_API_URL',
-  IPFS_GATEWAY: 'CARBON_IPFS_GATEWAY',
-  PRIORITY_FEE: 'CARBON_PRIORITY_FEE_MICROLAMPORTS',
+  IPFS_GATEWAY: 'ARGON_IPFS_GATEWAY',
+  PRIORITY_FEE: 'ARGON_PRIORITY_FEE_MICROLAMPORTS',
 } as const;
 
 export const DEFAULT_RPC_URL: Record<Network, string> = {
@@ -46,8 +46,8 @@ export interface SolanaConfig {
   readonly feeMode: FeeMode;
   readonly buybackWallet: PublicKey;
   readonly treasuryWallet: PublicKey;
-  /** $CARBON mint; required only by buyCarbon. */
-  readonly carbonMint: PublicKey | null;
+  /** $ARGON mint; required only by buyArgon. */
+  readonly argonMint: PublicKey | null;
   /** Optional address lookup table for the launch transaction. */
   readonly lookupTable: PublicKey | null;
   readonly pumpApiUrl: string;
@@ -73,11 +73,11 @@ export class SolanaSecrets {
     return `SolanaSecrets ${JSON.stringify(this.toJSON())}`;
   }
   requireCrank(): Keypair {
-    if (!this.crankKey) throw new ChainConfigError(`${ENV.CRANK_KEY} is required for this operation (Carbon fee payer for cranks, splits and decay)`);
+    if (!this.crankKey) throw new ChainConfigError(`${ENV.CRANK_KEY} is required for this operation (Argon fee payer for cranks, splits and decay)`);
     return this.crankKey;
   }
   requireBuyback(): Keypair {
-    if (!this.buybackKey) throw new ChainConfigError(`${ENV.BUYBACK_KEY} is required for $CARBON buybacks`);
+    if (!this.buybackKey) throw new ChainConfigError(`${ENV.BUYBACK_KEY} is required for $ARGON buybacks`);
     return this.buybackKey;
   }
   requirePinata(): string {
@@ -145,7 +145,7 @@ export function parseSecretKey(raw: string, name: string): Keypair {
 /**
  * The two owner flags, read the same way everywhere (this config, the client's
  * re-check, the worker seam and the web display): EXACT values, never trimmed or
- * case-folded. An unset or empty CARBON_NETWORK means devnet; anything else must be
+ * case-folded. An unset or empty ARGON_NETWORK means devnet; anything else must be
  * exactly 'devnet' or 'mainnet-beta'. Mainnet is enabled only by exactly 'true'
  * (AG-018: a padded " true" is refused here as it is in the worker and the web app).
  */
@@ -186,7 +186,7 @@ export function assertGenesisMatches(network: Network, genesisHash: string): Net
 
 /**
  * The network guard. Throws NetworkGuardError unless the network is devnet,
- * or mainnet-beta with CARBON_MAINNET_ENABLED=true (exact). A devnet config must
+ * or mainnet-beta with ARGON_MAINNET_ENABLED=true (exact). A devnet config must
  * point at an RPC whose URL names devnet, and a mainnet config at one that does
  * not name devnet/testnet. These URL checks are only a fast first filter: the
  * client then verifies the cluster by genesis hash before anything is built or
@@ -248,7 +248,7 @@ export function loadSolanaConfig(env: EnvLike = process.env): SolanaConfig {
     feeMode: feeModeRaw,
     buybackWallet,
     treasuryWallet,
-    carbonMint: pubkey(env, ENV.CARBON_MINT, false),
+    argonMint: pubkey(env, ENV.ARGON_MINT, false),
     lookupTable: pubkey(env, ENV.LOOKUP_TABLE, false),
     pumpApiUrl: (opt(env, ENV.PUMP_API_URL) ?? DEFAULT_PUMP_API_URL).replace(/\/+$/, ''),
     ipfsGateway: opt(env, ENV.IPFS_GATEWAY) ?? DEFAULT_IPFS_GATEWAY,
@@ -266,7 +266,7 @@ export function describeConfig(cfg: SolanaConfig): Record<string, unknown> {
     feeMode: cfg.feeMode,
     buybackWallet: cfg.buybackWallet.toBase58(),
     treasuryWallet: cfg.treasuryWallet.toBase58(),
-    carbonMint: cfg.carbonMint?.toBase58() ?? null,
+    argonMint: cfg.argonMint?.toBase58() ?? null,
     lookupTable: cfg.lookupTable?.toBase58() ?? null,
     secrets: cfg.secrets.toJSON(),
   };

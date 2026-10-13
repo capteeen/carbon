@@ -1,10 +1,10 @@
 /**
- * @carbon/visual: the 3D scroll story and live views (SPEC §5).
- * Import '@carbon/visual/styles.css' once in the app layout.
+ * @argon/visual: the 3D scroll story and live views (SPEC §5).
+ * Import '@argon/visual/styles.css' once in the app layout.
  */
 
 // components
-export { CarbonStory, type CarbonStoryProps } from './story/CarbonStory.js';
+export { ArgonStory, type ArgonStoryProps } from './story/ArgonStory.js';
 export { IsotopeChamber, type IsotopeChamberProps } from './components/IsotopeChamber.js';
 export { ShapePicker, type ShapePickerProps } from './components/ShapePicker.js';
 export { LaunchScene, type LaunchSceneProps } from './components/LaunchScene.js';

@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { scoreBinding, type AgentContext, type LaunchUser, type RunnerOptions } from '@carbon/agents';
-import type { CarbonEvent, LlmProvider } from '@carbon/core';
+import { scoreBinding, type AgentContext, type LaunchUser, type RunnerOptions } from '@argon/agents';
+import type { ArgonEvent, LlmProvider } from '@argon/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PgAssetStore } from '../src/assets.js';
 import { createChainClient, launchAllowedCheck } from '../src/chain.js';
 import { WebLaunchUser } from '../src/launch-user.js';
 import { Supervisor } from '../src/supervisor.js';
 import { ApprovalAlreadyUsedError, ApprovalNotConsumedError, ApprovedTextMismatchError, consumedApprovalCheck, createWorkerX } from '../src/x.js';
-import { textHash } from '@carbon/x';
+import { textHash } from '@argon/x';
 import { WALLET, testEnv, type Env } from './helpers.js';
 
 let env: Env;
@@ -18,12 +18,12 @@ afterAll(async () => {
   await env.cleanup();
 });
 
-const created = (launchId: string, extra: Partial<CarbonEvent<'launch.created'>['payload']> = {}) =>
+const created = (launchId: string, extra: Partial<ArgonEvent<'launch.created'>['payload']> = {}) =>
   env.core.bus.append({
     launchId,
     kind: 'launch.created',
     actor: 'user',
-    payload: { line: 'a line', isotope: 'C-12', shape: 'chain', heavyAgent: null, launcherWallet: WALLET, xConnected: false, ...extra },
+    payload: { line: 'a line', isotope: 'Ar-36', shape: 'chain', heavyAgent: null, launcherWallet: WALLET, xConnected: false, ...extra },
   });
 
 describe('migrations', () => {
@@ -42,19 +42,19 @@ describe('migrations', () => {
 
 describe('AssetStore', () => {
   it('stores bytes under a content-hash name with a public, immutable URI', async () => {
-    const store = new PgAssetStore(env.core.bus.pool, 'https://carbon.test/');
+    const store = new PgAssetStore(env.core.bus.pool, 'https://argon.test/');
     const bytes = new TextEncoder().encode('<html>hi</html>');
     const a = await store.put('L1', 'site-x.html', bytes, 'text/html; charset=utf-8');
     const b = await store.put('L1', 'site-x.html', bytes, 'text/html; charset=utf-8');
     expect(a.uri).toBe(b.uri);
-    expect(a.uri).toMatch(/^https:\/\/carbon\.test\/api\/assets\/L1\/[0-9a-f]{16}-site-x\.html$/);
+    expect(a.uri).toMatch(/^https:\/\/argon\.test\/api\/assets\/L1\/[0-9a-f]{16}-site-x\.html$/);
     const r = await env.core.bus.pool.query('SELECT bytes FROM carbon_assets WHERE launch_id = $1', ['L1']);
     expect(Buffer.from(r.rows[0].bytes).toString()).toBe('<html>hi</html>');
     await expect(store.put('L1', 'x', new Uint8Array(), 'image/png')).rejects.toThrow();
   });
 
   it('[AG-035] reads back the bytes behind its own URIs (for Sentinel), and nothing else', async () => {
-    const store = new PgAssetStore(env.core.bus.pool, 'https://carbon.test');
+    const store = new PgAssetStore(env.core.bus.pool, 'https://argon.test');
     const png = new Uint8Array([137, 80, 78, 71, 1, 2, 3]);
     const { uri } = await store.put('L2', 'logo-abc.png', png, 'image/png');
     expect(await store.read(uri)).toEqual({ bytes: png, mime: 'image/png' });
@@ -68,9 +68,9 @@ describe('approval hooks never consume (the X hook records the one post an appro
     const launchId = randomUUID();
     await created(launchId);
     const { approvals, bus } = env.core;
-    const { approvalId } = await approvals.open(launchId, 'post', { title: 't', text: 'gm carbon' }, 'herald');
+    const { approvalId } = await approvals.open(launchId, 'post', { title: 't', text: 'gm argon' }, 'herald');
     const check = consumedApprovalCheck(bus.pool);
-    const h = textHash('gm carbon');
+    const h = textHash('gm argon');
     await expect(check(launchId, approvalId, 'post', h)).rejects.toThrow(ApprovalNotConsumedError);
     await approvals.decide(approvalId, true, WALLET);
     await expect(check(launchId, approvalId, 'post', h)).rejects.toThrow(ApprovalNotConsumedError); // granted but not consumed
@@ -134,7 +134,7 @@ describe('approval hooks never consume (the X hook records the one post an appro
   it('without chain/X config the clients refuse honestly (no data)', async () => {
     const chain = createChainClient({ pool: env.core.bus.pool, bus: env.core.bus, env: {} });
     expect(chain.kind).toBe('unavailable');
-    await expect(chain.client.searchCoins('x')).rejects.toThrow(/chain unavailable|ChainUnavailable|not set|CARBON_/);
+    await expect(chain.client.searchCoins('x')).rejects.toThrow(/chain unavailable|ChainUnavailable|not set|ARGON_/);
     const x = createWorkerX(env.core.bus.pool, {});
     await expect(x.searchRecent('x')).rejects.toThrow(/X is not configured/);
     expect(await x.isConnected('L')).toBe(false);
@@ -150,7 +150,7 @@ describe('WebLaunchUser', () => {
       kind: 'scout.proposals',
       actor: 'scout',
       payload: { narratives: [{ title: 'n', names: [{ name: 'A', ticker: 'A' }, { name: 'B', ticker: 'B' }], why: 'w', sources: [] }] },
-    })) as CarbonEvent<'scout.proposals'>;
+    })) as ArgonEvent<'scout.proposals'>;
     const user = new WebLaunchUser({ pool: env.core.bus.pool, bus: env.core.bus, launchId, launcherWallet: WALLET, pollMs: 20, choiceTimeoutMs: 400 });
     const pool = env.core.bus.pool;
     const p = user.chooseNarrative(proposals);
@@ -199,7 +199,7 @@ describe('Supervisor', () => {
       llm,
       x: createWorkerX(core.bus.pool, {}),
       chain,
-      assets: new PgAssetStore(core.bus.pool, 'https://carbon.test'),
+      assets: new PgAssetStore(core.bus.pool, 'https://argon.test'),
       workerId: 'test',
       log: () => undefined,
       makeUser: () => ({}) as LaunchUser,
@@ -212,7 +212,7 @@ describe('Supervisor', () => {
               kind: 'launch.deployed',
               actor: 'treasurer',
               payload: { ca: 'Ca1111111111111111111111111111111111111111', txSig: 'sig', creatorWallet: 'Fee11111111111111111111111111111111111111', devBuySol: 0.1, network: 'devnet' },
-            })) as CarbonEvent<'launch.deployed'>;
+            })) as ArgonEvent<'launch.deployed'>;
             return { status: 'deployed' as const, deployed, announcement: null };
           }
           return { status: 'not-approved' as const };
@@ -247,12 +247,12 @@ describe('Supervisor', () => {
     const runs: string[] = [];
     const s = supervisor(runs, [], 'deployed');
     const launchId = randomUUID();
-    const c = (await created(launchId, { isotope: 'C-14', shape: 'ring' })) as CarbonEvent<'launch.created'>;
+    const c = (await created(launchId, { isotope: 'Ar-39', shape: 'ring' })) as ArgonEvent<'launch.created'>;
     await s.claimAndRun(c);
     const evs = await env.core.bus.list(launchId, { kinds: ['wallet.created', 'decay.started', 'launch.deployed'] });
     const dep = evs.find((e) => e.kind === 'launch.deployed')!;
     expect(evs.filter((e) => e.kind === 'wallet.created')).toHaveLength(1);
-    const ds = evs.find((e) => e.kind === 'decay.started') as CarbonEvent<'decay.started'>;
+    const ds = evs.find((e) => e.kind === 'decay.started') as ArgonEvent<'decay.started'>;
     expect(ds.payload).toEqual({ rule: 'clock', collapseAt: dep.ts + 7 * 24 * 3600 * 1000 });
     expect(await s.nextTickAt(c)).toBe(dep.ts + 10 * 60_000); // RING loop: 10 min after the last logged tick
     expect(s.jobs()).toContain(`tick:${launchId}`);

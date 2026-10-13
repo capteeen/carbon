@@ -19,12 +19,12 @@
  *   awaiting_approval → forging            approval.rejected for the launch approval (revise)
  *   deploying         → live               launch.deployed
  *   deploying         → failed             error
- *   live              → decaying           holders.snapshot on an unstable isotope (C-11/C-14): the decay
+ *   live              → decaying           holders.snapshot on an unstable isotope (Ar-41/Ar-39): the decay
  *                                          watcher snapshots holders when collapse is due
  *   live|decaying     → collapsed          decay.collapsed (unstable isotopes only)
  * Any other event leaves the state unchanged (recorded in `ignored` when it was a transition kind).
  */
-import { ISOTOPES, launchConfig, type CarbonEvent, type EventPayloads, type LaunchConfig } from './contracts.js';
+import { ISOTOPES, launchConfig, type ArgonEvent, type EventPayloads, type LaunchConfig } from './contracts.js';
 
 export const MOLECULE_STATES = [
   'draft',
@@ -72,7 +72,7 @@ const TRANSITION_KINDS = new Set<string>([
 ]);
 
 /** One step of the fold. Returns a new snapshot (never mutates `s`). */
-export function stepMolecule(s: MoleculeSnapshot, e: CarbonEvent): MoleculeSnapshot {
+export function stepMolecule(s: MoleculeSnapshot, e: ArgonEvent): MoleculeSnapshot {
   if (s.launchId !== null && e.launchId !== s.launchId) return s;
   const next = (state: MoleculeState, patch: Partial<MoleculeSnapshot> = {}): MoleculeSnapshot => ({
     ...s,
@@ -158,6 +158,6 @@ export function stepMolecule(s: MoleculeSnapshot, e: CarbonEvent): MoleculeSnaps
 }
 
 /** State of one launch: a pure fold over its events in seq order. */
-export function foldMolecule(events: readonly CarbonEvent[]): MoleculeSnapshot {
+export function foldMolecule(events: readonly ArgonEvent[]): MoleculeSnapshot {
   return [...events].sort((a, b) => a.seq - b.seq).reduce(stepMolecule, initialMolecule());
 }

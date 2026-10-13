@@ -1,5 +1,5 @@
 {
-  "name": "@carbon/web",
+  "name": "@argon/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,10 +13,10 @@
     "gen:how": "tsx scripts/gen-how.ts"
   },
   "dependencies": {
-    "@carbon/agents": "workspace:*",
-    "@carbon/core": "workspace:*",
-    "@carbon/visual": "workspace:*",
-    "@carbon/x": "workspace:*",
+    "@argon/agents": "workspace:*",
+    "@argon/core": "workspace:*",
+    "@argon/visual": "workspace:*",
+    "@argon/x": "workspace:*",
     "@noble/curves": "2.3.0",
     "@solana/wallet-adapter-base": "0.9.27",
     "@solana/wallet-adapter-react": "0.15.39",

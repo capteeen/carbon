@@ -4,7 +4,7 @@
  * model cites that we did not hand it (X) or that grounding did not return
  * (web) is dropped; a narrative with no surviving source is dropped.
  */
-import type { CarbonEvent, XPost } from '@carbon/core';
+import type { ArgonEvent, XPost } from '@argon/core';
 import { type AgentContext, clip, emit, emitError, errMsg, gate, think } from '../context.js';
 import { arr, llmJson, normalizeName, normalizeTicker, obj, optStr, str } from '../json.js';
 import { SCOUT_PROMPT, SCOUT_SCHEMA, SCOUT_SYSTEM, fill } from '../prompts/index.js';
@@ -41,7 +41,7 @@ export function buildQuery(line: string): string {
 export class Scout {
   constructor(private readonly ctx: AgentContext) {}
 
-  async propose(line: string): Promise<CarbonEvent<'scout.proposals'>> {
+  async propose(line: string): Promise<ArgonEvent<'scout.proposals'>> {
     const ctx = this.ctx;
     await gate(ctx, 'scout', 'research live narratives on X and the web', { line });
 

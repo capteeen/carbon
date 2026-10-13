@@ -37,5 +37,5 @@ export class ServerClock {
 /** The page-wide clock (one server per page). */
 export const serverClock = new ServerClock();
 
-/** SSE event name carrying the server's Date.now() (see @carbon/core/sse). */
+/** SSE event name carrying the server's Date.now() (see @argon/core/sse). */
 export const SERVER_TIME_EVENT = 'server-time';

@@ -4,7 +4,7 @@
  * (every action gated) and after the kill switch. Each signed request is
  * single-use (a replayed signature is refused: AG-016).
  */
-import { AUTOPILOT_CLASSES, type AutopilotClass } from '@carbon/core/contracts';
+import { AUTOPILOT_CLASSES, type AutopilotClass } from '@argon/core/contracts';
 import { isFresh, messages } from '@/lib/signing';
 import { getCore } from '@/server/core';
 import { consumeSignedNonce } from '@/server/nonces';

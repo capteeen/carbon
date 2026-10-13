@@ -1,5 +1,5 @@
 /**
- * Carbon shared contracts. Every package builds against these types.
+ * Argon shared contracts. Every package builds against these types.
  * Written by the integrator; change only with the integrator's review.
  *
  * Nothing in here is data: it is shapes and the ONE launch config table
@@ -21,7 +21,7 @@ export const AGENT_ROLES: Record<AgentId, string> = {
   forge: 'Creates the coin: name, ticker, lore, logo, banner, site; prepares the pump.fun deploy',
   herald: "Drafts posts and, after approval, posts from the user's connected X account",
   keeper: 'Community: replies, holder milestones, recruiting drafts',
-  treasurer: 'Per-launch fee address, fee claims, the 50/30/20 split, $CARBON buybacks, public receipts',
+  treasurer: 'Per-launch fee address, fee claims, the 50/30/20 split, $ARGON buybacks, public receipts',
   sentinel: 'Risk checks; computes the stability score; can BLOCK a launch',
 };
 
@@ -89,15 +89,15 @@ export const AGENT_DETAILS: Record<AgentId, AgentDetail> = {
   },
   treasurer: {
     does: [
-      "Sets up the launch's fee address with pump.fun native fee sharing: 50% to you, 30% to $CARBON buybacks, 20% to the treasury.",
+      "Sets up the launch's fee address with pump.fun native fee sharing: 50% to you, 30% to $ARGON buybacks, 20% to the treasury.",
       'Builds and sends the launch transaction, including your dev buy, once you approve and Sentinel passes it.',
       'Claims fees on a schedule and publishes a receipt for every split.',
-      'Buys back $CARBON using only the 30% share.',
+      'Buys back $ARGON using only the 30% share.',
     ],
     inputs: ['Your launch approval', "Sentinel's passing score", 'Claimed creator fees'],
-    outputs: ['The launch transaction', 'Fee-split receipts', '$CARBON buyback receipts'],
+    outputs: ['The launch transaction', 'Fee-split receipts', '$ARGON buyback receipts'],
     approval: 'The launch always needs your approval. Autopilot is never available for launches.',
-    never: ['Trades anything except $CARBON buybacks and the launch’s own dev buy', 'Moves money without a receipt'],
+    never: ['Trades anything except $ARGON buybacks and the launch’s own dev buy', 'Moves money without a receipt'],
   },
   sentinel: {
     does: [
@@ -120,7 +120,8 @@ export function protonLabel(agent: AgentId): string {
 
 // ───────────────────────────── isotopes / shapes ─────────────────────────────
 
-export const ISOTOPE_IDS = ['C-11', 'C-12', 'C-13', 'C-14'] as const;
+/** Lightest to heaviest: the order the chamber and pickers show them in. */
+export const ISOTOPE_IDS = ['Ar-36', 'Ar-39', 'Ar-40', 'Ar-41'] as const;
 export type IsotopeId = (typeof ISOTOPE_IDS)[number];
 
 export const SHAPE_IDS = ['chain', 'ring', 'diamond'] as const;
@@ -129,68 +130,52 @@ export type ShapeId = (typeof SHAPE_IDS)[number];
 export type DecayRule =
   /** Stable isotope: never decays. */
   | { kind: 'none' }
-  /** C-11: collapses once `quietSec` pass with no trades on the coin. */
+  /** Ar-41: collapses once `quietSec` pass with no trades on the coin. */
   | { kind: 'quiet'; quietSec: number }
-  /** C-14: collapses at bornAt + `clockSec`, a fixed visible countdown (trades do not reset it). */
+  /** Ar-39: collapses at bornAt + `clockSec`, a fixed visible countdown (trades do not reset it). */
   | { kind: 'clock'; clockSec: number };
 
 export interface IsotopeSpec {
   id: IsotopeId;
-  label: string; // HUD label, e.g. ISOTOPE_C14
-  neutrons: 5 | 6 | 7 | 8;
+  label: string; // HUD label, e.g. ISOTOPE_AR39
+  /** Real neutron count of the argon isotope (mass number minus argon's 18 protons). */
+  neutrons: 18 | 21 | 22 | 23;
+  /**
+   * Neutrons drawn in the chamber model next to the six agent protons. The model shows
+   * the agents' core, not all 18 protons, so it draws fewer neutrons, ordered like the real ones.
+   */
+  shownNeutrons: 5 | 6 | 7 | 8;
   name: 'FLASH' | 'CORE' | 'HEAVY' | 'RADIOACTIVE';
   stable: boolean;
   behaviour: string;
   /** Multiplies the shape's base budgets. */
   budgetMultiplier: number;
   decay: DecayRule;
-  /** C-13 only: the user picks one agent whose capacity doubles. */
+  /** Ar-40 only: the user picks one agent whose capacity doubles. */
   heavyAgent: boolean;
   /** Story copy about the real isotope. Never implies the coin lasts that long. */
   realWorldNote: string;
 }
 
 export const ISOTOPES: Record<IsotopeId, IsotopeSpec> = {
-  'C-11': {
-    id: 'C-11',
-    label: 'ISOTOPE_C11',
-    neutrons: 5,
-    name: 'FLASH',
-    stable: false,
-    behaviour: 'Small budget, fast meme. Decays to a daughter after 20 min with no trades.',
-    budgetMultiplier: 0.5,
-    decay: { kind: 'quiet', quietSec: 20 * 60 },
-    heavyAgent: false,
-    realWorldNote: 'Real carbon-11 has a half-life of about 20.4 minutes.',
-  },
-  'C-12': {
-    id: 'C-12',
-    label: 'ISOTOPE_C12',
-    neutrons: 6,
+  'Ar-36': {
+    id: 'Ar-36',
+    label: 'ISOTOPE_AR36',
+    neutrons: 18,
+    shownNeutrons: 5,
     name: 'CORE',
     stable: true,
     behaviour: 'Balanced and stable. The default.',
     budgetMultiplier: 1,
     decay: { kind: 'none' },
     heavyAgent: false,
-    realWorldNote: 'Carbon-12 is stable and makes up about 99% of natural carbon.',
+    realWorldNote: 'Argon-36 is stable and makes up about 0.3% of natural argon.',
   },
-  'C-13': {
-    id: 'C-13',
-    label: 'ISOTOPE_C13',
-    neutrons: 7,
-    name: 'HEAVY',
-    stable: true,
-    behaviour: 'Stable. The extra neutron doubles the capacity of one agent you choose.',
-    budgetMultiplier: 1,
-    decay: { kind: 'none' },
-    heavyAgent: true,
-    realWorldNote: 'Carbon-13 is stable and makes up about 1% of natural carbon.',
-  },
-  'C-14': {
-    id: 'C-14',
-    label: 'ISOTOPE_C14',
-    neutrons: 8,
+  'Ar-39': {
+    id: 'Ar-39',
+    label: 'ISOTOPE_AR39',
+    neutrons: 21,
+    shownNeutrons: 6,
     name: 'RADIOACTIVE',
     stable: false,
     behaviour: 'Built-in decay to a daughter on a long, visible 7-day clock.',
@@ -198,7 +183,33 @@ export const ISOTOPES: Record<IsotopeId, IsotopeSpec> = {
     decay: { kind: 'clock', clockSec: 7 * 24 * 60 * 60 },
     heavyAgent: false,
     realWorldNote:
-      'Real carbon-14 has a half-life of about 5,730 years. That is the story, not the coin: a C-14 coin decays after 7 days.',
+      'Real argon-39 has a half-life of about 269 years. That is the story, not the coin: an Ar-39 coin decays after 7 days.',
+  },
+  'Ar-40': {
+    id: 'Ar-40',
+    label: 'ISOTOPE_AR40',
+    neutrons: 22,
+    shownNeutrons: 7,
+    name: 'HEAVY',
+    stable: true,
+    behaviour: 'Stable. A heavy neutron doubles the capacity of one agent you choose.',
+    budgetMultiplier: 1,
+    decay: { kind: 'none' },
+    heavyAgent: true,
+    realWorldNote: 'Argon-40 is stable and makes up about 99.6% of natural argon.',
+  },
+  'Ar-41': {
+    id: 'Ar-41',
+    label: 'ISOTOPE_AR41',
+    neutrons: 23,
+    shownNeutrons: 8,
+    name: 'FLASH',
+    stable: false,
+    behaviour: 'Small budget, fast meme. Decays to a daughter after 20 min with no trades.',
+    budgetMultiplier: 0.5,
+    decay: { kind: 'quiet', quietSec: 20 * 60 },
+    heavyAgent: false,
+    realWorldNote: 'Real argon-41 has a half-life of about 110 minutes. That is the story, not the coin: an Ar-41 coin decays after 20 minutes with no trades.',
   },
 };
 
@@ -218,7 +229,7 @@ export interface ShapeSpec {
   base: {
     /** SOL the launcher's wallet spends on the launch's own dev buy. */
     devBuySol: number;
-    /** Max SOL per Treasurer $CARBON buyback (funded only by the 30% fee share). */
+    /** Max SOL per Treasurer $ARGON buyback (funded only by the 30% fee share). */
     buybackSolPerTick: number;
     /** Max LLM calls per agent per hour (capacity). Heavy agent gets 2x. */
     llmCallsPerAgentHour: number;
@@ -304,7 +315,7 @@ export interface LaunchConfig {
   loopMinutes: number | null;
   devBuySol: number;
   buybackSolPerTick: number;
-  /** Per-agent capacity. Only the heavy agent (C-13) differs from the others. */
+  /** Per-agent capacity. Only the heavy agent (Ar-40) differs from the others. */
   capacity: Record<AgentId, { llmCallsPerHour: number; concurrency: number }>;
   postsPerHour: number;
   repliesPerHour: number;
@@ -345,7 +356,7 @@ export function launchConfig(isotope: IsotopeId, shape: ShapeId, heavyAgent: Age
 // ───────────────────────────── fee split ─────────────────────────────
 
 /** Basis points of every claimed creator fee. Sums to 10 000. */
-export const FEE_SPLIT_BPS = { launcher: 5000, carbonBuyback: 3000, treasury: 2000 } as const;
+export const FEE_SPLIT_BPS = { launcher: 5000, argonBuyback: 3000, treasury: 2000 } as const;
 
 // ───────────────────────────── events ─────────────────────────────
 
@@ -355,12 +366,12 @@ export const FEE_SPLIT_BPS = { launcher: 5000, carbonBuyback: 3000, treasury: 20
  * of {launchId, seq-less body}; `sig` is the ed25519 signature of `id` by the
  * signer's key. Every live visual maps to one of these.
  */
-export interface CarbonEvent<K extends EventKind = EventKind> {
+export interface ArgonEvent<K extends EventKind = EventKind> {
   /** sha256 hex of canonicalJson(EventBody). The bond hash shown on seams is id.slice(0, 8). */
   id: string;
   /** Global monotonically increasing sequence (Postgres bigserial). */
   seq: number;
-  /** Launch the event belongs to, or 'system' for global events (e.g. $CARBON buybacks). */
+  /** Launch the event belongs to, or 'system' for global events (e.g. $ARGON buybacks). */
   launchId: string;
   /** Unix milliseconds, server clock at append. */
   ts: number;
@@ -409,7 +420,7 @@ export interface EventPayloads {
   'post.published': { postId: string; url: string; text: string; approvalId: string; kind: 'post' | 'reply' };
   'fee.claimed': { claimId: string; lamports: string; txSig: string };
   'split.receipt': SplitReceipt;
-  'buyback.executed': { lamportsIn: string; carbonOut: string; txSig: string; funding: 'fee-split'; splitId: string };
+  'buyback.executed': { lamportsIn: string; argonOut: string; txSig: string; funding: 'fee-split'; splitId: string };
   'autopilot.changed': { actionClass: AutopilotClass; enabled: boolean; by: string };
   'killswitch.engaged': { by: string; reason?: string };
   'holders.snapshot': { slot: number; holderCount: number; merkleRoot?: string };
@@ -450,7 +461,7 @@ export interface SplitReceipt {
   splitId: string;
   claimId: string;
   totalLamports: string;
-  legs: { to: 'launcher' | 'carbon-buyback' | 'treasury'; address: string; lamports: string; txSig: string | null; status: 'pending' | 'sent' | 'confirmed' }[];
+  legs: { to: 'launcher' | 'argon-buyback' | 'treasury'; address: string; lamports: string; txSig: string | null; status: 'pending' | 'sent' | 'confirmed' }[];
   at: number;
 }
 
@@ -470,7 +481,7 @@ export interface Bond {
 // ───────────────────────────── footer ─────────────────────────────
 
 export const FOOTER_TEXT =
-  'Carbon does not run on a quantum computer. Agents are powered by Google Gemini; Carbon is not affiliated with or endorsed by Google. Coins launch on pump.fun (Solana). A meme, not an investment.';
+  'Argon does not run on a quantum computer. Agents are powered by Google Gemini; Argon is not affiliated with or endorsed by Google. Coins launch on pump.fun (Solana). A meme, not an investment.';
 
 export const EMPTY_READOUT = '--.--';
 export const EMPTY_GRAPHENE = 'No molecules yet. Launch the first one.';

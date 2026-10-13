@@ -9,11 +9,11 @@ const browser = await launch();
 try {
   const { page, errors } = await phonePage(browser, { dpr: 1 });
   await page.goto(`${url}?view=story&smooth=0${fixture ? '&fixture=1' : ''}`);
-  await page.waitForFunction(() => window.__carbon?.firstFrameAt != null);
+  await page.waitForFunction(() => window.__argon?.firstFrameAt != null);
   await scrollToProgress(page, p);
   await page.waitForTimeout(800);
   const out = await page.evaluate(() => {
-    const lines = [...document.querySelectorAll('.carbon-leaders line')].map((l) => ({
+    const lines = [...document.querySelectorAll('.argon-leaders line')].map((l) => ({
       id: l.getAttribute('data-leader'),
       o: (l as SVGLineElement).style.opacity,
       x1: l.getAttribute('x1'),
@@ -21,9 +21,9 @@ try {
       x2: l.getAttribute('x2'),
       y2: l.getAttribute('y2'),
     }));
-    const layers = [...document.querySelectorAll('.carbon-chapter')].map((s) => (s as HTMLElement).dataset.fade);
+    const layers = [...document.querySelectorAll('.argon-chapter')].map((s) => (s as HTMLElement).dataset.fade);
     const pin = document.querySelector('[data-testid=story-pin]') as HTMLElement;
-    return { lines: lines.filter((l) => l.o !== '0'), layers, chapter3d: pin.dataset.chapter3d, chapterHud: pin.dataset.chapterHud, progress: window.__carbon.store.get() };
+    return { lines: lines.filter((l) => l.o !== '0'), layers, chapter3d: pin.dataset.chapter3d, chapterHud: pin.dataset.chapterHud, progress: window.__argon.store.get() };
   });
   console.log(JSON.stringify({ ...out, errors }, null, 1));
 } finally {

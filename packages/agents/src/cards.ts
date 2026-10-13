@@ -1,4 +1,4 @@
-import type { AgentId } from '@carbon/core';
+import type { AgentId } from '@argon/core';
 
 /**
  * Pre-drafted approval card (the `draft` of approval.requested). Everything the

@@ -7,7 +7,7 @@
  * Every step after "create" is driven by the launch's real events over SSE; the
  * page never shows a step the log has not reached.
  */
-import { EMPTY_READOUT, ISOTOPES, type AgentId, type IsotopeId, type ShapeId } from '@carbon/core/contracts';
+import { EMPTY_READOUT, ISOTOPES, type AgentId, type IsotopeId, type ShapeId } from '@argon/core/contracts';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { postJson } from '@/lib/api';
@@ -30,7 +30,7 @@ interface Draft {
 }
 
 function newDraft(): Draft {
-  return { launchId: crypto.randomUUID(), line: '', isotope: 'C-12', heavyAgent: null, shape: 'chain', created: false };
+  return { launchId: crypto.randomUUID(), line: '', isotope: 'Ar-36', heavyAgent: null, shape: 'chain', created: false };
 }
 
 function loadDraft(): Draft {
@@ -177,7 +177,7 @@ export function LaunchFlow() {
         <p className="hud-label" style={{ marginTop: 24 }}>
           ////// 02 X (OPTIONAL)
         </p>
-        <p className="meta">// Connect your project&apos;s own X account so Herald can post after you approve. Carbon never creates accounts.</p>
+        <p className="meta">// Connect your project&apos;s own X account so Herald can post after you approve. Argon never creates accounts.</p>
         <p className="meta">// Your wallet signs the connect request; the X account only counts for a launch started by the same wallet.</p>
         <button type="button" className="hud-label" disabled={!connected || !address || busy} onClick={() => void connectX()}>
           [ CONNECT X ]
@@ -292,7 +292,7 @@ export function LaunchFlow() {
       {deploying ? (
         tx ? (
           <div className="card">
-            <p className="meta">// Mint {tx.mint}. Your wallet signs and pays the launch; Carbon never holds your keys.</p>
+            <p className="meta">// Mint {tx.mint}. Your wallet signs and pays the launch; Argon never holds your keys.</p>
             <button
               type="button"
               className="primary"

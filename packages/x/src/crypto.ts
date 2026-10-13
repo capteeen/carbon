@@ -1,6 +1,6 @@
 /**
  * AES-256-GCM sealing for OAuth tokens (and the PKCE flow cookie), via
- * @noble/ciphers. Key: CARBON_TOKEN_KEY, 32 bytes as 64 hex chars or base64.
+ * @noble/ciphers. Key: ARGON_TOKEN_KEY, 32 bytes as 64 hex chars or base64.
  * Layout of a sealed value: version(1) || nonce(12) || ciphertext+tag.
  * Associated data binds a ciphertext to its row so rows cannot be swapped.
  */
@@ -12,12 +12,12 @@ const VERSION = 1;
 const NONCE_LEN = 12;
 
 export function parseTokenKey(raw: string | undefined): Uint8Array {
-  if (!raw) throw new XConfigError('CARBON_TOKEN_KEY is not set');
+  if (!raw) throw new XConfigError('ARGON_TOKEN_KEY is not set');
   const s = raw.trim();
   let key: Uint8Array;
   if (/^[0-9a-fA-F]{64}$/.test(s)) key = Uint8Array.from(Buffer.from(s, 'hex'));
   else key = Uint8Array.from(Buffer.from(s, 'base64'));
-  if (key.length !== 32) throw new XConfigError('CARBON_TOKEN_KEY must decode to exactly 32 bytes (hex or base64)');
+  if (key.length !== 32) throw new XConfigError('ARGON_TOKEN_KEY must decode to exactly 32 bytes (hex or base64)');
   return key;
 }
 
@@ -30,7 +30,7 @@ export class TokenCipher {
   }
 
   static fromEnv(env: Record<string, string | undefined> = process.env): TokenCipher {
-    return new TokenCipher(parseTokenKey(env.CARBON_TOKEN_KEY));
+    return new TokenCipher(parseTokenKey(env.ARGON_TOKEN_KEY));
   }
 
   seal(plaintext: string, aad: string): Uint8Array {

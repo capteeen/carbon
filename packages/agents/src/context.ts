@@ -1,17 +1,17 @@
 /**
  * AgentContext: the only way an agent touches the outside world. Everything in
- * here is a port from @carbon/core (implemented by core, x and solana) plus two
+ * here is a port from @argon/core (implemented by core, x and solana) plus two
  * small local ports (AssetStore, fetchBytes) that the agents package needs and
  * that ports.ts does not yet define (proposed to the integrator).
  */
-import { SHAPES, pairKey } from '@carbon/core';
+import { SHAPES, pairKey } from '@argon/core';
 import type {
   AgentId,
   ApprovalAction,
   ApprovalDecision,
   Approvals,
   Budgets,
-  CarbonEvent,
+  ArgonEvent,
   ChainClient,
   EventBus,
   EventKind,
@@ -22,7 +22,7 @@ import type {
   LlmRequest,
   LlmResponse,
   XClient,
-} from '@carbon/core';
+} from '@argon/core';
 import type { ApprovalCard } from './cards.js';
 
 /** Where Forge puts generated assets (banner, logo copy, site HTML). Local port: proposed for ports.ts. */
@@ -72,7 +72,7 @@ export function errMsg(e: unknown): string {
 }
 
 /** Agent reasoning, tied to the event it explains. Text must come from the actual decision/LLM output. */
-export async function reason(ctx: AgentContext, agent: AgentId, forEventId: string, text: string): Promise<CarbonEvent<'reasoning'>> {
+export async function reason(ctx: AgentContext, agent: AgentId, forEventId: string, text: string): Promise<ArgonEvent<'reasoning'>> {
   const t = clip(text);
   if (!t) throw new Error('reasoning text must not be empty');
   return ctx.bus.append({ launchId: ctx.launchId, kind: 'reasoning', actor: agent, payload: { agent, forEventId, text: t } });
@@ -85,14 +85,14 @@ export async function emit<K extends EventKind>(
   kind: K,
   payload: EventPayloads[K],
   reasoning: string,
-): Promise<CarbonEvent<K>> {
+): Promise<ArgonEvent<K>> {
   const e = await ctx.bus.append({ launchId: ctx.launchId, kind, actor: agent, payload });
   await reason(ctx, agent, e.id, reasoning);
   return e;
 }
 
 /** Emits an `error` event for a refusal/failure, with reasoning. */
-export async function emitError(ctx: AgentContext, agent: AgentId, message: string): Promise<CarbonEvent<'error'>> {
+export async function emitError(ctx: AgentContext, agent: AgentId, message: string): Promise<ArgonEvent<'error'>> {
   return emit(ctx, agent, 'error', { agent, message: clip(message, 500) }, message);
 }
 
@@ -108,7 +108,7 @@ export async function handoff(
   topic: string,
   summary: string,
   refEventId?: string,
-): Promise<CarbonEvent<'handoff'>> {
+): Promise<ArgonEvent<'handoff'>> {
   if (!bondAllowed(ctx.config, from, to)) {
     throw new Error(`shape ${ctx.config.shape} has no ${from}–${to} bond`);
   }
@@ -124,18 +124,18 @@ export async function think(ctx: AgentContext, agent: AgentId, req: LlmRequest):
   return ctx.llm.generate(req);
 }
 
-export async function latest<K extends EventKind>(ctx: AgentContext, kind: K): Promise<CarbonEvent<K> | null> {
-  const list = (await ctx.bus.list(ctx.launchId, { kinds: [kind] })) as CarbonEvent<K>[];
+export async function latest<K extends EventKind>(ctx: AgentContext, kind: K): Promise<ArgonEvent<K> | null> {
+  const list = (await ctx.bus.list(ctx.launchId, { kinds: [kind] })) as ArgonEvent<K>[];
   return list.length ? list[list.length - 1]! : null;
 }
 
-export async function all<K extends EventKind>(ctx: AgentContext, kind: K): Promise<CarbonEvent<K>[]> {
-  return (await ctx.bus.list(ctx.launchId, { kinds: [kind] })) as CarbonEvent<K>[];
+export async function all<K extends EventKind>(ctx: AgentContext, kind: K): Promise<ArgonEvent<K>[]> {
+  return (await ctx.bus.list(ctx.launchId, { kinds: [kind] })) as ArgonEvent<K>[];
 }
 
 export interface ApprovalResult {
   decision: ApprovalDecision;
-  requestEvent: CarbonEvent<'approval.requested'> | null;
+  requestEvent: ArgonEvent<'approval.requested'> | null;
 }
 
 /**
@@ -150,16 +150,16 @@ export async function requestApproval(
   why: string,
 ): Promise<ApprovalResult> {
   const key = JSON.stringify(card);
-  let found: CarbonEvent<'approval.requested'> | null = null;
+  let found: ArgonEvent<'approval.requested'> | null = null;
   let reasoned: Promise<unknown> | null = null;
-  const match = (e: CarbonEvent) =>
+  const match = (e: ArgonEvent) =>
     e.kind === 'approval.requested' &&
     e.actor === agent &&
-    (e as CarbonEvent<'approval.requested'>).payload.action === action &&
-    JSON.stringify((e as CarbonEvent<'approval.requested'>).payload.draft) === key;
+    (e as ArgonEvent<'approval.requested'>).payload.action === action &&
+    JSON.stringify((e as ArgonEvent<'approval.requested'>).payload.draft) === key;
   const unsub = ctx.bus.subscribe(ctx.launchId, (e) => {
     if (!found && match(e)) {
-      found = e as CarbonEvent<'approval.requested'>;
+      found = e as ArgonEvent<'approval.requested'>;
       reasoned = reason(ctx, agent, e.id, why);
     }
   });

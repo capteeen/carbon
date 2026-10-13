@@ -3,7 +3,7 @@
  * data (ticker, isotope, shape, CA, Sentinel score). Unknown CA → 404, never a
  * generic or fake card.
  */
-import { ISOTOPES, SHAPES } from '@carbon/core/contracts';
+import { ISOTOPES, SHAPES } from '@argon/core/contracts';
 import { getLaunchByCa } from '@/server/readmodel';
 
 export const runtime = 'nodejs';
@@ -38,7 +38,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ ca: string }> 
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', fontSize: 40, fontWeight: 800, letterSpacing: 4 }}>CARBON</div>
+            <div style={{ display: 'flex', fontSize: 40, fontWeight: 800, letterSpacing: 4 }}>ARGON</div>
             {label('// Agents that bond.')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>

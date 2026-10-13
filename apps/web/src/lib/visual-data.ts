@@ -1,10 +1,10 @@
 /**
- * Adapters from the web read model (real logged events) to @carbon/visual's
+ * Adapters from the web read model (real logged events) to @argon/visual's
  * props. Browser-safe and pure. Nothing here invents a value: anything the log
  * does not contain becomes null / [] and the visuals render their empty states.
  */
-import { computeBonds } from '@carbon/core/bonds';
-import { EMPTY_READOUT, type CarbonEvent, type SplitReceipt } from '@carbon/core/contracts';
+import { computeBonds } from '@argon/core/bonds';
+import { EMPTY_READOUT, type ArgonEvent, type SplitReceipt } from '@argon/core/contracts';
 import {
   buildReplay,
   deriveLive,
@@ -15,7 +15,7 @@ import {
   type LaunchSummary as VisualLaunchSummary,
   type LiveStats,
   type ThinkingItem,
-} from '@carbon/visual';
+} from '@argon/visual';
 import type { DecayView } from './launch-view';
 import type { LaunchSummary, ReplayData } from './types';
 
@@ -58,11 +58,11 @@ export function toVisualReplay(r: ReplayData | null): LaunchReplay | null {
 }
 
 /** Complete per-launch event logs held by the home page (launchId → full log, seq order). */
-export type LaunchLogs = ReadonlyMap<string, readonly CarbonEvent[]>;
+export type LaunchLogs = ReadonlyMap<string, readonly ArgonEvent[]>;
 
 /** The launch of the most recent hand-off (highest seq) across the given seq-ordered lists, or null. */
-export function lastHandoffLaunch(...lists: (readonly CarbonEvent[])[]): string | null {
-  let best: CarbonEvent | null = null;
+export function lastHandoffLaunch(...lists: (readonly ArgonEvent[])[]): string | null {
+  let best: ArgonEvent | null = null;
   for (const list of lists) {
     for (let i = list.length - 1; i >= 0; i--) {
       const e = list[i]!;
@@ -84,7 +84,7 @@ export function lastHandoffLaunch(...lists: (readonly CarbonEvent[])[]): string 
  * If that launch's full log is not loaded yet the BONDS readout is unknown
  * ("--.--"), not a count from a partial slice.
  */
-export function liveFromLogs(window: readonly CarbonEvent[], logs: LaunchLogs, now: number): LiveStats | null {
+export function liveFromLogs(window: readonly ArgonEvent[], logs: LaunchLogs, now: number): LiveStats | null {
   const active = lastHandoffLaunch(window, ...logs.values());
   const log = active ? logs.get(active) : undefined;
   const at = Math.max(now, lastTs(window), log ? lastTs(log) : 0);
@@ -95,20 +95,20 @@ export function liveFromLogs(window: readonly CarbonEvent[], logs: LaunchLogs, n
   return deriveLive(forLoad, bonds, at, molecule);
 }
 
-function lastTs(events: readonly CarbonEvent[]): number {
+function lastTs(events: readonly ArgonEvent[]): number {
   return events.length ? events[events.length - 1]!.ts : 0;
 }
 
-function tickerOf(events: readonly CarbonEvent[]): string | null {
+function tickerOf(events: readonly ArgonEvent[]): string | null {
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i]!;
-    if (e.kind === 'forge.draft') return (e as CarbonEvent<'forge.draft'>).payload.ticker;
+    if (e.kind === 'forge.draft') return (e as ArgonEvent<'forge.draft'>).payload.ticker;
   }
   return null;
 }
 
-function mergeBySeq(a: readonly CarbonEvent[], b: readonly CarbonEvent[]): CarbonEvent[] {
-  const m = new Map<number, CarbonEvent>();
+function mergeBySeq(a: readonly ArgonEvent[], b: readonly ArgonEvent[]): ArgonEvent[] {
+  const m = new Map<number, ArgonEvent>();
   for (const e of a) m.set(e.seq, e);
   for (const e of b) m.set(e.seq, e);
   return [...m.values()].sort((x, y) => x.seq - y.seq);
@@ -118,8 +118,8 @@ function mergeBySeq(a: readonly CarbonEvent[], b: readonly CarbonEvent[]): Carbo
  * Folds newly streamed events into the complete logs we hold (only launches
  * whose full log was loaded). Returns the same map when nothing changed.
  */
-export function foldIntoLogs(logs: ReadonlyMap<string, CarbonEvent[]>, incoming: readonly CarbonEvent[]): ReadonlyMap<string, CarbonEvent[]> {
-  let next: Map<string, CarbonEvent[]> | null = null;
+export function foldIntoLogs(logs: ReadonlyMap<string, ArgonEvent[]>, incoming: readonly ArgonEvent[]): ReadonlyMap<string, ArgonEvent[]> {
+  let next: Map<string, ArgonEvent[]> | null = null;
   for (const [id, log] of logs) {
     const tail = log.length ? log[log.length - 1]!.seq : 0;
     const add = incoming.filter((e) => e.launchId === id && e.seq > tail);
@@ -130,12 +130,12 @@ export function foldIntoLogs(logs: ReadonlyMap<string, CarbonEvent[]>, incoming:
   return next ?? logs;
 }
 
-export function feedFromEvents(events: readonly CarbonEvent[]): ThinkingItem[] {
+export function feedFromEvents(events: readonly ArgonEvent[]): ThinkingItem[] {
   return thinkingFromEvents(events, 8);
 }
 
-export function receiptsFromEvents(events: readonly CarbonEvent[]): SplitReceipt[] {
-  return events.filter((e): e is CarbonEvent<'split.receipt'> => e.kind === 'split.receipt').map((e) => e.payload);
+export function receiptsFromEvents(events: readonly ArgonEvent[]): SplitReceipt[] {
+  return events.filter((e): e is ArgonEvent<'split.receipt'> => e.kind === 'split.receipt').map((e) => e.payload);
 }
 
 /**
@@ -143,7 +143,7 @@ export function receiptsFromEvents(events: readonly CarbonEvent[]): SplitReceipt
  * collapseAt. Quiet rule: the last-trade time is not in the log, so no
  * countdown is drawn until it collapses. Collapsed: fully dimmed, tied to the event id.
  */
-export function toVisualDecay(events: readonly CarbonEvent[], d: DecayView): VisualDecayView | null {
+export function toVisualDecay(events: readonly ArgonEvent[], d: DecayView): VisualDecayView | null {
   if (d.rule === 'none') return null;
   const started = d.startedEventId ? events.find((e) => e.id === d.startedEventId) : undefined;
   if (d.collapsed) {

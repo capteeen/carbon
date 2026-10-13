@@ -1,7 +1,7 @@
 /**
- * Generate Carbon's operator keys.
+ * Generate Argon's operator keys.
  *
- *   pnpm --filter @carbon/solana generate-keys -- --out /secure/path/carbon-keys.json
+ *   pnpm --filter @argon/solana generate-keys -- --out /secure/path/argon-keys.json
  *
  * Prints PUBLIC keys only. Secrets (crank key, buyback key, treasury key,
  * vault key) are written as JSON to the path you choose, created with mode
@@ -55,10 +55,10 @@ const treasury = Keypair.generate();
 const vaultKey = randomBytes(32);
 
 const secrets = {
-  CARBON_CRANK_KEY: bs58.encode(crank.secretKey),
-  CARBON_BUYBACK_KEY: bs58.encode(buyback.secretKey),
-  CARBON_TREASURY_KEY_BACKUP: bs58.encode(treasury.secretKey),
-  CARBON_VAULT_KEY: vaultKey.toString('hex'),
+  ARGON_CRANK_KEY: bs58.encode(crank.secretKey),
+  ARGON_BUYBACK_KEY: bs58.encode(buyback.secretKey),
+  ARGON_TREASURY_KEY_BACKUP: bs58.encode(treasury.secretKey),
+  ARGON_VAULT_KEY: vaultKey.toString('hex'),
 };
 const fd = openSync(out, 'wx', 0o600); // fails if the file appeared meanwhile
 try {
@@ -71,6 +71,6 @@ vaultKey.fill(0);
 console.log(`Secrets written to ${out} (mode 0600). Move them into your secret manager.`);
 console.log('Public keys (safe to share):');
 console.log(`  crank (fee payer, cranks, daughters, airdrops)  ${crank.publicKey.toBase58()}`);
-console.log(`  CARBON_BUYBACK_WALLET                           ${buyback.publicKey.toBase58()}`);
-console.log(`  CARBON_TREASURY_WALLET                          ${treasury.publicKey.toBase58()}`);
+console.log(`  ARGON_BUYBACK_WALLET                           ${buyback.publicKey.toBase58()}`);
+console.log(`  ARGON_TREASURY_WALLET                          ${treasury.publicKey.toBase58()}`);
 console.log('Fund the crank wallet on devnet before running scripts/devnet-spike.ts.');

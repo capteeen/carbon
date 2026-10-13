@@ -1,5 +1,7 @@
 # Carbon build report
 
+> Historical record, written when the project was called Carbon (renamed Argon on 2026-10-13). Names, isotopes (C-11 to C-14) and figures below are as they were then; SPEC.md and docs/how.md are current.
+
 2026-10-11 · integrator report for SPEC.md §8 · repo `capteeen/carbon`, branch `main`
 
 ## Bottom line

@@ -2,11 +2,11 @@
 /**
  * <IsotopeChamber value onChange heavyAgent onHeavyAgentChange />
  * Reusable isotope picker (story ch06 and /launch). The nucleus re-forms as a
- * point cloud on a frosted pedestal; switching flows neutrons in/out. On C-13
+ * point cloud on a frosted pedestal; switching flows neutrons in/out. On Ar-40
  * the user drags the extra neutron onto a proton (or picks from the list).
  */
 import { useMemo, useState } from 'react';
-import type { AgentId, IsotopeId } from '@carbon/core/contracts';
+import type { AgentId, IsotopeId } from '@argon/core/contracts';
 import { COPY } from '../copy.js';
 import { HudCorner, HudLeaders, HudSection } from '../hud/Hud.js';
 import { LeaderRegistry } from '../hud/leaders.js';
@@ -36,29 +36,29 @@ export function IsotopeChamber({ value, onChange, heavyAgent, onHeavyAgentChange
   const plain = useMemo(() => ({ value: 0.35 }), []);
   const change = (v: IsotopeId) => {
     onChange(v);
-    if (v !== 'C-13' && heavyAgent) onHeavyAgentChange(null);
+    if (v !== 'Ar-40' && heavyAgent) onHeavyAgentChange(null);
   };
   return (
-    <div className={`carbon-picker${className ? ' ' + className : ''}`} data-testid="isotope-chamber">
-      <div ref={setFrame} className="carbon-frame carbon-frame--picker carbon-frame--chamber-picker">
+    <div className={`argon-picker${className ? ' ' + className : ''}`} data-testid="isotope-chamber">
+      <div ref={setFrame} className="argon-frame argon-frame--picker argon-frame--chamber-picker">
         <Stage quality={q} leaders={leaders} reducedMotion={reduced} eventSource={frame} ariaLabel="Isotope chamber: nucleus point cloud on a pedestal">
           <CameraRig position={[0, 3.7, 7.05]} target={[0, 0.85, 0]} fit={0.6} />
           <Plain visibility={plain} y={-1.05} />
           <ChamberObject isotope={value} heavyAgent={heavyAgent} onHeavyDrop={(a) => onHeavyAgentChange(a)} anchors={{ pedestal: leaders.anchor('pedestal'), extra: leaders.anchor('extra') }} />
         </Stage>
-        <div className="carbon-hud">
+        <div className="argon-hud">
           <HudLeaders registry={leaders} />
           <HudCorner at="tl">
             <HudSection>{COPY.chamber.head}</HudSection>
           </HudCorner>
           <HudCorner at="br">
-            <div className="carbon-hud__label" ref={leaders.labelRef('pedestal')}>
+            <div className="argon-hud__label" ref={leaders.labelRef('pedestal')}>
               PEDESTAL
             </div>
           </HudCorner>
         </div>
       </div>
-      <div className="carbon-picker__hud">
+      <div className="argon-picker__hud">
         <ChamberHud value={value} onChange={change} heavyAgent={heavyAgent} onHeavyAgentChange={onHeavyAgentChange} />
       </div>
     </div>

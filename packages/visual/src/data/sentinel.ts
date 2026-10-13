@@ -2,7 +2,7 @@
  * Sentinel check choreography (pure). Triggered only by a real sentinel.score
  * event; a report already present at mount renders in its final state.
  */
-import type { SentinelReport } from '@carbon/core/contracts';
+import type { SentinelReport } from '@argon/core/contracts';
 
 export interface GaugeSegment {
   key: string;

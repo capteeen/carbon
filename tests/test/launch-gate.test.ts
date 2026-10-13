@@ -3,8 +3,8 @@
  * "Post or launch without approval: impossible." (launch half; posts are in approvals.test.ts)
  *
  * The production wiring is exercised: the worker's launchAllowedCheck (the hook
- * apps/worker/src/chain.ts passes to @carbon/solana) inside a real CarbonChainClient
- * on a test-double chain, real core approvals in Postgres, and @carbon/agents'
+ * apps/worker/src/chain.ts passes to @argon/solana) inside a real ArgonChainClient
+ * on a test-double chain, real core approvals in Postgres, and @argon/agents'
  * Treasurer.deploy.
  */
 import { randomBytes } from 'node:crypto';
@@ -15,11 +15,11 @@ import {
   foldMolecule,
   getLaunchConfig,
   launchConfig,
-  type CarbonEvent,
+  type ArgonEvent,
   type SentinelReport,
-} from '@carbon/core';
-import { CarbonChainClient, loadSolanaConfig } from '@carbon/solana';
-import { Treasurer, assertLaunchCleared, scoreBinding, type AgentContext } from '@carbon/agents';
+} from '@argon/core';
+import { ArgonChainClient, loadSolanaConfig } from '@argon/solana';
+import { Treasurer, assertLaunchCleared, scoreBinding, type AgentContext } from '@argon/agents';
 import { launchAllowedCheck } from '../../apps/worker/src/chain.js';
 import { FakeChain } from '../../packages/solana/test/helpers/fakeChain.js';
 import { encodeAccount } from '../../packages/solana/test/helpers/events.js';
@@ -33,10 +33,10 @@ const URI = 'https://ipfs.io/ipfs/bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsc
 function solEnv() {
   const k = { buyback: Keypair.generate(), treasury: Keypair.generate(), crank: Keypair.generate() };
   return {
-    CARBON_FEE_MODE: 'wallet', // fits one packet without a lookup table on the test-double chain
-    CARBON_VAULT_KEY: randomBytes(32).toString('hex'),
-    CARBON_BUYBACK_WALLET: k.buyback.publicKey.toBase58(),
-    CARBON_TREASURY_WALLET: k.treasury.publicKey.toBase58(),
+    ARGON_FEE_MODE: 'wallet', // fits one packet without a lookup table on the test-double chain
+    ARGON_VAULT_KEY: randomBytes(32).toString('hex'),
+    ARGON_BUYBACK_WALLET: k.buyback.publicKey.toBase58(),
+    ARGON_TREASURY_WALLET: k.treasury.publicKey.toBase58(),
   } as Record<string, string>;
 }
 
@@ -51,16 +51,16 @@ function report(score: number, threshold: number, hardFail = false, run = 1): Se
   };
 }
 
-describe('launch gate at the chain seam (worker launchAllowedCheck + CarbonChainClient.buildLaunchTx)', () => {
+describe('launch gate at the chain seam (worker launchAllowedCheck + ArgonChainClient.buildLaunchTx)', () => {
   let env: Env;
   let chain: FakeChain;
-  let client: CarbonChainClient;
+  let client: ArgonChainClient;
   beforeAll(async () => {
     env = await makeEnv();
     chain = new FakeChain();
     chain.accounts.set(pumpSdk.GLOBAL_PDA.toBase58(), { data: await encodeAccount('pump', 'global', fixtureGlobal() as never), owner: PUMP_PROGRAM_ID, lamports: 1, executable: false });
     const e = solEnv();
-    client = new CarbonChainClient({
+    client = new ArgonChainClient({
       config: loadSolanaConfig(e),
       rpc: chain.rpc(),
       db: env.core.bus.pool,
@@ -74,7 +74,7 @@ describe('launch gate at the chain seam (worker launchAllowedCheck + CarbonChain
 
   async function setup(opts: { score?: SentinelReport | null; approve?: 'consumed' | 'granted' | 'none'; action?: 'launch' | 'post' } = {}) {
     const w = wallet();
-    const launchId = await createLaunch(env.core, 'ring', 'C-12', null, w.address);
+    const launchId = await createLaunch(env.core, 'ring', 'Ar-36', null, w.address);
     await client.createLaunchWallet(launchId);
     const drafted = await env.core.bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: { name: 'Frost Lattice', ticker: 'FRST', lore: 'cold', logoUri: 'u', logoHash: '0'.repeat(16), bannerUri: 'u', siteUri: 'u', metadataUri: URI } });
     // Scores name the draft they checked (AG-035).
@@ -87,7 +87,7 @@ describe('launch gate at the chain seam (worker launchAllowedCheck + CarbonChain
       if ((opts.approve ?? 'consumed') === 'consumed') await env.core.approvals.consume(launchId, approvalId, action);
     }
     const payer = Keypair.generate().publicKey.toBase58();
-    const args = { launchId, payer, name: 'Frost Lattice', symbol: 'FRST', metadataUri: URI, devBuySol: launchConfig('C-12', 'ring').devBuySol, approvalId };
+    const args = { launchId, payer, name: 'Frost Lattice', symbol: 'FRST', metadataUri: URI, devBuySol: launchConfig('Ar-36', 'ring').devBuySol, approvalId };
     return { launchId, approvalId, args, w };
   }
 
@@ -173,7 +173,7 @@ describe('launch gate in the agents and core', () => {
       chain: new Proxy({ network: 'devnet' } as Record<string, unknown>, {
         get: (t, k) => (k in t ? t[k as string] : (..._a: unknown[]) => (chainCalls.push(String(k)), Promise.reject(new Error(`chain.${String(k)} must not be reached`)))),
       }) as never,
-      config: launchConfig('C-12', 'ring'),
+      config: launchConfig('Ar-36', 'ring'),
       launchId,
       now: env.clock.now,
       assets: { put: async () => ({ uri: 'u' }) },
@@ -181,7 +181,7 @@ describe('launch gate in the agents and core', () => {
   }
 
   it('Treasurer.deploy refuses before any chain call: below threshold, hard fail, stale draft, threshold lower than the row', async () => {
-    const cases: [string, (l: string, d: CarbonEvent<'forge.draft'>) => Promise<unknown>][] = [
+    const cases: [string, (l: string, d: ArgonEvent<'forge.draft'>) => Promise<unknown>][] = [
       ['below', (l, d) => env.core.bus.append({ launchId: l, kind: 'sentinel.score', actor: 'sentinel', payload: { ...report(10, 70), ...scoreBinding(d) } })],
       ['hardfail', (l, d) => env.core.bus.append({ launchId: l, kind: 'sentinel.score', actor: 'sentinel', payload: { ...report(99, 70, true), passed: false, ...scoreBinding(d) } })],
       ['lower-threshold', (l, d) => env.core.bus.append({ launchId: l, kind: 'sentinel.score', actor: 'sentinel', payload: { ...report(20, 10), ...scoreBinding(d) } })],
@@ -207,7 +207,7 @@ describe('launch gate in the agents and core', () => {
 
   it('launches can never be autopiloted: not a class, not auto-granted with every class on, not consumable even if forced into the table', async () => {
     const w = wallet();
-    const launchId = await createLaunch(env.core, 'ring', 'C-12', null, w.address);
+    const launchId = await createLaunch(env.core, 'ring', 'Ar-36', null, w.address);
     await expect(env.core.approvals.setAutopilot(launchId, 'launch' as never, true, w.address)).rejects.toBeInstanceOf(ApprovalError);
     for (const cls of ['posts', 'replies', 'buybacks'] as const) await env.core.approvals.setAutopilot(launchId, cls, true, w.address);
     const { approvalId, autoGranted } = await env.core.approvals.open(launchId, 'launch', {}, 'treasurer');
@@ -226,7 +226,7 @@ describe('launch gate in the agents and core', () => {
     await env.core.bus.append({ launchId, kind: 'scout.proposals', actor: 'scout', payload: { narratives: [] } });
     await env.core.bus.append({ launchId, kind: 'forge.draft', actor: 'forge', payload: { name: 'F', ticker: 'F', lore: 'x', logoUri: 'u', logoHash: '0'.repeat(16), bannerUri: 'u', siteUri: 'u' } });
     await env.core.bus.append({ launchId, kind: 'sentinel.score', actor: 'sentinel', payload: report(61, 60) }); // diamond needs 85
-    const m = foldMolecule((await env.core.bus.list(launchId)) as CarbonEvent[]);
+    const m = foldMolecule((await env.core.bus.list(launchId)) as ArgonEvent[]);
     expect(m.state).not.toBe('awaiting_approval');
   });
 });

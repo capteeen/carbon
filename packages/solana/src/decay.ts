@@ -1,9 +1,9 @@
 /**
- * Decay watcher for C-11 and C-14.
+ * Decay watcher for Ar-41 and Ar-39.
  *
- * Carbon's collapse is DETERMINISTIC, from the one config table:
- *   C-11 { kind: 'quiet', quietSec: 1200 }    collapseAt = lastTradeAt + 20 min
- *   C-14 { kind: 'clock', clockSec: 604800 }  collapseAt = bornAt + 7 days (trades do not reset it)
+ * Argon's collapse is DETERMINISTIC, from the one config table:
+ *   Ar-41 { kind: 'quiet', quietSec: 1200 }    collapseAt = lastTradeAt + 20 min
+ *   Ar-39 { kind: 'clock', clockSec: 604800 }  collapseAt = bornAt + 7 days (trades do not reset it)
  * @qsd/protocol's decay is a quantum-measurement model (collapse resolved by a
  * QRNG draw with probability = decayProgress), so its state machine
  * (applyBuy / measurementInputs / applyMeasurement / nextAutoMeasureAt) is NOT
@@ -15,24 +15,24 @@
  *   - allocationProof / verifyAllocationProof  per-wallet proofs of the table
  *   - HolderSnapshot / AllocationTable types
  *   - decayProgressFor(quietSec, halfLifeSec)  ONLY for the illustrative
- *     half-life curve on the C-11 readout (T = 1224 s, real C-11's 20.4 min);
+ *     half-life curve on the Ar-41 readout (T = 6577 s, real Ar-41's 109.6 min);
  *     assertHalfLife accepts any positive integer, so it validates. It never
- *     decides the collapse. C-14 has no half-life readout (5,730 years is the
+ *     decides the collapse. Ar-39 has no half-life readout (269 years is the
  *     story, not the coin).
  *
  * Steps are persisted in `sol_decay`; each tick resumes where the last one
  * stopped. The watcher returns event data; the calling agent appends it and
  * acknowledges the snapshot event so decay.collapsed can reference its id.
  */
-import type { DecayRule, EventPayloads } from '@carbon/core';
+import type { DecayRule, EventPayloads } from '@argon/core';
 import { allocationProof, computeAllocation, daughterName, decayProgressFor, verifyAllocationProof, type AllocationTable, type HolderSnapshot } from '@qsd/protocol';
-import type { CarbonChainClient, EventData } from './client.js';
+import type { ArgonChainClient, EventData } from './client.js';
 import type { Db } from './db.js';
 import { withLock } from './db.js';
 import { errorMessage, LedgerError } from './errors.js';
 
-/** Real carbon-11 half-life (≈ 20.4 min), for the illustrative curve only. */
-export const C11_HALF_LIFE_SEC = 1224;
+/** Real argon-41 half-life (≈ 109.6 min), for the illustrative curve only. */
+export const AR41_HALF_LIFE_SEC = 6577;
 
 /** Unix ms at which the coin collapses, or null for stable isotopes. */
 export function collapseAtMs(rule: DecayRule, bornAtMs: number, lastTradeAtMs: number | null): number | null {
@@ -46,7 +46,7 @@ export interface DecayReadout {
   remainingMs: number | null;
   /** Fraction of the deterministic window elapsed, 0..1 (1 = collapsed). */
   progress: number | null;
-  /** C-11 only: 1 − 2^(−quiet/1224 s) from @qsd/protocol decayProgressFor. Illustration, not the rule. */
+  /** Ar-41 only: 1 − 2^(−quiet/6577 s) from @qsd/protocol decayProgressFor. Illustration, not the rule. */
   halfLifeCurve: number | null;
 }
 
@@ -56,7 +56,7 @@ export function decayReadout(rule: DecayRule, bornAtMs: number, lastTradeAtMs: n
   const windowMs = (rule.kind === 'quiet' ? rule.quietSec : rule.clockSec) * 1000;
   const remainingMs = Math.max(0, at - nowMs);
   const progress = Math.min(1, Math.max(0, 1 - remainingMs / windowMs));
-  const halfLifeCurve = rule.kind === 'quiet' ? decayProgressFor(Math.max(0, Math.floor((nowMs - (at - windowMs)) / 1000)), C11_HALF_LIFE_SEC) : null;
+  const halfLifeCurve = rule.kind === 'quiet' ? decayProgressFor(Math.max(0, Math.floor((nowMs - (at - windowMs)) / 1000)), AR41_HALF_LIFE_SEC) : null;
   return { collapseAt: at, remainingMs, progress, halfLifeCurve };
 }
 
@@ -126,7 +126,7 @@ export interface DecayTickResult {
 }
 
 export interface DecayDeps {
-  client: CarbonChainClient;
+  client: ArgonChainClient;
   db: Db;
   now?: () => number;
 }
@@ -176,7 +176,7 @@ export class DecayWatcher {
   }
 
   private async step(t: DecayTarget): Promise<DecayTickResult> {
-    // The clock starts at the create transaction's block time when Carbon has it on record
+    // The clock starts at the create transaction's block time when Argon has it on record
     // (AG-025); the caller's value (the launch.deployed event time) is only the fallback.
     const bornAtMs = (await this.deps.client.launchBornAtMs(t.launchId)) ?? t.bornAtMs;
     const { client, db } = this.deps;
@@ -191,7 +191,7 @@ export class DecayWatcher {
       const readout = decayReadout(t.rule, bornAtMs, lastTrade, now);
       if (readout.collapseAt === null || now < readout.collapseAt) return { state: 'watching', readout, events };
       const collapseSec = Math.floor(readout.collapseAt / 1000);
-      // Quiet period start: the last trade (C-11), or for C-14 the last trade before the clock ran out.
+      // Quiet period start: the last trade (Ar-41), or for Ar-39 the last trade before the clock ran out.
       const lastTradeForQuiet = t.rule.kind === 'quiet' ? lastTrade : await client.lastTradeAt(t.ca);
       const quietStart = Math.min(collapseSec, Math.floor(Math.max(bornAtMs, lastTradeForQuiet ?? bornAtMs) / 1000));
       const snap = await client.holderSnapshot({ mint: t.ca, collapseAt: collapseSec, quietPeriodStart: quietStart, excludeOwners: [client.crankAddress()] });

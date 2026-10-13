@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'CARBON',
-    short_name: 'CARBON',
+    name: 'ARGON',
+    short_name: 'ARGON',
     description: 'Agents that bond. A pump.fun launchpad run by six AI agents.',
     start_url: '/',
     display: 'standalone',

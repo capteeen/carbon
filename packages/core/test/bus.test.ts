@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { CarbonEvent } from '../src/contracts.js';
+import type { ArgonEvent } from '../src/contracts.js';
 import { sseStream } from '../src/bus/sse.js';
 import { createLaunch, testEnv, waitFor, type TestEnv } from './helpers.js';
 
@@ -28,7 +28,7 @@ describe('PgEventBus', () => {
   it('signature tamper detected on a stored event', async () => {
     const l = await createLaunch(env.bus, 'chain');
     const [e] = await env.bus.list(l);
-    expect(env.bus.verify({ ...e!, payload: { ...(e!.payload as object), line: 'tampered' } } as CarbonEvent)).toBe(false);
+    expect(env.bus.verify({ ...e!, payload: { ...(e!.payload as object), line: 'tampered' } } as ArgonEvent)).toBe(false);
   });
 
   it('the events table is append-only', async () => {
@@ -67,7 +67,7 @@ describe('PgEventBus', () => {
     const got: number[] = [];
     const unsub = env.bus.subscribe(l, (e) => got.push(e.seq));
     await env.bus.ready();
-    const writes: Promise<CarbonEvent>[] = [];
+    const writes: Promise<ArgonEvent>[] = [];
     for (let i = 0; i < 40; i++) {
       const b = i % 2 ? env.bus : other;
       writes.push(b.append({ launchId: l, kind: 'error', actor: 'system', payload: { message: String(i) } }));
@@ -120,11 +120,11 @@ describe('PgEventBus', () => {
   });
 });
 
-async function readSse(stream: ReadableStream<Uint8Array>, until: (frames: { id: string; event: string; data: CarbonEvent }[]) => boolean) {
+async function readSse(stream: ReadableStream<Uint8Array>, until: (frames: { id: string; event: string; data: ArgonEvent }[]) => boolean) {
   const reader = stream.getReader();
   const dec = new TextDecoder();
   let buf = '';
-  const frames: { id: string; event: string; data: CarbonEvent }[] = [];
+  const frames: { id: string; event: string; data: ArgonEvent }[] = [];
   const deadline = Date.now() + 5000;
   while (!until(frames)) {
     if (Date.now() > deadline) throw new Error('SSE read timed out');
@@ -141,7 +141,7 @@ async function readSse(stream: ReadableStream<Uint8Array>, until: (frames: { id:
         const k = line.slice(0, line.indexOf(':'));
         f[k] = line.slice(line.indexOf(':') + 1).trimStart();
       }
-      if (f.data) frames.push({ id: f.id!, event: f.event!, data: JSON.parse(f.data) as CarbonEvent });
+      if (f.data) frames.push({ id: f.id!, event: f.event!, data: JSON.parse(f.data) as ArgonEvent });
     }
   }
   await reader.cancel();

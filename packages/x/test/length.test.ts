@@ -16,7 +16,7 @@ describe('weighted length (X counting rules, twitter-text v3 config)', () => {
   it('treats bare domains as URLs and strips trailing punctuation', () => {
     expect(weightedLength('pump.fun').weightedLength).toBe(23);
     expect(weightedLength('go to https://pump.fun/coin/abc.').weightedLength).toBe(6 + 23 + 1);
-    expect(weightedLength('$CARBON').weightedLength).toBe(7);
+    expect(weightedLength('$ARGON').weightedLength).toBe(6);
     expect(weightedLength('e.g. this').weightedLength).toBe(9);
   });
   it('counts CJK and other non-Latin as 2', () => {

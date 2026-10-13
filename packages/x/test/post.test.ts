@@ -48,13 +48,13 @@ describe('post / reply approval gate', () => {
       responders: [
         (c) => {
           order.push('network');
-          expect(JSON.parse(c.body!)).toEqual({ text: 'gm carbon' });
+          expect(JSON.parse(c.body!)).toEqual({ text: 'gm argon' });
           expect(c.headers.authorization).toBe('Bearer FIXTURE-ACCESS-TOKEN-stored');
-          return json(createPost('1900000000000000001', 'gm carbon'), 201);
+          return json(createPost('1900000000000000001', 'gm argon'), 201);
         },
       ],
     });
-    await expect(ctx.client.post('launch-1', 'gm carbon', 'appr-1')).resolves.toEqual({
+    await expect(ctx.client.post('launch-1', 'gm argon', 'appr-1')).resolves.toEqual({
       id: '1900000000000000001',
       url: 'https://x.com/fixture_project/status/1900000000000000001',
     });

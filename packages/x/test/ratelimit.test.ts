@@ -18,14 +18,14 @@ describe('rate limiting', () => {
         () => json(searchRecent),
       ],
     });
-    await ctx.client.searchRecent('carbon');
-    const err = await ctx.client.searchRecent('carbon').catch((e) => e);
+    await ctx.client.searchRecent('argon');
+    const err = await ctx.client.searchRecent('argon').catch((e) => e);
     expect(err).toBeInstanceOf(RateLimitedError);
     expect((err as RateLimitedError).resetAt.getTime()).toBe(reset);
     expect((err as RateLimitedError).source).toBe('headers');
     expect(ctx.calls).toHaveLength(1);
     now = reset + 1;
-    await expect(ctx.client.searchRecent('carbon')).resolves.toHaveLength(2);
+    await expect(ctx.client.searchRecent('argon')).resolves.toHaveLength(2);
   });
 
   it('throws RateLimitedError with resetAt on a 429 for posts (never auto-retried)', async () => {
@@ -59,7 +59,7 @@ describe('rate limiting', () => {
         () => json(searchRecent, 200, { 'x-rate-limit-remaining': '449', 'x-rate-limit-reset': sec(T0 + 900_000) }),
       ],
     });
-    await expect(ctx.client.searchRecent('carbon')).resolves.toHaveLength(2);
+    await expect(ctx.client.searchRecent('argon')).resolves.toHaveLength(2);
     expect(slept).toEqual([1000]);
     expect(ctx.calls).toHaveLength(2);
   });

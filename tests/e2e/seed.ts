@@ -11,28 +11,28 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import pg from 'pg';
 import bs58 from 'bs58';
-import { createCore } from '@carbon/core';
+import { createCore } from '@argon/core';
 import { migrateAll } from '../../apps/worker/src/migrate.js';
 
-const DB = process.env.CARBON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
+const DB = process.env.ARGON_TEST_DATABASE_URL ?? 'postgres://carbon:carbon@localhost:5432/carbon_test';
 const schema = process.argv[2];
 if (!schema || !/^g2_[a-z0-9_]+$/.test(schema)) throw new Error('schema must match g2_*');
 const replay = process.argv.includes('--replay');
-const seed = process.env.CARBON_AGENT_KEY_SEED ?? randomBytes(32).toString('hex');
+const seed = process.env.ARGON_AGENT_KEY_SEED ?? randomBytes(32).toString('hex');
 
 const admin = new pg.Pool({ connectionString: DB });
 await admin.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
 await admin.query(`CREATE SCHEMA ${schema}`);
 await admin.end();
 
-const core = await createCore({ databaseUrl: DB, redisUrl: process.env.CARBON_TEST_REDIS_URL ?? 'redis://localhost:6379', seed, schema });
+const core = await createCore({ databaseUrl: DB, redisUrl: process.env.ARGON_TEST_REDIS_URL ?? 'redis://localhost:6379', seed, schema });
 await migrateAll(core.bus.pool);
 const out: Record<string, unknown> = { schema, seed, dbUrl: `${DB}?options=${encodeURIComponent(`-c search_path=${schema}`)}` };
 
 if (replay) {
   const launchId = randomUUID();
   const { bus, handoffs } = core;
-  await bus.append({ launchId, kind: 'launch.created', actor: 'user', payload: { line: 'agent g e2e replay', isotope: 'C-13', shape: 'ring', heavyAgent: 'herald', launcherWallet: bs58.encode(randomBytes(32)), xConnected: false } });
+  await bus.append({ launchId, kind: 'launch.created', actor: 'user', payload: { line: 'agent g e2e replay', isotope: 'Ar-40', shape: 'ring', heavyAgent: 'herald', launcherWallet: bs58.encode(randomBytes(32)), xConnected: false } });
   const hs: string[] = [];
   const send = async (from: Parameters<typeof handoffs.send>[1], to: Parameters<typeof handoffs.send>[2], topic: string) => {
     const e = await handoffs.send(launchId, from, to, topic, `e2e ${topic}`);

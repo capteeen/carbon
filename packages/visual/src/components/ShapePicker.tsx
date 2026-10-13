@@ -6,7 +6,7 @@
  */
 import { useMemo, useState } from 'react';
 import { Vector3 } from 'three';
-import type { ShapeId } from '@carbon/core/contracts';
+import type { ShapeId } from '@argon/core/contracts';
 import { COPY } from '../copy.js';
 import { HudCorner, HudLeaders, HudSection } from '../hud/Hud.js';
 import { LeaderRegistry } from '../hud/leaders.js';
@@ -56,20 +56,20 @@ export function ShapePicker({ value = null, onChange, reducedMotion, quality, cl
   const leaders = useMemo(() => new LeaderRegistry(), []);
   const [frame, setFrame] = useState<HTMLDivElement | null>(null);
   return (
-    <div className={`carbon-picker${className ? ' ' + className : ''}`} data-testid="shape-picker">
-      <div ref={setFrame} className="carbon-frame carbon-frame--picker">
+    <div className={`argon-picker${className ? ' ' + className : ''}`} data-testid="shape-picker">
+      <div ref={setFrame} className="argon-frame argon-frame--picker">
         <Stage quality={q} leaders={leaders} reducedMotion={reduced} eventSource={frame} ariaLabel="Three molecule shapes: chain, ring, diamond">
           <CameraRig position={[0, 0.5, 9.5]} fit={1} />
           <Molecules leaders={leaders} value={value} />
         </Stage>
-        <div className="carbon-hud">
+        <div className="argon-hud">
           <HudLeaders registry={leaders} />
           <HudCorner at="tl">
             <HudSection>{COPY.shapes.head}</HudSection>
           </HudCorner>
         </div>
       </div>
-      <div className="carbon-picker__hud">
+      <div className="argon-picker__hud">
         <ShapesHud value={value} onChange={onChange} />
       </div>
     </div>

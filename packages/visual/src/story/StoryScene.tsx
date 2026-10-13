@@ -7,7 +7,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { memo, useEffect, useMemo, useReducer, useRef, type RefObject } from 'react';
 import { Vector3, type PerspectiveCamera } from 'three';
-import { AGENT_IDS, type AgentId, type IsotopeId, type ShapeId } from '@carbon/core/contracts';
+import { AGENT_IDS, type AgentId, type IsotopeId, type ShapeId } from '@argon/core/contracts';
 import { chapterFade, chapterAt, chapterCenter, chapterLocal, replayedCountAt } from './chapters.js';
 import { createStoryState, evalStory } from './timeline.js';
 import type { ProgressStore } from './progress.js';

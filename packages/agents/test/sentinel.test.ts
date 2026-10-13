@@ -1,4 +1,4 @@
-import { SHAPES, type SentinelInput, launchConfig } from '@carbon/core';
+import { SHAPES, type SentinelInput, launchConfig } from '@argon/core';
 import { describe, expect, it } from 'vitest';
 import { Forge } from '../src/forge/index.js';
 import { Scout } from '../src/scout/index.js';
@@ -7,7 +7,7 @@ import { WEIGHTS, devBuySupplyPct, finalize, renderFormulaMarkdown, scoreCollisi
 import { makePng, snowflake } from './fakes.js';
 import { GROUNDED, created, expectReasoningForEveryAction, makeHarness } from './script.js';
 
-async function setup(cfg = launchConfig('C-12', 'chain'), o: Parameters<typeof makeHarness>[1] = {}) {
+async function setup(cfg = launchConfig('Ar-36', 'chain'), o: Parameters<typeof makeHarness>[1] = {}) {
   const h = makeHarness(cfg, o);
   const c = await created(h, cfg);
   const proposals = await new Scout(h.ctx).propose(c.payload.line);
@@ -31,7 +31,7 @@ describe('Sentinel', () => {
   });
 
   it('unreachable sources score 0 with reason "source unavailable", never a guess', async () => {
-    const { h, score } = await setup(launchConfig('C-12', 'chain'), { classifierThrows: true });
+    const { h, score } = await setup(launchConfig('Ar-36', 'chain'), { classifierThrows: true });
     h.chain.coins = new Error('pump.fun 503');
     h.chain.history = new Error('rpc timeout');
     const e = await score();
@@ -48,7 +48,7 @@ describe('Sentinel', () => {
   });
 
   it('an unreachable content classifier blocks even when every other input is full', async () => {
-    const { score } = await setup(launchConfig('C-12', 'chain'), { classifierThrows: true });
+    const { score } = await setup(launchConfig('Ar-36', 'chain'), { classifierThrows: true });
     const e = await score();
     expect(e.payload.score).toBe(80);
     expect(e.payload.score).toBeGreaterThanOrEqual(e.payload.threshold);
@@ -74,13 +74,13 @@ describe('Sentinel', () => {
   });
 
   it('content-rule violations (denylist or classifier) are hard fails', async () => {
-    const a = await setup(launchConfig('C-12', 'chain'), { name: 'Elon Cat', ticker: 'ECAT' });
+    const a = await setup(launchConfig('Ar-36', 'chain'), { name: 'Elon Cat', ticker: 'ECAT' });
     const ea = await a.score();
     expect(ea.payload.hardFail).toBe(true);
     expect(ea.payload.passed).toBe(false);
     expect(ea.payload.inputs.find((i) => i.key === 'content')!.reason).toContain('real_person');
 
-    const b = await setup(launchConfig('C-12', 'chain'), { violations: [{ rule: 'protected_brand', evidence: 'looks like a franchise mascot' }] });
+    const b = await setup(launchConfig('Ar-36', 'chain'), { violations: [{ rule: 'protected_brand', evidence: 'looks like a franchise mascot' }] });
     const eb = await b.score();
     expect(eb.payload.hardFail).toBe(true);
     expect(eb.payload.score).toBeGreaterThanOrEqual(60); // would pass on points alone
@@ -139,7 +139,7 @@ describe('Sentinel', () => {
   });
 
   it('Scout says when X is unavailable and cites only grounded web sources', async () => {
-    const cfg = launchConfig('C-12', 'chain');
+    const cfg = launchConfig('Ar-36', 'chain');
     const h = makeHarness(cfg, { posts: [] });
     h.x.searchResult = new Error('X 503');
     await created(h, cfg);
@@ -160,7 +160,7 @@ describe('[AG-035] the score is bound to the draft it checked, and the images an
   });
 
   it('the logo and banner bytes go to the vision classifier; an image finding is a hard fail', async () => {
-    const { h, draft, score } = await setup(launchConfig('C-12', 'chain'), { imageViolations: [{ rule: 'protected_brand', evidence: 'logo: a franchise mascot' }] });
+    const { h, draft, score } = await setup(launchConfig('Ar-36', 'chain'), { imageViolations: [{ rule: 'protected_brand', evidence: 'logo: a franchise mascot' }] });
     const e = await score();
     const content = e.payload.inputs.find((i) => i.key === 'content')!;
     expect(content.hardFail).toBe(true);
@@ -177,7 +177,7 @@ describe('[AG-035] the score is bound to the draft it checked, and the images an
     expect([a.hardFail, a.points]).toEqual([true, 0]);
     expect(a.reason).toContain('image check: LLM provider text-only has no image input');
 
-    const throws = await setup(launchConfig('C-12', 'chain'), { imageClassifierThrows: true });
+    const throws = await setup(launchConfig('Ar-36', 'chain'), { imageClassifierThrows: true });
     expect((await throws.score()).payload.inputs.find((i) => i.key === 'content')!.reason).toContain('image check: vision 503');
 
     const missing = await setup();
@@ -197,7 +197,7 @@ describe('[AG-035] the score is bound to the draft it checked, and the images an
     h.assets.files.set(draft.payload.siteUri, new TextEncoder().encode(html.replace(/<p class="tag">[^<]*<\/p>/, '<p class="tag">// the pikachu of glaciers</p>')));
     const e = await score();
     expect(e.payload.inputs.find((i) => i.key === 'content')!.reason).toContain('"pikachu" in site');
-    // the Carbon footer (which names Google Gemini and pump.fun) is not coin content
+    // the Argon footer (which names Google Gemini and pump.fun) is not coin content
     expect(siteText(html)).not.toMatch(/Gemini/);
     expect(siteText(html)).toContain('Cold paws, warm hearts.');
     h.assets.files.delete(draft.payload.siteUri);

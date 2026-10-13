@@ -1,7 +1,7 @@
 /**
  * POST /api/x/connect { launchId, wallet, issuedAt, signature } → { authorizeUrl }
  *
- * Starts OAuth 2.0 PKCE for the launcher's own X project account (@carbon/x
+ * Starts OAuth 2.0 PKCE for the launcher's own X project account (@argon/x
  * startAuth), bound to the wallet that signed messages.xConnect (AG-004):
  * - The wallet signature is required and single-use. The wallet is sealed into the
  *   encrypted flow cookie and stored with the tokens (x_tokens.wallet).
@@ -11,7 +11,7 @@
  *   connection only if the launcher wallet is the wallet bound here; the worker's X
  *   client ignores tokens bound to any other wallet.
  */
-import { AUTH_COOKIE_NAME } from '@carbon/x';
+import { AUTH_COOKIE_NAME } from '@argon/x';
 import { NextResponse } from 'next/server';
 import { isFresh, isWalletAddress, messages, verifyWalletSignature } from '@/lib/signing';
 import { xConfigured } from '@/server/env';

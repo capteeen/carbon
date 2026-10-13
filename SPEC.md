@@ -1,4 +1,4 @@
-# CARBON ($CARBON) · "Agents that bond."
+# ARGON ($ARGON) · "Agents that bond."
 # ONE BUILD PROMPT FOR CLAUDE CODE
 
 Read this whole file first. Write it to SPEC.md at the repo root and re-read
@@ -13,12 +13,16 @@ overclaims, or moves money without a receipt.
 A pump.fun launchpad run by a molecule of six AI agents. A user connects their
 wallet (and optionally their project's X account), types one line, picks an
 isotope and a shape, and the agents bond to research, create, check and launch
-a coin. The site is a cinematic, scroll-driven 3D story of the carbon atom that
+a coin. The site is a cinematic, scroll-driven 3D story of the argon atom that
 ends in a live view of every real launch.
 
-Carbon is element 6 because it has 6 protons. Carbon has 6 agents. Isotopes
-differ only in neutrons, so each isotope is a different agent configuration
-that produces a different launch.
+Argon is element 18 because it has 18 protons. Argon has 6 agents: six
+agents sit at the core of the nucleus. Real argon is a noble gas with full
+shells (2, 8, 8) and almost never bonds; the agents' bonds and valence are
+product rules, and copy must say so rather than claim argon chemistry.
+Isotopes differ only in neutrons, so each isotope is a different agent
+configuration that produces a different launch.
+(Renamed from Carbon on 2026-10-13. The project owner chose the name.)
 
 LIVE ONLY. No mock agents, posts, coins, bonds, readouts, receipts or numbers.
 Every live visual maps to a logged event. Empty states are honest ("--.--",
@@ -27,8 +31,8 @@ Every live visual maps to a logged event. Empty states are honest ("--.--",
 ══════════════════════════════════════════════════════════════════════
 1. THE CHEMISTRY — rules enforced in code
 ══════════════════════════════════════════════════════════════════════
-PROTONS = the six core agents (fixed; they make it Carbon). Each has
-valence 4: at most 4 bond orders at once; extra work queues visibly.
+PROTONS = the six core agents (fixed; six agents at the core of an Argon
+launch). Each has valence 4 (a product rule): at most 4 bond orders at once; extra work queues visibly.
   SCOUT      finds live trends on X, proposes 3-5 narratives + names
   FORGE      creates the coin: name, ticker, lore, logo, banner, site;
              prepares the pump.fun deploy
@@ -36,7 +40,7 @@ valence 4: at most 4 bond orders at once; extra work queues visibly.
              connected X account
   KEEPER     community: replies, holder milestones, recruiting drafts
   TREASURER  per-launch wallet, fee claims, the 50/30/20 split,
-             $CARBON buybacks, public receipts
+             $ARGON buybacks, public receipts
   SENTINEL   risk checks; computes the stability score; can BLOCK a launch
 
 BONDS = real hand-offs between agents on the event bus. Order from traffic
@@ -46,15 +50,19 @@ must always equal the order recomputed from the log. Every hand-off is a
 signed message; its hash is shown on the bond.
 
 NEUTRONS / ISOTOPES (user picks one per launch):
-  C-11  5 neutrons · FLASH · small budget, fast meme. Unstable: decays to a
-        daughter after 20 min with no trades (real C-11 half-life ≈ 20.4 min)
-  C-12  6 neutrons · CORE · balanced, stable, default
-  C-13  7 neutrons · HEAVY · stable; the extra neutron doubles the capacity
-        of ONE agent the user chooses (e.g. heavy Herald, heavy Sentinel)
-  C-14  8 neutrons · RADIOACTIVE · built-in decay to a daughter on a long,
-        visible clock. Copy may mention real C-14's ~5,730-year half-life as
+  Ar-36  18 neutrons · CORE · balanced, stable, default (real Ar-36 is stable,
+        about 0.3% of natural argon)
+  Ar-39  21 neutrons · RADIOACTIVE · built-in decay to a daughter on a long,
+        visible clock. Copy may mention real Ar-39's ~269-year half-life as
         the story; never imply the coin lasts that long.
-DECAY (C-11, C-14): on collapse, a daughter coin launches and mother holders
+  Ar-40  22 neutrons · HEAVY · stable (about 99.6% of natural argon); a heavy
+        neutron doubles the capacity of ONE agent the user chooses (e.g.
+        heavy Herald, heavy Sentinel)
+  Ar-41  23 neutrons · FLASH · small budget, fast meme. Unstable: decays to a
+        daughter after 20 min with no trades (real Ar-41 half-life ≈ 110 min)
+  The 3D chamber draws 5-8 neutrons beside the six agent protons, ordered
+  like the real counts; HUD readouts show the real counts.
+DECAY (Ar-41, Ar-39): on collapse, a daughter coin launches and mother holders
 are airdropped proportionally from a snapshot. Import @qsd/protocol from
 the qsd-market repo; never reimplement.
 
@@ -68,7 +76,8 @@ MOLECULES / SHAPES (user picks one per launch; each changes real behaviour):
            threshold 85
 Isotope × shape = 12 launch types. Budget, posting cadence, Sentinel
 threshold and decay clock for each live in ONE config table, rendered on /how.
-GRAPHENE is not a shape: it is the live homepage sheet of all launches.
+The LATTICE (called graphene in code) is not a shape: it is the live
+homepage sheet of all launches.
 
 STABILITY SCORE (Sentinel), 0-100, formula public on /how. Inputs:
 name/ticker collision with live pump.fun coins · perceptual-hash logo match
@@ -90,13 +99,13 @@ DEFAULT DESIGN (change only if the research finds a cleaner native option):
 - Each launch gets its own per-launch creator wallet, generated server-side,
   encrypted at rest, keys only in Railway env/KMS, never logged. The user's
   wallet signs and pays the launch and is never stored.
-- Copy says "Carbon never holds YOUR keys." Every per-launch wallet address
+- Copy says "Argon never holds YOUR keys." Every per-launch wallet address
   is public on /wallets.
-- Fee split on every claim: 50% to the launcher's wallet · 30% buys $CARBON
-  · 20% to the Carbon treasury. Treasurer executes on a schedule.
+- Fee split on every claim: 50% to the launcher's wallet · 30% buys $ARGON
+  · 20% to the Argon treasury. Treasurer executes on a schedule.
 - Every split is a public receipt: amounts, tx signatures, time. Idempotent:
   a crashed split resumes without double-paying.
-- Budgets enforced in code. Treasurer never trades anything except $CARBON
+- Budgets enforced in code. Treasurer never trades anything except $ARGON
   buybacks and the launch's own dev buy.
 - Devnet by default. Mainnet only behind an env flag the owner sets.
 
@@ -110,8 +119,8 @@ DEFAULT DESIGN (change only if the research finds a cleaner native option):
   available for launches.
 - X: OAuth 2.0 PKCE on the user's own project account. No account creation
   anywhere in the codebase.
-- Footer on every page: "Carbon does not run on a quantum computer. Agents
-  are powered by Google Gemini; Carbon is not affiliated with or endorsed by
+- Footer on every page: "Argon does not run on a quantum computer. Agents
+  are powered by Google Gemini; Argon is not affiliated with or endorsed by
   Google. Coins launch on pump.fun (Solana). A meme, not an investment."
 
 ══════════════════════════════════════════════════════════════════════
@@ -127,7 +136,7 @@ C visual   /packages/visual   the 3D scroll story and live views; three
                               performance
 D x        /packages/x        OAuth, posting, replies, search, rate limits
 E chain    /packages/solana   fees research FIRST, then per-launch wallets,
-                              pump.fun deploy, claims, split, $CARBON buy,
+                              pump.fun deploy, claims, split, $ARGON buy,
                               holder snapshots, decay via @qsd/protocol
 F app      /apps/web          onboarding, launch flow, pages, embed
 G verify   /tests /docs       adversarial; never saw the code written
@@ -146,7 +155,7 @@ labelled "agent reasoning", tied to event ids, never invented.
 REFERENCE: igloo.inc. Take its palette, type system, HUD labelling and scroll
 grammar (dismantle → glitch → isolate → tunnel → pedestal → reassemble). Do
 NOT copy its layout, wordmark, objects, terrain or copy. The subject is the
-carbon atom; every object is ours.
+argon atom; every object is ours.
 
 PALETTE (cold, near-monochrome, foggy):
   fog-light #B9C0CB · fog-mid #9AA2AF · slate #5C6472 · frost #E6EBF2 ·
@@ -156,10 +165,10 @@ PALETTE (cold, near-monochrome, foggy):
   emblem and label. Fine animated film grain and volumetric fog over all.
 
 TYPE:
-  Display: heavy, rounded geometric sans (open licence) for the CARBON
+  Display: heavy, rounded geometric sans (open licence) for the ARGON
   wordmark and section titles; do not imitate Igloo's wordmark.
   Everything else: typewriter-style mono (Space Mono, IBM Plex Mono or
-  similar). Labels UPPERCASE_SNAKE (ATOM_06, PROTON_01_SCOUT, ISOTOPE_C14);
+  similar). Labels UPPERCASE_SNAKE (ATOM_18, PROTON_01_SCOUT, ISOTOPE_AR39);
   "//" for metadata, "//////" for section heads. Text sits small in corners;
   the 3D object owns the centre.
 
@@ -169,9 +178,11 @@ data. "Sound: On/Off" toggle bottom-left: procedural wind and soft
 crystalline tones on bond events, off by default.
 
 OBJECTS (frosted, physically lit, matte-icy, slightly rough):
-- ATOM: nucleus of 12 frosted nucleons (6 protons with faint engraved agent
-  emblems, 6 neutrons plain) inside two translucent electron shells: inner
-  2 electrons, outer 4. The 4 outer electrons are the 4 bonds.
+- ATOM: a model of the agents' core, not argon's real 40-nucleon nucleus:
+  12 frosted nucleons (6 agent protons with faint engraved emblems, 6
+  neutrons plain) inside two translucent rings: inner 2 electrons, outer 4.
+  The 4 outer electrons are the agents' 4 bond arms (a product rule; real
+  argon has full 2-8-8 shells). HUD: ATOM_18 · 18 protons · 18 electrons.
 - BONDS: frosted bridges with 1, 2 or 3 inner seams by order; seams glow
   frost-white with an iridescent flicker on each real hand-off; the message
   hash (first 8 chars, mono) rides the seam.
@@ -181,29 +192,30 @@ smooth scroll; anime.js v4 onScroll for 2D/HUD; react-three-fiber for 3D.
 Every layer reads the same progress value, so scrolling back rewinds 3D,
 labels and HUD together.
   00 HERO — the atom floats in fog over a frozen, faintly crystalline
-     graphite plain. Top-left: CARBON, "// Element 06", "// Agents that
+     graphite plain. Top-left: ARGON, "// Element 18", "// Agents that
      bond." Top-right: "////// Manifesto" + three mono lines. Drag rotates
      with heavy inertial easing; the cursor disturbs the electron cloud.
   01 DISMANTLE — the 12 nucleons lift apart like blocks, seams glowing,
      fragments catching iridescent light.
   02 GLITCH — pixel-stretch / slit-scan transition with chromatic
      aberration into isolation.
-  03 SIX PROTONS — one proton at a time: frosted sphere with agent emblem,
+  03 SIX AGENTS — one agent proton at a time: frosted sphere with agent emblem,
      HUD: PROTON_01 / SCOUT · role · BONDS n/4 · LOAD live · "CLICK TO
      EXPLORE" (opens that agent's live log). Order: Scout, Forge, Herald,
-     Keeper, Treasurer, Sentinel. Note: "6 protons make it carbon. 6 agents
-     make it a Carbon launch."
+     Keeper, Treasurer, Sentinel. Note: "18 protons make it argon. Six agents
+     at the core make it an Argon launch."
   04 SHELLS — camera flies through two concentric frosted rings (2 then 4
      electrons) into a bright core; the 4 outer electrons become the 4 bond
-     arms: "Every agent holds exactly 4 bonds."
+     arms. Copy says real argon is a noble gas that almost never bonds, and
+     that each agent has 4 bond arms.
   05 BONDING — single, double, triple bonds form as frosted bridges with
      1/2/3 seams; hashes ride the seams; copy: light hand-off, partnership,
      locked team.
   06 ISOTOPE CHAMBER — the nucleus re-forms as a point cloud on a circular
      frosted pedestal with a glowing base ring. Bracketed carousel:
-     [ C-11 ] [ C-12 ] [ C-13 ] [ C-14 ]. Switching flows neutrons in/out
-     and updates NEUTRONS · STABILITY · HALF-LIFE · BEHAVIOUR. C-11 and C-14
-     shimmer with a decay readout. On C-13 the visitor drags the extra
+     [ Ar-36 ] [ Ar-39 ] [ Ar-40 ] [ Ar-41 ]. Switching flows neutrons in/out
+     and updates NEUTRONS · STABILITY · HALF-LIFE · BEHAVIOUR. Ar-41 and Ar-39
+     shimmer with a decay readout. On Ar-40 the visitor drags the heavy
      neutron onto a proton to strengthen that agent. This chamber is a
      reusable component also used on /launch.
   07 SHAPES — chain, benzene ring and diamond lattice side by side, HUD
@@ -211,7 +223,7 @@ labels and HUD together.
   08 THE LAUNCH — the chosen isotope + shape condenses into a frosted coin
      with the CA typing beneath it.
   09 REASSEMBLE → LIVE — nucleons fly back into the atom; the camera pulls
-     up to a frozen graphene plain where every real live launch is a crystal
+     up to a frozen lattice plain where every real live launch is a crystal
      in the hex sheet (shows its isotope and shape). Click to fly in.
      [Launch] in the corner; thinking feed and receipts as small mono panels.
 
@@ -245,7 +257,7 @@ twitter:card=player embed per launch and a real 1200×630 OG image per launch.
 /receipts    every fee split with tx links
 /wallets     every per-launch wallet address
 /how         chemistry rules, isotope × shape table, stability formula,
-             fee split, what Carbon never does; rendered verbatim from /docs
+             fee split, what Argon never does; rendered verbatim from /docs
 /embed/[ca]  player-card view
 
 ══════════════════════════════════════════════════════════════════════
@@ -254,7 +266,7 @@ twitter:card=player embed per launch and a real 1200×630 OG image per launch.
 - Try to give an agent a 5th bond: must fail.
 - Displayed bond orders = orders recomputed from logs, always.
 - Each isotope × shape applies exactly its config row (budget, cadence,
-  threshold, decay); C-13's extra neutron affects only the chosen agent.
+  threshold, decay); Ar-40's extra neutron affects only the chosen agent.
 - Launch below threshold or with a hard fail: blocked.
 - Post or launch without approval: impossible.
 - Kill the fee split mid-run and resume: no double payment; receipts match
@@ -276,7 +288,7 @@ on Railway. Secrets only in Vercel/Railway env. .env and details/ never
 committed.
 
 Deliver one recorded phone run in a single take: scroll the full story →
-connect wallet + X → one line → pick C-13 with a heavy Herald → pick RING →
+connect wallet + X → one line → pick Ar-40 with a heavy Herald → pick RING →
 Scout proposals → Sentinel score passes → approve → real devnet coin → bonds
 forming from real events → approved CA post from the connected account →
 first fee-split receipt → the launch appears as a crystal in the live

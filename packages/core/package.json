@@ -1,5 +1,5 @@
 {
-  "name": "@carbon/core",
+  "name": "@argon/core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,8 @@
     "./render-config": "./src/render-config.ts",
     "./crypto": "./src/crypto.ts",
     "./sse": "./src/bus/sse.ts",
-    "./llm": "./src/llm/index.ts"
+    "./llm": "./src/llm/index.ts",
+    "./env-compat": "./src/env-compat.ts"
   },
   "scripts": {
     "test": "vitest run",

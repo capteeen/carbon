@@ -6,8 +6,8 @@ import { sound, useSoundEnabled } from './sound.js';
 export function SoundToggle({ className }: { className?: string }) {
   const on = useSoundEnabled();
   return (
-    <div className={className ?? 'carbon-sound'}>
-      <button type="button" className="carbon-hud__btn carbon-sound__btn" aria-pressed={on} onClick={() => sound.toggle()} data-testid="sound-toggle">
+    <div className={className ?? 'argon-sound'}>
+      <button type="button" className="argon-hud__btn argon-sound__btn" aria-pressed={on} onClick={() => sound.toggle()} data-testid="sound-toggle">
         {on ? COPY.sound.on : COPY.sound.off}
       </button>
     </div>

@@ -591,7 +591,7 @@ void main() {
   col = mix(col, uFrost, glint + (1.0 - edge) * 0.18);
   // frost dusting
   col = mix(col, uFrost, smoothstep(0.55, 0.9, vnoise(vec3(p * 1.7, 0.0))) * 0.35);
-  // graphene: hex lattice of frozen carbon lines
+  // graphene: hex lattice of frozen argon lines
   float hx = hexEdge(p * 0.75);
   float line = 1.0 - smoothstep(0.0, 0.022, hx);
   col = mix(col, mix(uSlate, uFog, 0.55), uGraphene * 0.7);

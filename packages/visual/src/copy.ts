@@ -3,15 +3,15 @@
  * factual and true of the product as specified. No numbers, hashes or launches
  * live here: those only ever come from props carrying real event ids.
  */
-import { EMPTY_GRAPHENE } from '@carbon/core/contracts';
+import { EMPTY_GRAPHENE } from '@argon/core/contracts';
 
 export const COPY = {
   liveTag: 'LIVE',
   replayTag: 'REPLAY',
 
   hero: {
-    wordmark: 'CARBON',
-    meta: ['// Element 06', '// Agents that bond.'],
+    wordmark: 'ARGON',
+    meta: ['// Element 18', '// Agents that bond.'],
     manifestoHead: '////// Manifesto',
     manifesto: [
       'Six AI agents form one nucleus.',
@@ -24,22 +24,22 @@ export const COPY = {
   },
   dismantle: {
     head: '////// 01 Dismantle',
-    lines: ['// 12 nucleons', '// 6 protons · 6 neutrons'],
+    lines: ['// Real argon: 18 protons', '// Shown: the six agent protons, with their neutrons'],
   },
   glitch: {
     head: '////// 02 Isolate',
     lines: ['// Separating the protons'],
   },
   protons: {
-    head: '////// 03 Six protons',
-    note: '6 protons make it carbon. 6 agents make it a Carbon launch.',
+    head: '////// 03 Six agents',
+    note: '18 protons make it argon. Six agents at the core make it an Argon launch.',
     explore: 'CLICK TO EXPLORE',
     liveReadouts: '// Readouts: live agent stats',
   },
   shells: {
     head: '////// 04 Shells',
-    note: 'Every agent has exactly 4 bond arms.',
-    lines: ['// Inner shell · 2 electrons', '// Outer shell · 4 electrons = 4 bond arms (at most 4 bond orders)'],
+    note: 'Real argon is a noble gas and almost never bonds. These agents do: each has exactly 4 bond arms.',
+    lines: ['// Real argon: shells of 2 · 8 · 8 electrons, all full', '// Each agent: 4 bond arms (at most 4 bond orders)'],
   },
   bonding: {
     head: '////// 05 Bonding',
@@ -55,7 +55,7 @@ export const COPY = {
   chamber: {
     head: '////// 06 Isotope chamber',
     readouts: ['NEUTRONS', 'STABILITY', 'DECAY_RULE', 'BEHAVIOUR'] as const,
-    heavyHint: '// Drag the extra neutron onto a proton',
+    heavyHint: '// Drag the heavy neutron onto a proton',
     heavyPick: '// Or pick the heavy agent',
   },
   shapes: {

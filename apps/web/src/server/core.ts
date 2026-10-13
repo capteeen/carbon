@@ -1,41 +1,41 @@
 /**
- * The web app's one connection to the Carbon event log (server only).
- * createCore() reads DATABASE_URL, REDIS_URL and CARBON_AGENT_KEY_SEED.
+ * The web app's one connection to the Argon event log (server only).
+ * createCore() reads DATABASE_URL, REDIS_URL and ARGON_AGENT_KEY_SEED.
  * Migrations run at build time (scripts/migrate-on-build.mjs) and at worker
  * boot. Until the tables exist, getCore() rejects with LogNotConfiguredError (a
  * schema message) and pages show the same honest empty states as a deployment with no log.
  */
-import { createCore, type Core } from '@carbon/core';
+import { createCore, type Core } from '@argon/core';
 import { logConfigured } from './log-config';
 export { logConfigured };
 
-const g = globalThis as typeof globalThis & { __carbonCore?: Promise<Core>; __carbonConn?: Promise<Core>; __carbonSchemaAt?: number };
+const g = globalThis as typeof globalThis & { __argonCore?: Promise<Core>; __argonConn?: Promise<Core>; __argonSchemaAt?: number };
 
 /** How often a deployment without tables re-checks for them (ms). */
 const SCHEMA_RECHECK_MS = 10_000;
 
 export function getCore(): Promise<Core> {
-  if (g.__carbonCore) return g.__carbonCore;
+  if (g.__argonCore) return g.__argonCore;
   if (!logConfigured()) {
-    return Promise.reject(new LogNotConfiguredError('This deployment has no event log connected yet (DATABASE_URL / CARBON_AGENT_KEY_SEED unset), so launching and approvals are unavailable.'));
+    return Promise.reject(new LogNotConfiguredError('This deployment has no event log connected yet (DATABASE_URL / ARGON_AGENT_KEY_SEED unset), so launching and approvals are unavailable.'));
   }
   // one connection per process; the schema check is repeated (rate-limited) until the tables exist
-  if (!g.__carbonConn) {
-    g.__carbonConn = createCore().catch((err: unknown) => {
-      g.__carbonConn = undefined;
+  if (!g.__argonConn) {
+    g.__argonConn = createCore().catch((err: unknown) => {
+      g.__argonConn = undefined;
       throw err;
     });
   }
   const now = Date.now();
-  if (g.__carbonSchemaAt && now - g.__carbonSchemaAt < SCHEMA_RECHECK_MS) return Promise.reject(schemaError());
-  return g.__carbonConn.then(async (core) => {
+  if (g.__argonSchemaAt && now - g.__argonSchemaAt < SCHEMA_RECHECK_MS) return Promise.reject(schemaError());
+  return g.__argonConn.then(async (core) => {
     const r = await core.bus.pool.query<{ t: string | null }>("SELECT to_regclass('events')::text AS t");
     if (!r.rows[0]?.t) {
-      g.__carbonSchemaAt = Date.now();
+      g.__argonSchemaAt = Date.now();
       throw schemaError();
     }
-    g.__carbonSchemaAt = undefined;
-    g.__carbonCore = Promise.resolve(core);
+    g.__argonSchemaAt = undefined;
+    g.__argonCore = Promise.resolve(core);
     return core;
   });
 }

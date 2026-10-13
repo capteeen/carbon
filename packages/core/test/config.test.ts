@@ -23,7 +23,7 @@ describe('config table', () => {
     for (const row of parsed) {
       const iso = row.Isotope as (typeof ISOTOPE_IDS)[number];
       const shape = row.Shape!.toLowerCase() as (typeof SHAPE_IDS)[number];
-      const heavy = iso === 'C-13';
+      const heavy = iso === 'Ar-40';
       const c: LaunchConfig = launchConfig(iso, shape, heavy ? 'sentinel' : null); // a non-herald, non-keeper heavy
       expect(Number(row['Sentinel threshold'])).toBe(c.sentinelThreshold);
       expect(row.Decay).toBe(formatDecay(c.decay));
@@ -49,11 +49,11 @@ describe('config table', () => {
     }
   });
 
-  it("C-13's extra neutron changes only the chosen agent", () => {
+  it("Ar-40's extra neutron changes only the chosen agent", () => {
     for (const shape of SHAPE_IDS) {
-      const base = launchConfig('C-12', shape);
+      const base = launchConfig('Ar-36', shape);
       for (const heavy of AGENT_IDS) {
-        const c = launchConfig('C-13', shape, heavy);
+        const c = launchConfig('Ar-40', shape, heavy);
         for (const a of AGENT_IDS) {
           const k = a === heavy ? 2 : 1;
           expect(c.capacity[a]).toEqual({ llmCallsPerHour: base.capacity[a].llmCallsPerHour * k, concurrency: base.capacity[a].concurrency * k });
@@ -64,7 +64,7 @@ describe('config table', () => {
         expect(strip(c)).toEqual(strip(base));
       }
     }
-    expect(() => launchConfig('C-13', 'ring', null)).toThrow();
-    expect(() => launchConfig('C-12', 'ring', 'herald')).toThrow();
+    expect(() => launchConfig('Ar-40', 'ring', null)).toThrow();
+    expect(() => launchConfig('Ar-36', 'ring', 'herald')).toThrow();
   });
 });

@@ -31,7 +31,7 @@ describe('signed launch tx relay check', () => {
     expect(checkSignedLaunchTx(b64(unsigned), b64(unsigned), payer.publicKey.toBase58()).ok).toBe(false);
     const swapped = build(payer, mint, 999);
     swapped.sign([payer]);
-    expect(checkSignedLaunchTx(b64(unsigned), b64(swapped), payer.publicKey.toBase58())).toEqual({ ok: false, reason: 'transaction differs from the one Carbon built' });
+    expect(checkSignedLaunchTx(b64(unsigned), b64(swapped), payer.publicKey.toBase58())).toEqual({ ok: false, reason: 'transaction differs from the one Argon built' });
     const signed = VersionedTransaction.deserialize(unsigned.serialize());
     signed.sign([payer]);
     expect(checkSignedLaunchTx(b64(unsigned), b64(signed), Keypair.generate().publicKey.toBase58()).ok).toBe(false);
@@ -43,7 +43,7 @@ describe('deriveLaunchView', () => {
   it('pending approvals drop once decided; DIAMOND forces autopilot off', () => {
     const L = 'L';
     const evs = [
-      ev(L, 'launch.created', { line: 'l', isotope: 'C-12', shape: 'diamond', heavyAgent: null, launcherWallet: 'w', xConnected: false }, 'user'),
+      ev(L, 'launch.created', { line: 'l', isotope: 'Ar-36', shape: 'diamond', heavyAgent: null, launcherWallet: 'w', xConnected: false }, 'user'),
       ev(L, 'approval.requested', { approvalId: 'a1', action: 'post', draft: null, expiresAt: null }, 'herald'),
       ev(L, 'approval.requested', { approvalId: 'a2', action: 'action', draft: null, expiresAt: null }, 'forge'),
       ev(L, 'approval.granted', { approvalId: 'a1', by: 'w', viaAutopilot: false }, 'user'),

@@ -12,7 +12,7 @@ const score = (passed: boolean, hardFail = false) => ({
 });
 const draft = { name: 'N', ticker: 'T', lore: 'l', logoUri: 'u', logoHash: 'h', bannerUri: 'b', siteUri: 's' };
 
-function happyPath(isotope: 'C-12' | 'C-11' = 'C-12') {
+function happyPath(isotope: 'Ar-36' | 'Ar-41' = 'Ar-36') {
   const log = new LogBuilder();
   log.created('ring', 0, isotope);
   log.add(1, 'reasoning', 'scout', { agent: 'scout', forEventId: log.events[0]!.id, text: 'searching trends' });
@@ -57,7 +57,7 @@ describe('molecule state machine', () => {
   });
 
   it('unstable isotopes decay and collapse; stable ones do not', () => {
-    for (const iso of ['C-11', 'C-12'] as const) {
+    for (const iso of ['Ar-41', 'Ar-36'] as const) {
       const log = happyPath(iso);
       log.add(4, 'sentinel.score', 'sentinel', score(true));
       log.add(5, 'approval.requested', 'forge', { approvalId: 'a1', action: 'launch', draft: {}, expiresAt: null });
@@ -66,7 +66,7 @@ describe('molecule state machine', () => {
       const snap = log.add(8, 'holders.snapshot', 'treasurer', { slot: 1, holderCount: 3 });
       log.add(9, 'decay.collapsed', 'system', { at: 9, reason: 'quiet', snapshotEventId: snap.id });
       const s = foldMolecule(log.events);
-      expect(s.state).toBe(iso === 'C-11' ? 'collapsed' : 'live');
+      expect(s.state).toBe(iso === 'Ar-41' ? 'collapsed' : 'live');
     }
   });
 

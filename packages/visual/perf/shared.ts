@@ -54,7 +54,7 @@ export async function phonePage(browser: any, { throttle = 1, dpr = 2 } = {}) {
 /** Scroll so that story progress == p (programmatic, no Lenis smoothing). */
 export async function scrollToProgress(page: any, p: number) {
   await page.evaluate((p) => {
-    const el = document.querySelector('.carbon-story');
+    const el = document.querySelector('.argon-story');
     const top = el.getBoundingClientRect().top + window.scrollY;
     const dist = el.offsetHeight - window.innerHeight;
     window.scrollTo(0, top + p * dist);

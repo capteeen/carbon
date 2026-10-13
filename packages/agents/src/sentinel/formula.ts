@@ -2,8 +2,8 @@
  * THE public stability formula. Sentinel scores with exactly these functions
  * and /how renders exactly these tables (renderFormulaMarkdown). Pure: no I/O.
  */
-import { SHAPES, SHAPE_IDS } from '@carbon/core';
-import type { SentinelInput, SentinelReport } from '@carbon/core';
+import { SHAPES, SHAPE_IDS } from '@argon/core';
+import type { SentinelInput, SentinelReport } from '@argon/core';
 import { DENYLIST } from './denylist.js';
 
 export type InputKey = SentinelInput['key'];

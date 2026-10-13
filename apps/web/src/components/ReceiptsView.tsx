@@ -1,17 +1,17 @@
-import { EMPTY_READOUT, FEE_SPLIT_BPS } from '@carbon/core/contracts';
+import { EMPTY_READOUT, FEE_SPLIT_BPS } from '@argon/core/contracts';
 import Link from 'next/link';
 import { explorerUrl, lamportsToSol, shortId } from '@/lib/launch-view';
 import type { ReceiptRow } from '@/lib/types';
 
-const LEG_LABEL = { launcher: 'LAUNCHER 50%', 'carbon-buyback': '$CARBON BUYBACK 30%', treasury: 'TREASURY 20%' } as const;
+const LEG_LABEL = { launcher: 'LAUNCHER 50%', 'argon-buyback': '$ARGON BUYBACK 30%', treasury: 'TREASURY 20%' } as const;
 
 export function ReceiptsView({ rows }: { rows: ReceiptRow[] }) {
   return (
     <>
       <h1 className="section-title">Receipts</h1>
       <p className="meta">
-        // Every fee split, as logged by Treasurer. Split: {FEE_SPLIT_BPS.launcher / 100}% launcher · {FEE_SPLIT_BPS.carbonBuyback / 100}% $CARBON buyback ·{' '}
-        {FEE_SPLIT_BPS.treasury / 100}% Carbon treasury.
+        // Every fee split, as logged by Treasurer. Split: {FEE_SPLIT_BPS.launcher / 100}% launcher · {FEE_SPLIT_BPS.argonBuyback / 100}% $ARGON buyback ·{' '}
+        {FEE_SPLIT_BPS.treasury / 100}% Argon treasury.
       </p>
       {rows.length === 0 ? (
         <p className="empty" data-testid="receipts-empty">

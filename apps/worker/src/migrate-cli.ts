@@ -1,4 +1,4 @@
-/** `pnpm --filter @carbon/worker migrate`: core + x + worker + chain migrations against DATABASE_URL. */
+/** `pnpm --filter @argon/worker migrate`: core + x + worker + chain migrations against DATABASE_URL. */
 import pg from 'pg';
 import { migrateAll } from './migrate.js';
 
